@@ -1,0 +1,18 @@
+# .NET
+bin/
+obj/
+TestResults/
+
+# Local .NET CLI home used by sandboxed/local automation
+.dotnet/
+
+# IDE/editor
+.vs/
+.vscode/
+*.user
+*.suo
+
+# OS
+Thumbs.db
+.DS_Store
+

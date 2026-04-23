@@ -1,6 +1,8 @@
 # TermBullet
 
-TermBullet is a personal productivity application for the terminal, inspired by the Bullet Journal philosophy and designed especially for developers and users who live in the shell.
+TermBullet is a local-first terminal planner for tasks, notes, events, and personal review workflows.
+
+It provides both a TUI and a CLI over the same core, with an emphasis on offline use, keyboard-first interaction, and transparent local data.
 
 The project combines two first-class interfaces over the same functional core:
 
@@ -27,7 +29,21 @@ Development
 
 TermBullet is intended to be an open source project for a global audience.
 
-Documentation, command names, examples, and user-facing text should be English-first. TermBullet is released under the MIT License.
+Documentation, command names, examples, and user-facing text should be English-first.
+
+## Study Disclaimer
+
+TermBullet is part of the author's ongoing study on using AI to support software coding and project delivery.
+
+This project is recommended for personal use, experimentation, and learning purposes only.
+
+The author does not recommend using TermBullet in professional or production-critical environments at this stage.
+
+## Legal
+
+Legal policy and trademark usage are centralized in [TRADEMARKS.md](TRADEMARKS.md).
+
+The project license is Apache License 2.0 in [LICENSE](LICENSE).
 
 ## Installation
 

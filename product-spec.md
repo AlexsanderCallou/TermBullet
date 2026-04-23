@@ -18,7 +18,7 @@
 
 ## 1. Product Vision
 
-**TermBullet** is a personal productivity application inspired by the **Bullet Journal** philosophy, built for the terminal and designed especially for developers and technical users.
+**TermBullet** is a local-first terminal planner for tasks, notes, events, and personal review workflows.
 
 The product provides two primary interaction modes over the same functional core:
 
@@ -26,6 +26,11 @@ The product provides two primary interaction modes over the same functional core
 - **CLI** as a fast interface for capture, manipulation, and lookup without opening the TUI.
 
 The project should be built as an open source tool, with public documentation, contribution-friendly architecture, and global naming/content in English.
+
+Legal baseline for documentation and distribution:
+
+- License text is Apache License 2.0 in `LICENSE`.
+- Legal/trademark/independence wording is centralized in `TRADEMARKS.md`.
 
 The product evolution must follow an architecture prepared from the beginning to support:
 
@@ -75,7 +80,8 @@ TermBullet development must follow these principles:
 7. **Open source by design**
    - The project must be understandable and maintainable by contributors.
    - Documentation, command names, examples, and user-facing language must be English-first.
-   - The project is released under the MIT License.
+   - The project is released under the Apache License 2.0.
+   - Trademark usage and third-party mark references are documented in `TRADEMARKS.md`.
    - Contribution rules and governance should be added before the first public release.
 
 ---
@@ -605,7 +611,7 @@ The system must be prepared for:
 - Clear internal boundaries for contributors.
 - English-first user-facing text and documentation.
 - Public architectural decisions for significant design choices.
-- MIT License documentation.
+- Apache License 2.0 documentation.
 - Contribution documentation is available and must stay current.
 
 ---
@@ -716,7 +722,7 @@ TermBullet must provide two main usage modes:
 ## `termbullet --help`
 
 ```text
-TermBullet - Bullet Journal for Terminal
+TermBullet - Local-First Terminal Planner
 
 Usage:
   termbullet [command] [arguments] [options]
