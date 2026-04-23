@@ -36,6 +36,7 @@ public sealed class JsonFileItemRepositoryTests
         Assert.Equal("t-0426-1", found.PublicRef.Value);
         Assert.Equal(ItemCollection.Today, found.Collection);
         Assert.True(File.Exists(context.MonthlyFilePath));
+        Assert.True(File.Exists(context.IndexFilePath));
     }
 
     [Fact]
@@ -57,7 +58,8 @@ public sealed class JsonFileItemRepositoryTests
     [Fact]
     public async Task UpdateAsync_persists_item_changes()
     {
-        var repository = CreateRepository();
+        var context = CreateContext();
+        var repository = CreateRepository(context);
         var item = CreateItem(
             id: Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
             publicRef: "t-0426-1",
@@ -76,6 +78,12 @@ public sealed class JsonFileItemRepositoryTests
         Assert.Equal(ItemCollection.Backlog, updated.Collection);
         Assert.Equal(Priority.High, updated.Priority);
         Assert.Equal(item.Version, updated.Version);
+
+        var indexJson = await File.ReadAllTextAsync(context.IndexFilePath);
+        using var indexDoc = JsonDocument.Parse(indexJson);
+        var indexItem = Assert.Single(indexDoc.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal("backlog", indexItem.GetProperty("collection").GetString());
+        Assert.Equal("high", indexItem.GetProperty("priority").GetString());
     }
 
     [Fact]
@@ -184,6 +192,34 @@ public sealed class JsonFileItemRepositoryTests
         Assert.Equal("deleted", history[1].GetProperty("event_type").GetString());
         var snapshot = history[1].GetProperty("data").GetProperty("snapshot");
         Assert.Equal("t-0426-1", snapshot.GetProperty("public_ref").GetString());
+
+        var indexJson = await File.ReadAllTextAsync(context.IndexFilePath);
+        using var indexDoc = JsonDocument.Parse(indexJson);
+        Assert.Empty(indexDoc.RootElement.GetProperty("items").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task ClearHistoryAsync_removes_history_and_keeps_active_items()
+    {
+        var context = CreateContext();
+        var repository = CreateRepository(context);
+        var item = CreateItem(
+            id: Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
+            publicRef: "t-0426-1",
+            collection: ItemCollection.Today);
+        await repository.AddAsync(item);
+        item.MarkDone(ChangedAt);
+        await repository.UpdateAsync(item);
+
+        await repository.ClearHistoryAsync();
+
+        var found = await repository.FindByPublicRefAsync("t-0426-1");
+        Assert.NotNull(found);
+
+        var json = await File.ReadAllTextAsync(context.MonthlyFilePath);
+        using var doc = JsonDocument.Parse(json);
+        Assert.Empty(doc.RootElement.GetProperty("history").EnumerateArray());
+        Assert.Single(doc.RootElement.GetProperty("items").EnumerateArray());
     }
 
     private static readonly DateTimeOffset CreatedAt = new(2026, 4, 23, 10, 30, 0, TimeSpan.Zero);
@@ -207,7 +243,8 @@ public sealed class JsonFileItemRepositoryTests
         return new JsonFileItemRepository(
             new FixedClock(CreatedAt),
             new MonthlyJsonFilePathResolver(current.ProjectRootPath),
-            new SafeJsonFileStore());
+            new SafeJsonFileStore(),
+            new LocalJsonIndexService(current.ProjectRootPath));
     }
 
     private static TestContext CreateContext()
@@ -218,10 +255,11 @@ public sealed class JsonFileItemRepositoryTests
             Guid.NewGuid().ToString("N"));
         var monthlyFilePath = Path.Combine(projectRootPath, "data", "2026", "data_04_2026.json");
         Directory.CreateDirectory(Path.GetDirectoryName(monthlyFilePath)!);
-        return new TestContext(projectRootPath, monthlyFilePath);
+        var indexFilePath = Path.Combine(projectRootPath, "data", "index.json");
+        return new TestContext(projectRootPath, monthlyFilePath, indexFilePath);
     }
 
-    private sealed record TestContext(string ProjectRootPath, string MonthlyFilePath);
+    private sealed record TestContext(string ProjectRootPath, string MonthlyFilePath, string IndexFilePath);
 
     private sealed class FixedClock(DateTimeOffset utcNow) : IClock
     {

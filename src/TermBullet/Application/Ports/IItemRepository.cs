@@ -20,6 +20,8 @@ public interface IItemRepository
 
     Task DeleteByPublicRefAsync(string publicRef, CancellationToken cancellationToken = default);
 
+    Task ClearHistoryAsync(CancellationToken cancellationToken = default);
+
     Task<IReadOnlyCollection<Item>> ListAsync(
         ItemCollection? collection = null,
         ItemStatus? status = null,

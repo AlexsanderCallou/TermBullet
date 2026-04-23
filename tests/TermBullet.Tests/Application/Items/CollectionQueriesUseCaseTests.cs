@@ -93,6 +93,11 @@ public sealed class CollectionQueriesUseCaseTests
             throw new NotSupportedException();
         }
 
+        public Task ClearHistoryAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<IReadOnlyCollection<Item>> ListAsync(
             ItemCollection? collection = null,
             ItemStatus? status = null,

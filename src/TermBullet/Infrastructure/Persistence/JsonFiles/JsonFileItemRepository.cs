@@ -9,7 +9,8 @@ namespace TermBullet.Infrastructure.Persistence.JsonFiles;
 public sealed class JsonFileItemRepository(
     IClock clock,
     MonthlyJsonFilePathResolver pathResolver,
-    SafeJsonFileStore fileStore) : IItemRepository
+    SafeJsonFileStore fileStore,
+    LocalJsonIndexService? indexService = null) : IItemRepository
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -70,6 +71,7 @@ public sealed class JsonFileItemRepository(
             });
 
         await WriteMonthlyDocumentAsync(year, month, document, cancellationToken);
+        await RebuildIndexIfConfiguredAsync(cancellationToken);
     }
 
     public async Task UpdateAsync(Item item, CancellationToken cancellationToken = default)
@@ -102,6 +104,7 @@ public sealed class JsonFileItemRepository(
             });
 
         await WriteMonthlyDocumentAsync(year, month, document, cancellationToken);
+        await RebuildIndexIfConfiguredAsync(cancellationToken);
     }
 
     public async Task DeleteByPublicRefAsync(string publicRef, CancellationToken cancellationToken = default)
@@ -132,6 +135,15 @@ public sealed class JsonFileItemRepository(
                 snapshot = deleted
             });
 
+        await WriteMonthlyDocumentAsync(year, month, document, cancellationToken);
+        await RebuildIndexIfConfiguredAsync(cancellationToken);
+    }
+
+    public async Task ClearHistoryAsync(CancellationToken cancellationToken = default)
+    {
+        var (year, month) = GetCurrentPeriod();
+        var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
+        document.History.Clear();
         await WriteMonthlyDocumentAsync(year, month, document, cancellationToken);
     }
 
@@ -224,6 +236,13 @@ public sealed class JsonFileItemRepository(
     {
         var now = clock.UtcNow;
         return (now.Year, now.Month);
+    }
+
+    private Task RebuildIndexIfConfiguredAsync(CancellationToken cancellationToken)
+    {
+        return indexService is null
+            ? Task.CompletedTask
+            : indexService.RebuildAsync(cancellationToken);
     }
 
     private static void UpdateSequence(MonthlyDataDocument document, ItemType type, int sequence)

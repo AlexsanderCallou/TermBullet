@@ -313,6 +313,11 @@ public sealed class MutateItemUseCaseTests
         {
             throw new NotSupportedException();
         }
+
+        public Task ClearHistoryAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     private sealed class FixedClock(DateTimeOffset utcNow) : IClock
