@@ -200,9 +200,11 @@ Enable safe and consistent usage across multiple machines while preserving the l
 
 ## 6. High-Level Architecture
 
-The system must be structured with clear separation between domain, use cases, and interfaces.
+The system must be structured as a modular monolith with clear separation between domain, use cases, infrastructure, and interfaces.
 
-### Recommended Layers
+Production code should live in one .NET project for V1, with modules separated by folders, namespaces, contracts, and tests.
+
+### Recommended Internal Modules
 
 - **Core**
   - Entities.
@@ -233,6 +235,11 @@ The system must be structured with clear separation between domain, use cases, a
   - Navigation.
   - Shortcuts.
   - Panels and visual context.
+
+- **Bootstrap**
+  - Startup.
+  - Dependency wiring.
+  - CLI/TUI dispatch.
 
 ### Essential Rule
 

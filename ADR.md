@@ -18,6 +18,7 @@ The ADRs below are derived from [product-spec.md](product-spec.md). They guide i
 - [ADR-0010 - Export and import as basic portability](#adr-0010---export-and-import-as-basic-portability)
 - [ADR-0011 - Open source and English-first project](#adr-0011---open-source-and-english-first-project)
 - [ADR-0012 - Official technology stack](#adr-0012---official-technology-stack)
+- [ADR-0013 - Modular monolith structure](#adr-0013---modular-monolith-structure)
 
 ---
 
@@ -544,6 +545,56 @@ Official references:
 - **Rust with ratatui/clap:** strong performance and terminal tooling, but raises implementation complexity and contributor barrier for this project.
 - **Node.js with terminal UI libraries:** viable for CLI tooling, but weaker fit for a long-lived local-first desktop terminal app with rich persistence and future backend sharing.
 - **PostgreSQL-only storage:** rejected for V1 because it breaks the lightweight local-first/offline experience.
+
+---
+
+## ADR-0013 - Modular Monolith Structure
+
+**Status:** Accepted  
+**Date:** 2026-04-23
+
+### Context
+
+TermBullet is a small terminal-first application. A multi-project architecture with one production project per layer would add ceremony before the product needs it.
+
+The project still needs clear boundaries between domain rules, use cases, persistence, CLI, and TUI, but those boundaries can be enforced through folders, namespaces, contracts, tests, and review discipline.
+
+### Decision
+
+TermBullet V1 will use a modular monolith.
+
+Production code will live in one .NET project:
+
+```text
+src/TermBullet/TermBullet.csproj
+```
+
+Internal modules will be separated by folders and namespaces:
+
+- `Bootstrap`
+- `Core`
+- `Application`
+- `Infrastructure`
+- `Cli`
+- `Tui`
+
+Tests will live in a separate test project:
+
+```text
+tests/TermBullet.Tests/TermBullet.Tests.csproj
+```
+
+### Consequences
+
+- The product remains simple to build, run, and package.
+- CLI and TUI can share Application use cases without extra project ceremony.
+- Internal boundaries must be maintained through discipline and tests rather than project references.
+- Future extraction into separate projects is possible if the codebase grows enough to justify it.
+
+### Alternatives Considered
+
+- **One production project per layer:** rejected for V1 because the project is small and the extra structure would slow early development.
+- **Single folder with no module boundaries:** rejected because it would make future AI, calendar, and sync work harder.
 
 ---
 

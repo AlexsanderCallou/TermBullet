@@ -197,19 +197,30 @@ Expected cross-screen behaviors:
 
 ## Architecture
 
-The project must keep clear separation between domain, use cases, and interfaces.
+The project is a **modular monolith**.
 
-Recommended layers:
+Production code should live in a single .NET project, with clear internal separation by folders, namespaces, contracts, and tests. This keeps the project proportional to its size while preserving clean boundaries between domain, use cases, infrastructure, CLI, and TUI.
+
+Recommended internal modules:
 
 - **Core**: entities, business rules, states, identification policies, and migration policies.
 - **Application**: use cases, orchestration services, and input/output contracts.
 - **Infrastructure**: local persistence, import/export, AI, calendar, and future sync.
 - **CLI**: commands, handlers, and text rendering.
 - **TUI**: screens, navigation, shortcuts, panels, and visual context.
+- **Bootstrap**: startup, dependency wiring, and dispatch between CLI and TUI.
 
 Essential rule:
 
 > CLI and TUI must reuse the same Application layer use cases.
+
+## Development Method
+
+TermBullet follows a TDD workflow.
+
+Before production implementation starts, unit tests must be written first. Tests should cover successful paths with valid mocked data and failure paths with invalid, missing, malformed, or conflicting mocked data.
+
+A development task is only considered complete after all relevant tests pass successfully.
 
 ## Technology Stack
 
@@ -285,3 +296,8 @@ V1 is considered adequate when:
 
 - [Product specification](product-spec.md)
 - [Architecture Decision Records](ADR.md)
+- [Agent development guide](AGENTS.md)
+- [Technical architecture](ARCHITECTURE.md)
+- [Data model](DATA_MODEL.md)
+- [Development plan](DEVELOPMENT_PLAN.md)
+- [Contributing guide](CONTRIBUTING.md)
