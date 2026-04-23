@@ -222,6 +222,126 @@ public sealed class JsonFileItemRepositoryTests
         Assert.Single(doc.RootElement.GetProperty("items").EnumerateArray());
     }
 
+    [Fact]
+    public async Task RunAutomaticMonthRolloverAsync_moves_active_tasks_from_previous_month_to_current_month()
+    {
+        var context = CreateContext(now: new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero));
+        var repository = CreateRepository(context);
+        Directory.CreateDirectory(Path.GetDirectoryName(context.PreviousMonthlyFilePath)!);
+        await File.WriteAllTextAsync(
+            context.PreviousMonthlyFilePath,
+            """
+            {
+              "period": "2026-04",
+              "file_name": "data_04_2026.json",
+              "public_ref_sequences": {
+                "task": 1,
+                "note": 0,
+                "event": 0
+              },
+              "items": [
+                {
+                  "id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
+                  "public_ref": "t-0426-1",
+                  "type": "task",
+                  "content": "Fix authentication flow",
+                  "description": null,
+                  "status": "open",
+                  "collection": "today",
+                  "priority": "none",
+                  "tags": ["auth"],
+                  "version": 1,
+                  "created_at": "2026-04-23T10:30:00Z",
+                  "updated_at": "2026-04-23T10:30:00Z",
+                  "completed_at": null,
+                  "cancelled_at": null,
+                  "migrated_at": null,
+                  "migration": null
+                }
+              ],
+              "history": [],
+              "settings": {}
+            }
+            """);
+
+        await repository.RunAutomaticMonthRolloverAsync();
+
+        var previousJson = await File.ReadAllTextAsync(context.PreviousMonthlyFilePath);
+        using var previousDoc = JsonDocument.Parse(previousJson);
+        Assert.Empty(previousDoc.RootElement.GetProperty("items").EnumerateArray());
+        var previousHistory = previousDoc.RootElement.GetProperty("history").EnumerateArray().ToArray();
+        Assert.Single(previousHistory);
+        Assert.Equal("migrated", previousHistory[0].GetProperty("event_type").GetString());
+
+        Assert.True(File.Exists(context.MonthlyFilePath));
+        var currentJson = await File.ReadAllTextAsync(context.MonthlyFilePath);
+        using var currentDoc = JsonDocument.Parse(currentJson);
+        var migratedItem = Assert.Single(currentDoc.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal("t-0426-1", migratedItem.GetProperty("public_ref").GetString());
+        Assert.Equal("open", migratedItem.GetProperty("status").GetString());
+        Assert.Equal(new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero), migratedItem.GetProperty("migrated_at").GetDateTimeOffset());
+        var migration = migratedItem.GetProperty("migration");
+        Assert.Equal("2026-04", migration.GetProperty("from_period").GetString());
+        Assert.Equal("2026-05", migration.GetProperty("to_period").GetString());
+        Assert.Equal("automatic_month_rollover", migration.GetProperty("reason").GetString());
+
+        var found = await repository.FindByPublicRefAsync("t-0426-1");
+        Assert.NotNull(found);
+        Assert.NotNull(found.Migration);
+        Assert.Equal("2026-04", found.Migration!.FromPeriod);
+        Assert.Equal("2026-05", found.Migration.ToPeriod);
+
+        var indexJson = await File.ReadAllTextAsync(context.IndexFilePath);
+        using var indexDoc = JsonDocument.Parse(indexJson);
+        Assert.Single(indexDoc.RootElement.GetProperty("items").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task RunAutomaticMonthRolloverAsync_is_idempotent_for_same_startup_day()
+    {
+        var context = CreateContext(now: new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero));
+        var repository = CreateRepository(context);
+        Directory.CreateDirectory(Path.GetDirectoryName(context.PreviousMonthlyFilePath)!);
+        await File.WriteAllTextAsync(
+            context.PreviousMonthlyFilePath,
+            """
+            {
+              "period": "2026-04",
+              "file_name": "data_04_2026.json",
+              "public_ref_sequences": { "task": 1, "note": 0, "event": 0 },
+              "items": [
+                {
+                  "id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
+                  "public_ref": "t-0426-1",
+                  "type": "task",
+                  "content": "Fix authentication flow",
+                  "description": null,
+                  "status": "open",
+                  "collection": "today",
+                  "priority": "none",
+                  "tags": [],
+                  "version": 1,
+                  "created_at": "2026-04-23T10:30:00Z",
+                  "updated_at": "2026-04-23T10:30:00Z",
+                  "completed_at": null,
+                  "cancelled_at": null,
+                  "migrated_at": null,
+                  "migration": null
+                }
+              ],
+              "history": [],
+              "settings": {}
+            }
+            """);
+
+        await repository.RunAutomaticMonthRolloverAsync();
+        await repository.RunAutomaticMonthRolloverAsync();
+
+        var currentJson = await File.ReadAllTextAsync(context.MonthlyFilePath);
+        using var currentDoc = JsonDocument.Parse(currentJson);
+        Assert.Single(currentDoc.RootElement.GetProperty("items").EnumerateArray());
+    }
+
     private static readonly DateTimeOffset CreatedAt = new(2026, 4, 23, 10, 30, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset ChangedAt = new(2026, 4, 23, 12, 0, 0, TimeSpan.Zero);
 
@@ -241,25 +361,33 @@ public sealed class JsonFileItemRepositoryTests
     {
         var current = context ?? CreateContext();
         return new JsonFileItemRepository(
-            new FixedClock(CreatedAt),
+            new FixedClock(current.Now),
             new MonthlyJsonFilePathResolver(current.ProjectRootPath),
             new SafeJsonFileStore(),
             new LocalJsonIndexService(current.ProjectRootPath));
     }
 
-    private static TestContext CreateContext()
+    private static TestContext CreateContext(DateTimeOffset? now = null)
     {
+        var currentNow = now ?? CreatedAt;
         var projectRootPath = Path.Combine(
             Path.GetTempPath(),
             "TermBullet.Tests",
             Guid.NewGuid().ToString("N"));
-        var monthlyFilePath = Path.Combine(projectRootPath, "data", "2026", "data_04_2026.json");
+        var monthlyFilePath = Path.Combine(projectRootPath, "data", $"{currentNow.Year:0000}", $"data_{currentNow.Month:00}_{currentNow.Year:0000}.json");
+        var previousDate = currentNow.AddMonths(-1);
+        var previousMonthlyFilePath = Path.Combine(projectRootPath, "data", $"{previousDate.Year:0000}", $"data_{previousDate.Month:00}_{previousDate.Year:0000}.json");
         Directory.CreateDirectory(Path.GetDirectoryName(monthlyFilePath)!);
         var indexFilePath = Path.Combine(projectRootPath, "data", "index.json");
-        return new TestContext(projectRootPath, monthlyFilePath, indexFilePath);
+        return new TestContext(projectRootPath, monthlyFilePath, previousMonthlyFilePath, indexFilePath, currentNow);
     }
 
-    private sealed record TestContext(string ProjectRootPath, string MonthlyFilePath, string IndexFilePath);
+    private sealed record TestContext(
+        string ProjectRootPath,
+        string MonthlyFilePath,
+        string PreviousMonthlyFilePath,
+        string IndexFilePath,
+        DateTimeOffset Now);
 
     private sealed class FixedClock(DateTimeOffset utcNow) : IClock
     {

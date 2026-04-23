@@ -3,6 +3,7 @@ using TermBullet.Application.Configuration;
 using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
+using TermBullet.Application.Startup;
 using TermBullet.Core.Items;
 
 namespace TermBullet.Cli;
@@ -30,12 +31,23 @@ public sealed class TermBulletCliApp(
     SetItemPriorityUseCase? setItemPriorityUseCase = null,
     TagItemUseCase? tagItemUseCase = null,
     UntagItemUseCase? untagItemUseCase = null,
-    MigrateItemUseCase? migrateItemUseCase = null)
+    MigrateItemUseCase? migrateItemUseCase = null,
+    Func<CancellationToken, Task>? startupAction = null)
 {
     public Task<int> InvokeAsync(string[] args, CancellationToken cancellationToken = default)
     {
+        return InvokeInternalAsync(args, cancellationToken);
+    }
+
+    private async Task<int> InvokeInternalAsync(string[] args, CancellationToken cancellationToken)
+    {
+        if (startupAction is not null)
+        {
+            await startupAction(cancellationToken);
+        }
+
         var rootCommand = BuildRootCommand(output, error, cancellationToken);
-        return rootCommand.Parse(args).InvokeAsync();
+        return await rootCommand.Parse(args).InvokeAsync();
     }
 
     public RootCommand BuildRootCommand(

@@ -185,6 +185,33 @@ public sealed class ItemTests
         Assert.Null(item.CancelledAt);
     }
 
+    [Fact]
+    public void Restore_accepts_migration_metadata()
+    {
+        var migration = new MigrationInfo("2026-04", "2026-05", ChangedAt, "automatic_month_rollover");
+
+        var item = Item.Restore(
+            ItemId,
+            PublicRef.Parse("t-0426-1"),
+            ItemType.Task,
+            "Fix authentication flow",
+            null,
+            ItemStatus.Open,
+            ItemCollection.Today,
+            Priority.None,
+            ["auth"],
+            2,
+            CreatedAt,
+            ChangedAt,
+            migratedAt: ChangedAt,
+            migration: migration);
+
+        Assert.NotNull(item.Migration);
+        Assert.Equal("2026-04", item.Migration!.FromPeriod);
+        Assert.Equal("2026-05", item.Migration.ToPeriod);
+        Assert.Equal("automatic_month_rollover", item.Migration.Reason);
+    }
+
     [Theory]
     [InlineData(ItemStatus.Done)]
     [InlineData(ItemStatus.Cancelled)]

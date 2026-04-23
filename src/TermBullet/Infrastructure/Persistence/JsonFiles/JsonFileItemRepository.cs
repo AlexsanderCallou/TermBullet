@@ -10,7 +10,7 @@ public sealed class JsonFileItemRepository(
     IClock clock,
     MonthlyJsonFilePathResolver pathResolver,
     SafeJsonFileStore fileStore,
-    LocalJsonIndexService? indexService = null) : IItemRepository
+    LocalJsonIndexService? indexService = null) : IItemRepository, IMonthRolloverService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -177,6 +177,83 @@ public sealed class JsonFileItemRepository(
         return storageItem is null ? null : ToDomainItem(storageItem);
     }
 
+    public async Task RunAutomaticMonthRolloverAsync(CancellationToken cancellationToken = default)
+    {
+        var (currentYear, currentMonth) = GetCurrentPeriod();
+        var currentPeriod = $"{currentYear:0000}-{currentMonth:00}";
+        var previousDate = new DateTimeOffset(currentYear, currentMonth, 1, 0, 0, 0, TimeSpan.Zero).AddMonths(-1);
+        var previousYear = previousDate.Year;
+        var previousMonth = previousDate.Month;
+        var previousPeriod = $"{previousYear:0000}-{previousMonth:00}";
+
+        var sourceDocument = await ReadMonthlyDocumentByPeriodAsync(previousYear, previousMonth, cancellationToken);
+        if (sourceDocument.Items.Count == 0)
+        {
+            return;
+        }
+
+        var destinationDocument = await ReadMonthlyDocumentByPeriodAsync(currentYear, currentMonth, cancellationToken);
+        var candidates = sourceDocument.Items
+            .Where(IsAutomaticRolloverCandidate)
+            .ToArray();
+
+        if (candidates.Length == 0)
+        {
+            return;
+        }
+
+        var now = clock.UtcNow;
+        foreach (var sourceItem in candidates)
+        {
+            var destinationIndex = destinationDocument.Items.FindIndex(existing =>
+                string.Equals(existing.PublicRef, sourceItem.PublicRef, StringComparison.Ordinal));
+
+            if (destinationIndex >= 0)
+            {
+                var existing = destinationDocument.Items[destinationIndex];
+                if (existing.Id != sourceItem.Id)
+                {
+                    throw new InvalidOperationException(
+                        $"Automatic rollover detected conflicting public ref in destination month: {sourceItem.PublicRef}.");
+                }
+            }
+            else
+            {
+                var migratedItem = CreateRolloverDestinationItem(sourceItem, previousPeriod, currentPeriod, now);
+                destinationDocument.Items.Add(migratedItem);
+                UpdateSequence(destinationDocument, ParseType(migratedItem.Type), PublicRef.Parse(migratedItem.PublicRef).Sequence);
+                AppendHistory(
+                    destinationDocument,
+                    migratedItem.Id,
+                    migratedItem.PublicRef,
+                    "migrated",
+                    new
+                    {
+                        from_period = previousPeriod,
+                        to_period = currentPeriod,
+                        reason = "automatic_month_rollover"
+                    });
+            }
+
+            sourceDocument.Items.RemoveAll(existing => existing.Id == sourceItem.Id);
+            AppendHistory(
+                sourceDocument,
+                sourceItem.Id,
+                sourceItem.PublicRef,
+                "migrated",
+                new
+                {
+                    from_period = previousPeriod,
+                    to_period = currentPeriod,
+                    reason = "automatic_month_rollover"
+                });
+        }
+
+        await WriteMonthlyDocumentAsync(previousYear, previousMonth, sourceDocument, cancellationToken);
+        await WriteMonthlyDocumentAsync(currentYear, currentMonth, destinationDocument, cancellationToken);
+        await RebuildIndexIfConfiguredAsync(cancellationToken);
+    }
+
     private async Task<MonthlyDataDocument> ReadCurrentMonthlyDocumentAsync(CancellationToken cancellationToken)
     {
         var (year, month) = GetCurrentPeriod();
@@ -316,7 +393,16 @@ public sealed class JsonFileItemRepository(
             UpdatedAt = item.UpdatedAt,
             CompletedAt = item.CompletedAt,
             CancelledAt = item.CancelledAt,
-            MigratedAt = item.MigratedAt
+            MigratedAt = item.MigratedAt,
+            Migration = item.Migration is null
+                ? null
+                : new StorageMigration
+                {
+                    FromPeriod = item.Migration.FromPeriod,
+                    ToPeriod = item.Migration.ToPeriod,
+                    MigratedAt = item.Migration.MigratedAt,
+                    Reason = item.Migration.Reason
+                }
         };
     }
 
@@ -351,7 +437,54 @@ public sealed class JsonFileItemRepository(
             item.EstimateMinutes,
             item.CompletedAt,
             item.CancelledAt,
-            item.MigratedAt);
+            item.MigratedAt,
+            item.Migration is null
+                ? null
+                : new MigrationInfo(
+                    item.Migration.FromPeriod,
+                    item.Migration.ToPeriod,
+                    item.Migration.MigratedAt,
+                    item.Migration.Reason));
+    }
+
+    private static bool IsAutomaticRolloverCandidate(StorageItem item) =>
+        string.Equals(item.Type, "task", StringComparison.Ordinal)
+        && item.Status is "open" or "in_progress";
+
+    private static StorageItem CreateRolloverDestinationItem(
+        StorageItem sourceItem,
+        string previousPeriod,
+        string currentPeriod,
+        DateTimeOffset now)
+    {
+        return new StorageItem
+        {
+            Id = sourceItem.Id,
+            PublicRef = sourceItem.PublicRef,
+            Type = sourceItem.Type,
+            Content = sourceItem.Content,
+            Description = sourceItem.Description,
+            Status = sourceItem.Status,
+            Collection = sourceItem.Collection,
+            Priority = sourceItem.Priority,
+            Tags = [.. sourceItem.Tags],
+            DueAt = sourceItem.DueAt,
+            ScheduledAt = sourceItem.ScheduledAt,
+            EstimateMinutes = sourceItem.EstimateMinutes,
+            Version = sourceItem.Version + 1,
+            CreatedAt = sourceItem.CreatedAt,
+            UpdatedAt = now,
+            CompletedAt = sourceItem.CompletedAt,
+            CancelledAt = sourceItem.CancelledAt,
+            MigratedAt = now,
+            Migration = new StorageMigration
+            {
+                FromPeriod = previousPeriod,
+                ToPeriod = currentPeriod,
+                MigratedAt = now,
+                Reason = "automatic_month_rollover"
+            }
+        };
     }
 
     private static string ToTypeKey(ItemType type) =>
@@ -527,6 +660,24 @@ public sealed class JsonFileItemRepository(
 
         [JsonPropertyName("migrated_at")]
         public DateTimeOffset? MigratedAt { get; set; }
+
+        [JsonPropertyName("migration")]
+        public StorageMigration? Migration { get; set; }
+    }
+
+    private sealed class StorageMigration
+    {
+        [JsonPropertyName("from_period")]
+        public string FromPeriod { get; set; } = string.Empty;
+
+        [JsonPropertyName("to_period")]
+        public string ToPeriod { get; set; } = string.Empty;
+
+        [JsonPropertyName("migrated_at")]
+        public DateTimeOffset MigratedAt { get; set; }
+
+        [JsonPropertyName("reason")]
+        public string Reason { get; set; } = string.Empty;
     }
 
     private sealed class HistoryEntry

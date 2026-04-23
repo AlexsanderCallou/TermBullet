@@ -3,6 +3,7 @@ using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Application.Ports;
+using TermBullet.Application.Startup;
 using TermBullet.Cli;
 using TermBullet.Infrastructure.Export;
 using TermBullet.Infrastructure.Identity;
@@ -33,6 +34,7 @@ public static class TermBulletBootstrap
             projectRootPath,
             new MonthlyJsonFilePathResolver(projectRootPath),
             fileStore);
+        var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
 
         return new TermBulletCliApp(
             new ListConfigurationUseCase(settingsStore),
@@ -57,7 +59,8 @@ public static class TermBulletBootstrap
             new SetItemPriorityUseCase(itemRepository, clock),
             new TagItemUseCase(itemRepository, clock),
             new UntagItemUseCase(itemRepository, clock),
-            new MigrateItemUseCase(itemRepository, clock));
+            new MigrateItemUseCase(itemRepository, clock),
+            startupAction: startupMaintenanceUseCase.ExecuteAsync);
     }
 
     private sealed class SystemClock : IClock

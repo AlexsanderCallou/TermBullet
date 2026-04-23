@@ -55,7 +55,8 @@ public sealed class Item
         int? estimateMinutes,
         DateTimeOffset? completedAt,
         DateTimeOffset? cancelledAt,
-        DateTimeOffset? migratedAt)
+        DateTimeOffset? migratedAt,
+        MigrationInfo? migration)
     {
         Id = id;
         PublicRef = publicRef;
@@ -75,6 +76,7 @@ public sealed class Item
         CompletedAt = completedAt;
         CancelledAt = cancelledAt;
         MigratedAt = migratedAt;
+        Migration = migration;
     }
 
     public Guid Id { get; }
@@ -112,6 +114,8 @@ public sealed class Item
     public DateTimeOffset? CancelledAt { get; private set; }
 
     public DateTimeOffset? MigratedAt { get; private set; }
+
+    public MigrationInfo? Migration { get; private set; }
 
     public static Item Create(
         Guid id,
@@ -184,7 +188,8 @@ public sealed class Item
         int? estimateMinutes = null,
         DateTimeOffset? completedAt = null,
         DateTimeOffset? cancelledAt = null,
-        DateTimeOffset? migratedAt = null)
+        DateTimeOffset? migratedAt = null,
+        MigrationInfo? migration = null)
     {
         if (id == Guid.Empty)
         {
@@ -235,7 +240,8 @@ public sealed class Item
             estimateMinutes,
             completedAt,
             cancelledAt,
-            migratedAt);
+            migratedAt,
+            migration);
     }
 
     public void MarkInProgress(DateTimeOffset changedAt)
@@ -266,6 +272,14 @@ public sealed class Item
         EnsureActive();
         Status = ItemStatus.Migrated;
         MigratedAt = changedAt;
+        Touch(changedAt);
+    }
+
+    public void ApplyMigrationInfo(MigrationInfo migration, DateTimeOffset changedAt)
+    {
+        ArgumentNullException.ThrowIfNull(migration);
+        Migration = migration;
+        MigratedAt = migration.MigratedAt;
         Touch(changedAt);
     }
 

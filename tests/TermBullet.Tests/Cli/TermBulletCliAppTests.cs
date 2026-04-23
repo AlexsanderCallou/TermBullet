@@ -118,7 +118,26 @@ public sealed class TermBulletCliAppTests
         Assert.True(dependencies.HistoryService.ClearAllCalled);
     }
 
-    private static TermBulletCliApp CreateApp(TestDependencies dependencies)
+    [Fact]
+    public async Task InvokeAsync_runs_startup_action_before_command_dispatch()
+    {
+        var dependencies = CreateDependencies();
+        var startupCalled = false;
+        var app = CreateApp(dependencies, startupAction: _ =>
+        {
+            startupCalled = true;
+            return Task.CompletedTask;
+        });
+
+        var exitCode = await app.InvokeAsync(["config", "path"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.True(startupCalled);
+    }
+
+    private static TermBulletCliApp CreateApp(
+        TestDependencies dependencies,
+        Func<CancellationToken, Task>? startupAction = null)
     {
         return new TermBulletCliApp(
             new ListConfigurationUseCase(dependencies.SettingsStore),
@@ -131,7 +150,8 @@ public sealed class TermBulletCliAppTests
                 dependencies.HistoryService,
                 new FixedClock(new DateTimeOffset(2026, 4, 23, 12, 0, 0, TimeSpan.Zero))),
             dependencies.Output,
-            dependencies.Error);
+            dependencies.Error,
+            startupAction: startupAction);
     }
 
     private static TestDependencies CreateDependencies()

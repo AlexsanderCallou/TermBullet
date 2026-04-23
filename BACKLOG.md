@@ -42,6 +42,8 @@ Already implemented:
 - [x] CLI command flow for `config`, `export`, `import`, and `history clear`
 - [x] CLI command flow for `add`, `list`, `show`, `today`, `week`, and `backlog`
 - [x] CLI command flow for `edit`, `done`, `cancel`, `move`, `tag`, `untag`, `priority`, and `migrate`
+- [x] startup-triggered month rollover
+- [x] migration metadata persistence
 - [x] project documentation baseline
 
 Still missing to finish V1:
@@ -138,15 +140,15 @@ Completed:
 - [x] import validation for duplicate public refs
 - [x] import validation for duplicate internal IDs
 - [x] export/import round-trip Infrastructure tests
+- [x] month rollover support for open task migration
+- [x] migration metadata persistence according to `DATA_MODEL.md`
+- [x] migration-between-months Infrastructure tests
 
 Remaining:
 
 - [x] tests for automatic index consistency after add/update/delete
 - [x] tests for history cleanup with backup-safe behavior
-- [ ] month rollover support for open task migration
-- [ ] migration metadata persistence according to `DATA_MODEL.md`
 - [ ] full repository/schema conformance for optional fields such as `migration`
-- [ ] migration-between-months Infrastructure tests
 - [x] settings persistence tests
 
 ## Milestone 4 - CLI MVP
@@ -262,7 +264,7 @@ A task is done only when:
 
 Recommended next execution slice, still aligned with the milestones above:
 
-- [ ] Milestone 3: month rollover and migration metadata
+- [ ] Milestone 3: complete remaining repository/schema conformance for optional fields
 
 ## Post-V1 Backlog
 
