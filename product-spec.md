@@ -238,6 +238,40 @@ The system must be structured with clear separation between domain, use cases, a
 
 CLI and TUI must reuse the same Application layer use cases.
 
+### Official Technology Stack
+
+The official implementation stack for TermBullet is:
+
+- **.NET 8 / C#**
+  - Main platform and implementation language.
+  - Provides a mature runtime, strong tooling, and cross-platform distribution options.
+
+- **Terminal.Gui**
+  - TUI framework.
+  - Used to build the panel/window-based interface described in this specification.
+
+- **System.CommandLine**
+  - CLI framework.
+  - Used to implement the official command tree, argument parsing, options, and help output.
+
+- **SQLite**
+  - Local offline database for V1.
+  - Serves as the local-first operational store.
+
+- **PostgreSQL**
+  - Future backend database for V4 sync/cloud.
+  - Used by the optional server-side synchronization/cloud layer, not as a replacement for the local database.
+
+This stack supports the product goals: local-first operation, fast terminal usage, a rich TUI, a robust CLI, and an architecture prepared for AI, calendar integration, and cross-device synchronization.
+
+Official references:
+
+- [.NET 8 / C#](https://learn.microsoft.com/pt-br/dotnet/core/whats-new/dotnet-8/overview)
+- [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui)
+- [System.CommandLine](https://learn.microsoft.com/en-us/dotnet/standard/commandline/)
+- [SQLite](https://www.sqlite.org/docs.html)
+- [PostgreSQL](https://www.postgresql.org/docs/)
+
 ---
 
 ## 7. V1 Functional Requirements

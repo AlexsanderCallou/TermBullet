@@ -2,7 +2,7 @@
 
 This file consolidates TermBullet's initial architecture decisions.
 
-The ADRs below are derived from [product-spec.md](product-spec.md). They guide implementation without prematurely locking the project into a specific programming language, framework, or storage technology.
+The ADRs below are derived from [product-spec.md](product-spec.md). They guide implementation and record the product, architecture, and technology decisions that shape the project.
 
 ## Index
 
@@ -17,6 +17,7 @@ The ADRs below are derived from [product-spec.md](product-spec.md). They guide i
 - [ADR-0009 - TUI based on screens, panels, and keyboard](#adr-0009---tui-based-on-screens-panels-and-keyboard)
 - [ADR-0010 - Export and import as basic portability](#adr-0010---export-and-import-as-basic-portability)
 - [ADR-0011 - Open source and English-first project](#adr-0011---open-source-and-english-first-project)
+- [ADR-0012 - Official technology stack](#adr-0012---official-technology-stack)
 
 ---
 
@@ -493,14 +494,63 @@ The project will be prepared for open source publication, including:
 
 ---
 
+## ADR-0012 - Official Technology Stack
+
+**Status:** Accepted  
+**Date:** 2026-04-23
+
+### Context
+
+TermBullet needs a stack that supports a local-first terminal application with both a rich TUI and a robust CLI. The project must also stay maintainable as an open source codebase and be able to evolve toward AI, calendar integration, and cross-device sync.
+
+The stack must support:
+
+- cross-platform terminal usage;
+- a panel/window-based TUI;
+- predictable CLI parsing and help output;
+- offline local storage in V1;
+- a future server-side database for sync/cloud in V4.
+
+### Decision
+
+TermBullet will use the following official technology stack:
+
+- **.NET 8 / C#** as the main platform and implementation language.
+- **Terminal.Gui** for the TUI, using a panel/window-based layout.
+- **System.CommandLine** for the command-line interface.
+- **SQLite** as the local offline database in V1.
+- **PostgreSQL** as the future backend database for synchronization/cloud in V4.
+
+Official references:
+
+- [.NET 8 / C#](https://learn.microsoft.com/pt-br/dotnet/core/whats-new/dotnet-8/overview)
+- [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui)
+- [System.CommandLine](https://learn.microsoft.com/en-us/dotnet/standard/commandline/)
+- [SQLite](https://www.sqlite.org/docs.html)
+- [PostgreSQL](https://www.postgresql.org/docs/)
+
+### Consequences
+
+- The codebase can use a single language and runtime across Core, Application, Infrastructure, CLI, and TUI.
+- CLI and TUI can share the same Application layer without language or process boundaries.
+- SQLite supports the V1 local-first/offline requirement.
+- PostgreSQL is reserved for the optional V4 server-side sync/cloud layer and must not replace local SQLite as the user's operational store.
+- Terminal.Gui shapes the TUI implementation around windows, panels, focus, keyboard navigation, and terminal rendering.
+- System.CommandLine shapes CLI implementation around explicit commands, arguments, options, help output, and future JSON-capable command flows.
+
+### Alternatives Considered
+
+- **Go with Bubble Tea/Lip Gloss:** strong for terminal apps, but would move the project away from the .NET/C# ecosystem.
+- **Rust with ratatui/clap:** strong performance and terminal tooling, but raises implementation complexity and contributor barrier for this project.
+- **Node.js with terminal UI libraries:** viable for CLI tooling, but weaker fit for a long-lived local-first desktop terminal app with rich persistence and future backend sharing.
+- **PostgreSQL-only storage:** rejected for V1 because it breaks the lightweight local-first/offline experience.
+
+---
+
 ## Final Notes
 
 These decisions define TermBullet's initial architectural direction, but they do not yet choose:
 
-- programming language;
-- CLI framework;
-- TUI framework;
-- specific local database;
 - final export format;
 - default AI provider;
 - open source license.

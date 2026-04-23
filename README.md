@@ -211,6 +211,26 @@ Essential rule:
 
 > CLI and TUI must reuse the same Application layer use cases.
 
+## Technology Stack
+
+The official development stack for TermBullet is:
+
+- **.NET 8 / C#** as the main platform and implementation language.
+- **Terminal.Gui** for the TUI, using a panel/window-based layout.
+- **System.CommandLine** for the command-line interface.
+- **SQLite** as the local offline database in V1.
+- **PostgreSQL** as the future backend database for synchronization/cloud in V4.
+
+This combination fits the product goals: a local-first application, fast to use in the terminal, with a rich TUI, a robust CLI, and an architecture prepared to evolve with AI, calendar integration, and cross-device sync.
+
+Official references:
+
+- [.NET 8 / C#](https://learn.microsoft.com/pt-br/dotnet/core/whats-new/dotnet-8/overview)
+- [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui)
+- [System.CommandLine](https://learn.microsoft.com/en-us/dotnet/standard/commandline/)
+- [SQLite](https://www.sqlite.org/docs.html)
+- [PostgreSQL](https://www.postgresql.org/docs/)
+
 ## Roadmap
 
 ### V1 - Offline Core
