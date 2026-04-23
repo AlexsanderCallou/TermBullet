@@ -8,6 +8,14 @@ TermBullet is an English-first open source project for a global audience. This d
 
 TermBullet is currently in early design and V1 planning.
 
+Official repository:
+
+```text
+https://github.com/AlexsanderCallou/TermBullet
+```
+
+Use `Development` as the base branch for work unless maintainers say otherwise.
+
 Before contributing, read:
 
 - [README.md](README.md)
@@ -131,6 +139,8 @@ fix/public-ref-sequence
 docs/data-model
 test/application-use-cases
 ```
+
+Open pull requests against `Development`.
 
 ## Pull Request Checklist
 
