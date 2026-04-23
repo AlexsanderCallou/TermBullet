@@ -4,6 +4,10 @@ Thank you for considering a contribution to TermBullet.
 
 TermBullet is an English-first open source project for a global audience. This document defines contribution expectations for code, tests, documentation, issues, and pull requests.
 
+Study context: TermBullet is part of the author's ongoing study on using AI to support software coding and project delivery.
+
+Usage recommendation: personal use, experimentation, and learning only. Professional or production-critical usage is not recommended at this stage.
+
 ## Project Status
 
 TermBullet is currently in early design and V1 planning.
@@ -218,6 +222,8 @@ Do not add these unless explicitly requested:
 
 Future-facing interfaces are acceptable when they keep V1 simple.
 
-## License
+## Legal
 
-TermBullet is released under the MIT License. See [LICENSE](LICENSE).
+Legal policy and trademark usage are centralized in [TRADEMARKS.md](TRADEMARKS.md).
+
+The project license is Apache License 2.0 in [LICENSE](LICENSE).

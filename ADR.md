@@ -20,7 +20,7 @@ The ADRs below are derived from [product-spec.md](product-spec.md). They guide i
 - [ADR-0012 - Official technology stack](#adr-0012---official-technology-stack)
 - [ADR-0013 - Modular monolith structure](#adr-0013---modular-monolith-structure)
 - [ADR-0014 - Monthly JSON storage for V1](#adr-0014---monthly-json-storage-for-v1)
-- [ADR-0015 - MIT open source license](#adr-0015---mit-open-source-license)
+- [ADR-0015 - Apache-2.0 open source license](#adr-0015---apache-20-open-source-license)
 
 ---
 
@@ -482,8 +482,12 @@ The project will be prepared for open source publication, including:
 - README in English;
 - product specification in English;
 - ADRs in English;
-- MIT `LICENSE` file;
+- Apache-2.0 `LICENSE` file;
+- `TRADEMARKS.md` with mark usage guidance;
+- explicit independence statement (no affiliation/endorsement/sponsorship by third-party trademark owners);
+- historical inspiration statement with trademark attribution for external marks;
 - future contribution guidelines;
+- trademark usage guidance for project and third-party marks;
 - future code of conduct or governance notes if the project becomes community-driven.
 
 ### Consequences
@@ -491,7 +495,7 @@ The project will be prepared for open source publication, including:
 - New documentation should be written in English by default.
 - Command names and output examples should avoid non-English terms.
 - Product decisions should be documented publicly when they affect contributors or long-term architecture.
-- The project license is MIT.
+- The project license is Apache-2.0.
 
 ### Alternatives Considered
 
@@ -677,7 +681,7 @@ History is stored as a root-level `history` array in each monthly file. Delete p
 
 ---
 
-## ADR-0015 - MIT Open Source License
+## ADR-0015 - Apache-2.0 Open Source License
 
 **Status:** Accepted  
 **Date:** 2026-04-23
@@ -688,9 +692,9 @@ TermBullet is intended to be an open source project for a global audience. The l
 
 ### Decision
 
-TermBullet will use the MIT License.
+TermBullet will use the Apache License 2.0.
 
-The repository must include a root `LICENSE` file using the standard MIT License text with:
+The repository must include a root `LICENSE` file using the standard Apache License 2.0 text with:
 
 ```text
 Copyright (c) 2026 TermBullet contributors
@@ -698,14 +702,14 @@ Copyright (c) 2026 TermBullet contributors
 
 ### Consequences
 
-- Users may use, copy, modify, merge, publish, distribute, sublicense, and sell copies under the MIT terms.
-- The copyright and permission notice must be included in substantial portions of the software.
-- The project is distributed without warranty as described by the MIT License.
-- Package manager distribution is simpler because MIT is broadly accepted.
+- Users may use, modify, and distribute the project under Apache-2.0 terms.
+- The license includes an explicit patent grant and contributor patent terms.
+- The project is distributed without warranty as described by Apache-2.0.
+- Package manager distribution remains straightforward because Apache-2.0 is widely accepted.
 
 ### Alternatives Considered
 
-- **Apache-2.0:** also permissive and mature, but more verbose and not necessary for the current project goals.
+- **MIT:** also permissive and concise, but Apache-2.0 is preferred for its explicit patent grant and clearer protection terms for open source collaboration.
 - **GPL-family license:** rejected because a copyleft license would be more restrictive than intended for TermBullet.
 - **No license yet:** rejected because public open source usage would remain legally ambiguous.
 
