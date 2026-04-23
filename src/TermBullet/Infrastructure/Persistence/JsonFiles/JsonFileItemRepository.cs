@@ -14,8 +14,7 @@ public sealed class JsonFileItemRepository(
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        PropertyNameCaseInsensitive = true
     };
 
     public async Task<int> GetCurrentPublicRefSequenceAsync(

@@ -147,6 +147,39 @@ public sealed class JsonFileItemRepositoryTests
     }
 
     [Fact]
+    public async Task AddAsync_writes_optional_schema_fields_as_null_when_absent()
+    {
+        var context = CreateContext();
+        var repository = CreateRepository(context);
+        var item = CreateItem(
+            id: Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
+            publicRef: "t-0426-1",
+            collection: ItemCollection.Today);
+
+        await repository.AddAsync(item);
+
+        var json = await File.ReadAllTextAsync(context.MonthlyFilePath);
+        using var doc = JsonDocument.Parse(json);
+        var stored = Assert.Single(doc.RootElement.GetProperty("items").EnumerateArray());
+        Assert.True(stored.TryGetProperty("description", out var description));
+        Assert.Equal(JsonValueKind.Null, description.ValueKind);
+        Assert.True(stored.TryGetProperty("due_at", out var dueAt));
+        Assert.Equal(JsonValueKind.Null, dueAt.ValueKind);
+        Assert.True(stored.TryGetProperty("scheduled_at", out var scheduledAt));
+        Assert.Equal(JsonValueKind.Null, scheduledAt.ValueKind);
+        Assert.True(stored.TryGetProperty("estimate_minutes", out var estimateMinutes));
+        Assert.Equal(JsonValueKind.Null, estimateMinutes.ValueKind);
+        Assert.True(stored.TryGetProperty("completed_at", out var completedAt));
+        Assert.Equal(JsonValueKind.Null, completedAt.ValueKind);
+        Assert.True(stored.TryGetProperty("cancelled_at", out var cancelledAt));
+        Assert.Equal(JsonValueKind.Null, cancelledAt.ValueKind);
+        Assert.True(stored.TryGetProperty("migrated_at", out var migratedAt));
+        Assert.Equal(JsonValueKind.Null, migratedAt.ValueKind);
+        Assert.True(stored.TryGetProperty("migration", out var migration));
+        Assert.Equal(JsonValueKind.Null, migration.ValueKind);
+    }
+
+    [Fact]
     public async Task UpdateAsync_appends_status_event_to_history()
     {
         var context = CreateContext();
@@ -220,6 +253,63 @@ public sealed class JsonFileItemRepositoryTests
         using var doc = JsonDocument.Parse(json);
         Assert.Empty(doc.RootElement.GetProperty("history").EnumerateArray());
         Assert.Single(doc.RootElement.GetProperty("items").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task AddAsync_and_FindByPublicRefAsync_preserve_optional_fields_and_migration_metadata()
+    {
+        var context = CreateContext(now: new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero));
+        var repository = CreateRepository(context);
+        var migrationInfo = new MigrationInfo(
+            "2026-04",
+            "2026-05",
+            new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero),
+            "automatic_month_rollover");
+        var item = Item.Restore(
+            Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
+            PublicRef.Parse("t-0426-1"),
+            ItemType.Task,
+            "Fix authentication flow",
+            "keep tests green",
+            ItemStatus.Open,
+            ItemCollection.Today,
+            Priority.High,
+            ["auth"],
+            3,
+            CreatedAt,
+            ChangedAt,
+            dueAt: new DateTimeOffset(2026, 5, 3, 9, 0, 0, TimeSpan.Zero),
+            scheduledAt: new DateTimeOffset(2026, 5, 2, 14, 0, 0, TimeSpan.Zero),
+            estimateMinutes: 45,
+            migratedAt: migrationInfo.MigratedAt,
+            migration: migrationInfo);
+
+        await repository.AddAsync(item);
+
+        var found = await repository.FindByPublicRefAsync("t-0426-1");
+        Assert.NotNull(found);
+        Assert.Equal(item.Description, found.Description);
+        Assert.Equal(item.DueAt, found.DueAt);
+        Assert.Equal(item.ScheduledAt, found.ScheduledAt);
+        Assert.Equal(item.EstimateMinutes, found.EstimateMinutes);
+        Assert.Equal(item.MigratedAt, found.MigratedAt);
+        Assert.NotNull(found.Migration);
+        Assert.Equal("2026-04", found.Migration!.FromPeriod);
+        Assert.Equal("2026-05", found.Migration.ToPeriod);
+        Assert.Equal("automatic_month_rollover", found.Migration.Reason);
+
+        var json = await File.ReadAllTextAsync(context.MonthlyFilePath);
+        using var doc = JsonDocument.Parse(json);
+        var stored = Assert.Single(doc.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal("keep tests green", stored.GetProperty("description").GetString());
+        Assert.Equal(new DateTimeOffset(2026, 5, 3, 9, 0, 0, TimeSpan.Zero), stored.GetProperty("due_at").GetDateTimeOffset());
+        Assert.Equal(new DateTimeOffset(2026, 5, 2, 14, 0, 0, TimeSpan.Zero), stored.GetProperty("scheduled_at").GetDateTimeOffset());
+        Assert.Equal(45, stored.GetProperty("estimate_minutes").GetInt32());
+        Assert.Equal(migrationInfo.MigratedAt, stored.GetProperty("migrated_at").GetDateTimeOffset());
+        var migration = stored.GetProperty("migration");
+        Assert.Equal("2026-04", migration.GetProperty("from_period").GetString());
+        Assert.Equal("2026-05", migration.GetProperty("to_period").GetString());
+        Assert.Equal("automatic_month_rollover", migration.GetProperty("reason").GetString());
     }
 
     [Fact]

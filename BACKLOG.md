@@ -44,6 +44,7 @@ Already implemented:
 - [x] CLI command flow for `edit`, `done`, `cancel`, `move`, `tag`, `untag`, `priority`, and `migrate`
 - [x] startup-triggered month rollover
 - [x] migration metadata persistence
+- [x] repository/schema conformance for optional fields
 - [x] project documentation baseline
 
 Still missing to finish V1:
@@ -143,12 +144,12 @@ Completed:
 - [x] month rollover support for open task migration
 - [x] migration metadata persistence according to `DATA_MODEL.md`
 - [x] migration-between-months Infrastructure tests
+- [x] full repository/schema conformance for optional fields such as `migration`
 
 Remaining:
 
 - [x] tests for automatic index consistency after add/update/delete
 - [x] tests for history cleanup with backup-safe behavior
-- [ ] full repository/schema conformance for optional fields such as `migration`
 - [x] settings persistence tests
 
 ## Milestone 4 - CLI MVP
@@ -171,13 +172,14 @@ Status: partially complete
 - [x] Implement `termbullet tag`
 - [x] Implement `termbullet untag`
 - [x] Implement `termbullet priority`
-- [ ] Implement `termbullet search`
+- [x] Implement `termbullet search`
 - [ ] Implement global options where practical
 - [x] Add CLI tests for valid parsing
 - [x] Add CLI tests for missing required arguments
 - [x] Add CLI tests for invalid options
 - [x] Add CLI tests for mocked handler execution
 - [x] Add CLI tests for success output
+- [x] Add CLI smoke tests for core flows
 - [ ] Add CLI tests for error output
 - [ ] Add CLI tests for representative help output
 
@@ -264,7 +266,7 @@ A task is done only when:
 
 Recommended next execution slice, still aligned with the milestones above:
 
-- [ ] Milestone 3: complete remaining repository/schema conformance for optional fields
+- [ ] Milestone 4/5: expand CLI help and error output coverage
 
 ## Post-V1 Backlog
 

@@ -32,6 +32,7 @@ public sealed class TermBulletCliApp(
     TagItemUseCase? tagItemUseCase = null,
     UntagItemUseCase? untagItemUseCase = null,
     MigrateItemUseCase? migrateItemUseCase = null,
+    SearchItemsUseCase? searchItemsUseCase = null,
     Func<CancellationToken, Task>? startupAction = null)
 {
     public Task<int> InvokeAsync(string[] args, CancellationToken cancellationToken = default)
@@ -161,6 +162,11 @@ public sealed class TermBulletCliApp(
                 standardOutput,
                 standardError,
                 cancellationToken));
+        }
+
+        if (searchItemsUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildSearchCommand(standardOutput, standardError, cancellationToken));
         }
 
         rootCommand.Subcommands.Add(BuildExportCommand(standardOutput, standardError, cancellationToken));
@@ -565,6 +571,44 @@ public sealed class TermBulletCliApp(
                     ?? throw new InvalidOperationException("Public ref is required.");
                 var item = await operation(publicRef, cancellationToken);
                 await WriteItemDetailAsync(item, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildSearchCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var queryArgument = new Argument<string>("query")
+        {
+            Description = "Search query"
+        };
+
+        var command = new Command("search", "Search items in the current local data")
+        {
+            queryArgument
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var query = parseResult.GetValue(queryArgument)
+                    ?? throw new InvalidOperationException("Search query is required.");
+                var items = await searchItemsUseCase!.ExecuteAsync(new SearchItemsRequest
+                {
+                    Query = query
+                }, cancellationToken);
+                await WriteItemsAsync(items, standardOutput);
                 return 0;
             }
             catch (Exception exception)
