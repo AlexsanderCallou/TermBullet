@@ -50,7 +50,7 @@ TermBullet development must follow these principles:
 
 1. **Local-first**
    - The system must work fully offline in V1.
-   - The local database must be the user's primary operational source.
+   - Local JSON files must be the user's primary operational source.
 
 2. **CLI + TUI as first-class interfaces**
    - The TUI is not the only entry point.
@@ -75,7 +75,8 @@ TermBullet development must follow these principles:
 7. **Open source by design**
    - The project must be understandable and maintainable by contributors.
    - Documentation, command names, examples, and user-facing language must be English-first.
-   - License, contribution rules, and governance should be added before the first public release.
+   - The project is released under the MIT License.
+   - Contribution rules and governance should be added before the first public release.
 
 ---
 
@@ -104,7 +105,8 @@ Deliver the product core as a fully local, offline, functional tool.
 
 ### Includes
 
-- Local data store.
+- Monthly JSON files.
+- Local JSON search index.
 - Main TUI.
 - Basic and robust CLI.
 - Creation and manipulation of internal tasks, notes, and events.
@@ -183,7 +185,7 @@ Enable safe and consistent usage across multiple machines while preserving the l
 ### Includes
 
 - Synchronization engine.
-- Entity-level sync model.
+- File-level sync model.
 - Optional sync/cloud server.
 - Authentication.
 - Push/pull.
@@ -193,8 +195,8 @@ Enable safe and consistent usage across multiple machines while preserving the l
 ### Must Not Do
 
 - Make cloud mandatory.
-- Turn the local database into a disposable cache.
-- Synchronize the physical local database file directly.
+- Turn local JSON files into a disposable cache.
+- Transform local JSON files into a different cloud data model.
 
 ---
 
@@ -261,13 +263,18 @@ The official implementation stack for TermBullet is:
   - CLI framework.
   - Used to implement the official command tree, argument parsing, options, and help output.
 
-- **SQLite**
-  - Local offline database for V1.
+- **Monthly JSON files**
+  - Local offline data store for V1.
+  - Files follow the `data/<year>/data_<month>_<year>.json` pattern.
   - Serves as the local-first operational store.
+
+- **Local JSON index**
+  - Derived local index for faster lookup and search.
+  - Rebuildable from monthly JSON files.
 
 - **PostgreSQL**
   - Future backend database for V4 sync/cloud.
-  - Used by the optional server-side synchronization/cloud layer, not as a replacement for the local database.
+  - Used by the optional server-side synchronization/cloud layer to store the same JSON file content, not as a replacement for the local files.
 
 This stack supports the product goals: local-first operation, fast terminal usage, a rich TUI, a robust CLI, and an architecture prepared for AI, calendar integration, and cross-device synchronization.
 
@@ -276,7 +283,6 @@ Official references:
 - [.NET 8 / C#](https://learn.microsoft.com/pt-br/dotnet/core/whats-new/dotnet-8/overview)
 - [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui)
 - [System.CommandLine](https://learn.microsoft.com/en-us/dotnet/standard/commandline/)
-- [SQLite](https://www.sqlite.org/docs.html)
 - [PostgreSQL](https://www.postgresql.org/docs/)
 
 ---
@@ -304,6 +310,7 @@ The system must allow users to:
 - Migrate an item.
 - Move an item between collections.
 - Delete an item.
+- Clear important history.
 - Add and remove tags.
 - Set priority.
 - Search items.
@@ -413,7 +420,7 @@ The identification model must separate:
 The public reference must follow this format:
 
 ```text
-<type>-<MMDD>-<sequence>
+<type>-<MMYY>-<sequence>
 ```
 
 ### Prefixes
@@ -424,14 +431,14 @@ The public reference must follow this format:
 
 ### Examples
 
-- `t-0422-1`
-- `t-0422-2`
-- `n-0422-1`
-- `e-0422-1`
+- `t-0426-1`
+- `t-0426-2`
+- `n-0426-1`
+- `e-0426-1`
 
 ## 10.3 Generation Rules
 
-- The sequence must be independent by type and day.
+- The sequence must be independent by type and month/year.
 - The public reference must be persisted.
 - The public reference must not be reused.
 - The internal ID remains the real entity identity.
@@ -446,7 +453,7 @@ In versions with synchronization between machines, the internal ID must be the i
 
 ## 11.1 Initial Persistence
 
-In V1, the system must operate with local storage.
+In V1, the system must operate with monthly local JSON files.
 
 ## 11.2 Minimum Persistence Requirements
 
@@ -462,15 +469,16 @@ Each relevant entity must record:
 - Current collection.
 - Priority.
 - Tags.
+- Version.
 
 ## 11.3 Future-Ready Architectural Requirements
 
 Even in V1, the model must consider:
 
-- Basic versioning.
+- Item-level versioning.
 - Consistent timestamps.
 - Separation between internal identity and public reference.
-- Future possibility of entity-level synchronization.
+- Future possibility of file-level synchronization.
 
 ---
 
@@ -546,14 +554,14 @@ Synchronization must follow a **local-first** model.
 
 ## 14.2 Guidelines
 
-- Each machine keeps a complete local database.
+- Each machine keeps complete local JSON files.
 - Sync is an additional layer.
 - Cloud is not mandatory for product usage.
 
 ## 14.3 Technical Rules
 
-- Entity-level synchronization.
-- Do not synchronize the physical local database file directly.
+- Whole-file JSON synchronization.
+- Do not transform local JSON files into a different sync data model.
 - Support conflicts as a normal part of operation.
 
 ## 14.4 Conflict Requirements
@@ -597,7 +605,8 @@ The system must be prepared for:
 - Clear internal boundaries for contributors.
 - English-first user-facing text and documentation.
 - Public architectural decisions for significant design choices.
-- Contribution and licensing documentation before public release.
+- MIT License documentation.
+- Contribution documentation is available and must stay current.
 
 ---
 
@@ -732,6 +741,7 @@ Main commands:
   untag                  Remove a tag from an item
   priority               Set item priority
   search                 Search items
+  history                Manage item history
   export                 Export data
   import                 Import data
   config                 Manage local configuration
@@ -741,7 +751,7 @@ Global options:
   -v, --version          Show version
       --json             JSON output when supported
       --no-color         Disable colors
-      --db <path>        Alternative path for the local database
+      --data <path>      Alternative path for the local data directory
       --profile <name>   Configuration profile to use
 
 Examples:
@@ -749,7 +759,7 @@ Examples:
   termbullet add "fix jwt authentication"
   termbullet add --note "error happens when audience is empty"
   termbullet today
-  termbullet done t-0422-1
+  termbullet done t-0426-1
   termbullet search "jwt"
 ```
 
@@ -776,6 +786,8 @@ termbullet
 ├── untag
 ├── priority
 ├── search
+├── history
+│   └── clear
 ├── export
 ├── import
 └── config
@@ -801,7 +813,7 @@ Each entity must have:
 ### Official Public Ref Format
 
 ```text
-<type>-<MMDD>-<sequence>
+<type>-<MMYY>-<sequence>
 ```
 
 ### Prefixes
@@ -812,30 +824,30 @@ Each entity must have:
 
 ### Examples
 
-- `t-0422-1`
-- `t-0422-2`
-- `n-0422-1`
-- `e-0422-1`
+- `t-0426-1`
+- `t-0426-2`
+- `n-0426-1`
+- `e-0426-1`
 
 ### Rules
 
-- The sequence is independent by type and day.
+- The sequence is independent by type and month/year.
 - The Public Ref is persisted.
 - The Public Ref does not replace the real internal ID.
 
 ### Example Creation Output
 
 ```text
-[ok] task created: t-0422-1
+[ok] task created: t-0426-1
      fix jwt authentication
 ```
 
 ### Example Later Usage
 
 ```bash
-termbullet done t-0422-1
-termbullet show t-0422-1
-termbullet edit t-0422-1
+termbullet done t-0426-1
+termbullet show t-0426-1
+termbullet edit t-0426-1
 ```
 
 ---
@@ -991,7 +1003,7 @@ Options:
   -h, --help                  Show help
 
 Examples:
-  termbullet show t-0422-1
+  termbullet show t-0426-1
 ```
 
 ---
@@ -1016,8 +1028,8 @@ Options:
   -h, --help                  Show help
 
 Examples:
-  termbullet edit t-0422-1 --text "fix authentication and validate roles"
-  termbullet edit t-0422-1 --priority high
+  termbullet edit t-0426-1 --text "fix authentication and validate roles"
+  termbullet edit t-0426-1 --priority high
 ```
 
 ---
@@ -1037,7 +1049,7 @@ Options:
   -h, --help                  Show help
 
 Examples:
-  termbullet done t-0422-1
+  termbullet done t-0426-1
 ```
 
 ---
@@ -1057,7 +1069,7 @@ Options:
   -h, --help                  Show help
 
 Examples:
-  termbullet cancel t-0422-1
+  termbullet cancel t-0426-1
 ```
 
 ---
@@ -1078,8 +1090,8 @@ Options:
   -h, --help                  Show help
 
 Examples:
-  termbullet migrate t-0422-1
-  termbullet migrate t-0422-1 --to backlog
+  termbullet migrate t-0426-1
+  termbullet migrate t-0426-1 --to backlog
 ```
 
 ---
@@ -1100,8 +1112,8 @@ Options:
   -h, --help                  Show help
 
 Examples:
-  termbullet move t-0422-1 --to backlog
-  termbullet move n-0422-1 --to today
+  termbullet move t-0426-1 --to backlog
+  termbullet move n-0426-1 --to today
 ```
 
 ---
@@ -1117,13 +1129,17 @@ Usage:
 Arguments:
   <ref>                       Item public reference
 
+Behavior:
+  The item is physically removed from the active items list and a deleted event
+  with an item snapshot is appended to the monthly history.
+
 Options:
       --force                 Remove without confirmation
   -h, --help                  Show help
 
 Examples:
-  termbullet delete t-0422-1
-  termbullet delete t-0422-1 --force
+  termbullet delete t-0426-1
+  termbullet delete t-0426-1 --force
 ```
 
 ---
@@ -1144,7 +1160,7 @@ Options:
   -h, --help                  Show help
 
 Examples:
-  termbullet tag t-0422-1 backend
+  termbullet tag t-0426-1 backend
 ```
 
 ---
@@ -1165,7 +1181,7 @@ Options:
   -h, --help                  Show help
 
 Examples:
-  termbullet untag t-0422-1 backend
+  termbullet untag t-0426-1 backend
 ```
 
 ---
@@ -1186,7 +1202,7 @@ Options:
   -h, --help                  Show help
 
 Examples:
-  termbullet priority t-0422-1 high
+  termbullet priority t-0426-1 high
 ```
 
 ---
@@ -1216,6 +1232,45 @@ Examples:
 
 ---
 
+## `termbullet history --help`
+
+```text
+Manage item history.
+
+Usage:
+  termbullet history <subcommand>
+
+Subcommands:
+  clear                      Clear stored history entries
+
+Examples:
+  termbullet history clear --month 04_2026
+  termbullet history clear --all --force
+```
+
+---
+
+## `termbullet history clear --help`
+
+```text
+Clear stored history entries without deleting active items.
+
+Usage:
+  termbullet history clear [options]
+
+Options:
+      --month <MM_YYYY>       Clear history for a specific month file
+      --all                   Clear history from all month files
+      --force                 Clear without confirmation
+  -h, --help                  Show help
+
+Examples:
+  termbullet history clear --month 04_2026
+  termbullet history clear --all --force
+```
+
+---
+
 ## `termbullet export --help`
 
 ```text
@@ -1225,7 +1280,7 @@ Usage:
   termbullet export [options]
 
 Options:
-      --format <value>        Format: json, markdown
+      --format <value>        Format: json
       --output <path>         Output file or directory
   -h, --help                  Show help
 
@@ -1238,7 +1293,7 @@ Examples:
 ## `termbullet import --help`
 
 ```text
-Import data into the local database.
+Import data into the local data directory.
 
 Usage:
   termbullet import <path> [options]
@@ -1247,7 +1302,7 @@ Arguments:
   <path>                      Input file
 
 Options:
-      --format <value>        Format: json, markdown
+      --format <value>        Format: json
   -h, --help                  Show help
 
 Examples:
@@ -1394,7 +1449,7 @@ Even if those modules are not active yet.
 Every main screen must follow this frame:
 
 ```text
-┌ TermBullet ─ <screen> ─ <date> ─ db:<profile> ─ ai:<state> ─ sync:<state> ─ mode:<mode> ┐
+┌ TermBullet ─ <screen> ─ <date> ─ data:<profile> ─ ai:<state> ─ sync:<state> ─ mode:<mode> ┐
 │ [main screen panels]                                                                      │
 ├────────────────────────────────────────────────────────────────────────────────────────────┤
 │ / filter  c capture  e edit  x done  > migrate  Enter zoom  Tab focus  ? help  q quit    │
@@ -1408,14 +1463,14 @@ It must always show:
 - Product name.
 - Active screen.
 - Current date.
-- Current database/profile.
+- Current data/profile.
 - AI state.
 - Sync state.
 - Current mode.
 
 Examples:
 
-- `db:local`
+- `data:local`
 - `ai:off`
 - `ai:on`
 - `sync:idle`
@@ -1468,9 +1523,9 @@ Refs must appear whenever space allows.
 
 Suggested official format:
 
-- `t-0422-1`
-- `n-0422-1`
-- `e-0422-1`
+- `t-0426-1`
+- `n-0426-1`
+- `e-0426-1`
 
 In very dense lists, the ref may appear only in the preview.
 
@@ -1498,12 +1553,12 @@ This screen must be the main evolution of the original concept.
 ### Official Layout
 
 ```text
-┌ TermBullet ─ Daily 2026-04-22 ─ db:local ─ ai:on ─ sync:idle ─ mode:normal ──────────────┐
+┌ TermBullet ─ Daily 2026-04-22 ─ data:local ─ ai:on ─ sync:idle ─ mode:normal ──────────────┐
 │ 1 Collections       │ 2 Day Items                        │ 3 Preview / AI                │
-│ > Daily             │ > [ ] t-0422-1 Fix auth JWT       │ t-0422-1                      │
-│   Weekly            │   [ ] t-0422-2 Review migrations  │ type: task                    │
-│   Monthly           │   (o) e-0422-1 Review 16:00       │ status: open                  │
-│   Backlog           │   (.) n-0422-1 Investigate error  │ priority: high                │
+│ > Daily             │ > [ ] t-0426-1 Fix auth JWT       │ t-0426-1                      │
+│   Weekly            │   [ ] t-0426-2 Review migrations  │ type: task                    │
+│   Monthly           │   (o) e-0426-1 Review 16:00       │ status: open                  │
+│   Backlog           │   (.) n-0426-1 Investigate error  │ priority: high                │
 │   Review            │                                    │ project: api                  │
 │   Search            │ today                              │ tags: jwt, auth               │
 │─────────────────────┼────────────────────────────────────┼───────────────────────────────│
@@ -1625,12 +1680,12 @@ While Main Dashboard is the general cockpit, this screen is the workbench.
 ### Official Layout
 
 ```text
-┌ TermBullet ─ Today 2026-04-22 ─ db:local ─ ai:off ─ sync:idle ─ mode:normal ──────────────┐
+┌ TermBullet ─ Today 2026-04-22 ─ data:local ─ ai:off ─ sync:idle ─ mode:normal ──────────────┐
 │ 1 Sections          │ 2 Daily Log                        │ 3 Details                     │
-│ > Open              │ > [ ] t-0422-1 Fix auth JWT       │ t-0422-1                      │
-│   In Progress       │   [ ] t-0422-2 Review migrations  │ type: task                    │
-│   Done              │   (.) n-0422-1 Empty audience bug  │ created: 08:14                │
-│   Cancelled         │   (o) e-0422-1 Review 16:00       │ priority: high                │
+│ > Open              │ > [ ] t-0426-1 Fix auth JWT       │ t-0426-1                      │
+│   In Progress       │   [ ] t-0426-2 Review migrations  │ type: task                    │
+│   Done              │   (.) n-0426-1 Empty audience bug  │ created: 08:14                │
+│   Cancelled         │   (o) e-0426-1 Review 16:00       │ priority: high                │
 │   Migrated          │                                    │ collection: daily             │
 │─────────────────────┼────────────────────────────────────┼───────────────────────────────│
 │ 4 Quick Capture     │ 5 Short History                   │ 6 Actions                     │
@@ -1661,17 +1716,17 @@ Turn the week into a practical view without becoming a heavy calendar.
 ### Official Layout
 
 ```text
-┌ TermBullet ─ Weekly 2026-W17 ─ db:local ─ ai:on ─ sync:idle ─ mode:normal ────────────────┐
+┌ TermBullet ─ Weekly 2026-W17 ─ data:local ─ ai:on ─ sync:idle ─ mode:normal ────────────────┐
 │ 1 Buckets           │ 2 Week                             │ 3 Context / AI                │
-│ > Must              │ Mon  [ ] t-0420-1 API auth        │ weekly focus: V1 core         │
-│   Should            │ Tue  [ ] t-0421-2 Compose         │ risk: large scope             │
-│   Could             │ Wed  [ ] t-0422-1 JWT             │ suggestion: finish auth       │
-│   Events            │ Thu  [ ] t-0423-1 Seeds           │ before starting refactor      │
+│ > Must              │ Mon  [ ] t-0426-6 API auth        │ weekly focus: V1 core         │
+│   Should            │ Tue  [ ] t-0426-7 Compose         │ risk: large scope             │
+│   Could             │ Wed  [ ] t-0426-1 JWT             │ suggestion: finish auth       │
+│   Events            │ Thu  [ ] t-0426-8 Seeds           │ before starting refactor      │
 │─────────────────────┼────────────────────────────────────┼───────────────────────────────│
 │ 4 Metrics           │ 5 Week Backlog                    │ 6 Notes                       │
-│ open: 17            │ t-0424-1 Adjust docker            │ demo on Friday                │
-│ done: 9             │ t-0424-2 Review tests             │ avoid overload on Thursday    │
-│ migrated: 4         │ n-0421-1 Review scope             │                               │
+│ open: 17            │ t-0426-9 Adjust docker            │ demo on Friday                │
+│ done: 9             │ t-0426-10 Review tests             │ avoid overload on Thursday    │
+│ migrated: 4         │ n-0426-2 Review scope             │                               │
 │ events: 6           │                                    │                               │
 ├────────────────────────────────────────────────────────────────────────────────────────────┤
 │ / filter  c capture  p plan  > migrate  Enter zoom  Tab focus  q quit                    │
@@ -1697,12 +1752,12 @@ This screen should strongly resemble tools such as LazyGit: large lists, side co
 ### Official Layout
 
 ```text
-┌ TermBullet ─ Backlog ─ db:local ─ ai:off ─ sync:idle ─ mode:filter ───────────────────────┐
+┌ TermBullet ─ Backlog ─ data:local ─ ai:off ─ sync:idle ─ mode:filter ───────────────────────┐
 │ 1 Filters           │ 2 Backlog Items                    │ 3 Preview                     │
-│ > project: api      │ > [ ] t-0419-1 Adjust compose     │ t-0419-1                      │
-│   tag: jwt          │   [ ] t-0419-2 Review roles       │ priority: medium              │
+│ > project: api      │ > [ ] t-0426-3 Adjust compose     │ t-0426-3                      │
+│   tag: jwt          │   [ ] t-0426-4 Review roles       │ priority: medium              │
 │   status: open      │   (.) n-0418-1 Review scope       │ project: infra                │
-│   priority: all     │   [ ] t-0417-1 Clean migrations   │ origin: backlog               │
+│   priority: all     │   [ ] t-0426-5 Clean migrations   │ origin: backlog               │
 │─────────────────────┼────────────────────────────────────┼───────────────────────────────│
 │ 4 Group By          │ 5 Next Candidates                 │ 6 Suggestion                  │
 │ > project           │ auth                              │ move 2 items to today         │
@@ -1732,7 +1787,7 @@ Enable daily and weekly review without leaving the TUI.
 ### Official Layout
 
 ```text
-┌ TermBullet ─ Review ─ 2026-04-22 ─ db:local ─ ai:on ─ sync:idle ─ mode:normal ────────────┐
+┌ TermBullet ─ Review ─ 2026-04-22 ─ data:local ─ ai:on ─ sync:idle ─ mode:normal ────────────┐
 │ 1 Period            │ 2 Summary                         │ 3 Insights                    │
 │ > Daily             │ done: 4                           │ pattern: auth moves early     │
 │   Weekly            │ open: 3                           │ docker always migrates        │
@@ -1766,13 +1821,13 @@ A mix of search and command palette.
 ### Official Layout
 
 ```text
-┌ TermBullet ─ Search ─ db:local ─ ai:off ─ sync:idle ─ mode:search ────────────────────────┐
+┌ TermBullet ─ Search ─ data:local ─ ai:off ─ sync:idle ─ mode:search ────────────────────────┐
 │ query: jwt                                                                                │
 │────────────────────────────────────────────────────────────────────────────────────────────│
 │ 1 Results                                  │ 2 Preview                                    │
-│ > t-0422-1 Fix auth JWT                    │ ref: t-0422-1                               │
-│   n-0422-1 Empty audience bug              │ collection: daily                           │
-│   t-0419-2 Review roles                    │ tags: jwt, auth                             │
+│ > t-0426-1 Fix auth JWT                    │ ref: t-0426-1                               │
+│   n-0426-1 Empty audience bug              │ collection: daily                           │
+│   t-0426-4 Review roles                    │ tags: jwt, auth                             │
 │   command: add                             │                                              │
 ├────────────────────────────────────────────────────────────────────────────────────────────┤
 │ / search  Enter open  Ctrl+e edit  Ctrl+x done  Esc back                                  │
@@ -1796,15 +1851,15 @@ Show the day's schedule without turning the product into a full-featured calenda
 ### Official Layout
 
 ```text
-┌ TermBullet ─ Calendar ─ 2026-04-22 ─ db:local ─ ai:on ─ sync:idle ─ mode:normal ──────────┐
+┌ TermBullet ─ Calendar ─ 2026-04-22 ─ data:local ─ ai:on ─ sync:idle ─ mode:normal ──────────┐
 │ 1 Calendars         │ 2 Day Agenda                       │ 3 Bullet Relation             │
 │ > Google Primary    │ 09:00 Daily                        │ free window: 10:00-11:00      │
-│   Work              │ 11:00 API meeting                  │ suggest: t-0422-1             │
+│   Work              │ 11:00 API meeting                  │ suggest: t-0426-1             │
 │   Personal          │ 16:00 Review                       │ create block for tests        │
 │─────────────────────┼────────────────────────────────────┼───────────────────────────────│
 │ 4 Local Events      │ 5 Schedulable Tasks               │ 6 Actions                     │
-│ e-0422-1 Review     │ t-0422-1 Fix auth JWT             │ i import event                │
-│                     │ t-0422-2 Review migrations        │ o create in calendar          │
+│ e-0426-1 Review     │ t-0426-1 Fix auth JWT             │ i import event                │
+│                     │ t-0426-2 Review migrations        │ o create in calendar          │
 │                     │                                    │                               │
 ├────────────────────────────────────────────────────────────────────────────────────────────┤
 │ / filter  i import  o export event  Enter detail  Tab focus  q quit                      │
@@ -1826,10 +1881,10 @@ Show synchronization state between machines without polluting the product.
 ### Official Layout
 
 ```text
-┌ TermBullet ─ Sync ─ db:local ─ ai:on ─ sync:idle ─ mode:normal ───────────────────────────┐
+┌ TermBullet ─ Sync ─ data:local ─ ai:on ─ sync:idle ─ mode:normal ───────────────────────────┐
 │ 1 State             │ 2 Devices                          │ 3 Latest Changes              │
-│ sync: idle          │ desktop-main                       │ t-0422-1 updated              │
-│ last sync: 08:14    │ laptop-dev                         │ n-0422-1 created              │
+│ sync: idle          │ desktop-main                       │ t-0426-1 updated              │
+│ last sync: 08:14    │ laptop-dev                         │ n-0426-1 created              │
 │ conflicts: 0        │ workstation                        │ backlog filter changed        │
 │─────────────────────┼────────────────────────────────────┼───────────────────────────────│
 │ 4 Local Queue       │ 5 Conflicts                        │ 6 Actions                     │
@@ -1852,7 +1907,7 @@ Local configuration center.
 ### Official Layout
 
 ```text
-┌ TermBullet ─ Config ─ db:local ─ ai:on ─ sync:idle ─ mode:normal ─────────────────────────┐
+┌ TermBullet ─ Config ─ data:local ─ ai:on ─ sync:idle ─ mode:normal ─────────────────────────┐
 │ 1 Sections          │ 2 Options                         │ 3 Value / Preview             │
 │ > General           │ theme                             │ dark                          │
 │   TUI               │ date format                       │ YYYY-MM-DD                    │

@@ -13,7 +13,82 @@ The project combines two first-class interfaces over the same functional core:
 
 TermBullet is intended to be an open source project for a global audience.
 
-Documentation, command names, examples, and user-facing text should be English-first. License, contribution guidelines, and governance details should be added before the first public release.
+Documentation, command names, examples, and user-facing text should be English-first. TermBullet is released under the MIT License.
+
+## Installation
+
+TermBullet is planned to be distributed through GitHub Releases with prebuilt binaries for Windows, Linux, and macOS.
+
+The preferred release artifact format is a self-contained executable per platform, so users do not need to install the .NET runtime manually.
+
+### Install Script
+
+Linux/macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/<org>/termbullet/main/install.sh | sh
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/<org>/termbullet/main/install.ps1 | iex
+```
+
+### .NET Tool
+
+For users who already have the .NET SDK installed:
+
+```bash
+dotnet tool install --global TermBullet
+```
+
+Update:
+
+```bash
+dotnet tool update --global TermBullet
+```
+
+### Manual Installation
+
+Download the archive for your platform from GitHub Releases, extract it, and place the `termbullet` executable in your `PATH`.
+
+Planned release artifacts:
+
+```text
+termbullet_<version>_windows_x64.zip
+termbullet_<version>_linux_x64.tar.gz
+termbullet_<version>_linux_arm64.tar.gz
+termbullet_<version>_macos_x64.tar.gz
+termbullet_<version>_macos_arm64.tar.gz
+```
+
+### Planned Package Managers
+
+Package manager support is planned after the first public releases:
+
+- Homebrew
+- Scoop
+- Winget
+- Chocolatey
+
+## Data Location
+
+TermBullet stores local monthly JSON files outside the executable directory.
+
+Default data locations:
+
+```text
+Windows: %APPDATA%\TermBullet\data
+macOS:   ~/Library/Application Support/TermBullet/data
+Linux:   ~/.local/share/termbullet/data
+```
+
+The data directory can be overridden with:
+
+```bash
+termbullet --data <path>
+```
 
 ## Objective
 
@@ -23,7 +98,7 @@ V1 must work fully offline, without depending on internet access, online account
 
 ## Principles
 
-- **Local-first**: the local database is the user's primary operational source.
+- **Local-first**: local JSON files are the user's primary operational source.
 - **Terminal-first**: optimized for keyboard, shell, and frequent terminal usage.
 - **CLI + TUI**: both interfaces must reuse the same use cases.
 - **Optional AI**: planning assistance, never a product dependency.
@@ -43,6 +118,8 @@ The first version of TermBullet should deliver the offline core:
 - basic editing;
 - item migration and movement;
 - local configuration;
+- monthly JSON file storage;
+- local JSON search index;
 - basic export and import.
 
 V1 does not include AI, Google Calendar, machine sync, or cloud accounts.
@@ -79,7 +156,7 @@ Each entity has:
 Official format:
 
 ```text
-<type>-<MMDD>-<sequence>
+<type>-<MMYY>-<sequence>
 ```
 
 Prefixes:
@@ -91,15 +168,15 @@ Prefixes:
 Examples:
 
 ```text
-t-0422-1
-t-0422-2
-n-0422-1
-e-0422-1
+t-0426-1
+t-0426-2
+n-0426-1
+e-0426-1
 ```
 
 Rules:
 
-- the sequence is independent by type and day;
+- the sequence is independent by type and month/year;
 - the public ref must be persisted;
 - the public ref must not be reused;
 - the internal ID remains the real entity identity.
@@ -133,6 +210,8 @@ termbullet
 ├── untag
 ├── priority
 ├── search
+├── history
+│   └── clear
 ├── export
 ├── import
 └── config
@@ -148,8 +227,8 @@ Target usage examples:
 termbullet add "fix jwt authentication"
 termbullet add --note "error happens when audience is empty"
 termbullet today
-termbullet done t-0422-1
-termbullet show t-0422-1
+termbullet done t-0426-1
+termbullet show t-0426-1
 termbullet search "jwt"
 ```
 
@@ -159,7 +238,7 @@ Planned global options:
 - `-v`, `--version`: show version.
 - `--json`: JSON output when supported.
 - `--no-color`: disable colors.
-- `--db <path>`: use an alternative local database.
+- `--data <path>`: use an alternative local data directory.
 - `--profile <name>`: use a specific configuration profile.
 
 ## TUI Interface
@@ -229,8 +308,9 @@ The official development stack for TermBullet is:
 - **.NET 8 / C#** as the main platform and implementation language.
 - **Terminal.Gui** for the TUI, using a panel/window-based layout.
 - **System.CommandLine** for the command-line interface.
-- **SQLite** as the local offline database in V1.
-- **PostgreSQL** as the future backend database for synchronization/cloud in V4.
+- **Monthly JSON files** as the local offline data store in V1.
+- **Local JSON index** for faster lookup and search.
+- **PostgreSQL** as the future backend database for synchronization/cloud in V4, storing the same JSON files.
 
 This combination fits the product goals: a local-first application, fast to use in the terminal, with a rich TUI, a robust CLI, and an architecture prepared to evolve with AI, calendar integration, and cross-device sync.
 
@@ -239,7 +319,6 @@ Official references:
 - [.NET 8 / C#](https://learn.microsoft.com/pt-br/dotnet/core/whats-new/dotnet-8/overview)
 - [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui)
 - [System.CommandLine](https://learn.microsoft.com/en-us/dotnet/standard/commandline/)
-- [SQLite](https://www.sqlite.org/docs.html)
 - [PostgreSQL](https://www.postgresql.org/docs/)
 
 ## Roadmap
@@ -250,7 +329,8 @@ Official references:
 - CLI;
 - tasks, notes, and events;
 - today, week, and backlog;
-- local persistence;
+- monthly JSON file persistence;
+- local JSON index;
 - export/import;
 - human-readable identification.
 

@@ -80,7 +80,7 @@ Responsibilities:
 - item status transitions;
 - validation that does not require storage or UI.
 
-Core must not depend on Infrastructure, CLI, TUI, Terminal.Gui, System.CommandLine, SQLite, or PostgreSQL.
+Core must not depend on Infrastructure, CLI, TUI, Terminal.Gui, System.CommandLine, JSON file storage, or PostgreSQL.
 
 ### Application
 
@@ -95,7 +95,7 @@ Responsibilities:
 - transaction boundaries;
 - orchestration between Core and persistence contracts.
 
-Application may depend on Core. It must not depend on CLI, TUI, Terminal.Gui, System.CommandLine, or concrete database APIs.
+Application may depend on Core. It must not depend on CLI, TUI, Terminal.Gui, System.CommandLine, or concrete file/storage APIs.
 
 ### Infrastructure
 
@@ -103,8 +103,10 @@ Namespace: `TermBullet.Infrastructure`
 
 Responsibilities:
 
-- SQLite repositories;
-- migrations;
+- monthly JSON file repositories;
+- safe file writer;
+- backup/recovery services;
+- local JSON index;
 - local settings storage;
 - import/export adapters;
 - clock and ID generation adapters;
@@ -183,7 +185,7 @@ TermBullet.Core.Items
 TermBullet.Core.Refs
 TermBullet.Application.Items
 TermBullet.Application.Ports
-TermBullet.Infrastructure.Persistence.Sqlite
+TermBullet.Infrastructure.Persistence.JsonFiles
 TermBullet.Infrastructure.Export
 TermBullet.Cli.Commands
 TermBullet.Cli.Rendering
@@ -205,7 +207,7 @@ Program
   -> command handler
   -> Application use case
   -> repository contract
-  -> SQLite implementation
+  -> JSON file implementation
   -> command output renderer
 ```
 
@@ -216,8 +218,8 @@ termbullet add "fix jwt authentication"
   -> AddCommand
   -> CreateItemUseCase
   -> IItemRepository
-  -> SqliteItemRepository
-  -> "[ok] task created: t-0422-1"
+  -> JsonFileItemRepository
+  -> "[ok] task created: t-0426-1"
 ```
 
 ## TUI Flow
@@ -232,7 +234,7 @@ Program
   -> panel action
   -> Application use case
   -> repository contract
-  -> SQLite implementation
+  -> JSON file implementation
   -> screen state refresh
 ```
 
@@ -240,16 +242,18 @@ The TUI should keep screen state and focus state, but domain state belongs to Co
 
 ## Persistence Flow
 
-SQLite is the V1 operational database.
+Monthly JSON files are the V1 operational data store.
 
 Persistence rules:
 
 - Application defines repository contracts.
-- Infrastructure implements repository contracts with SQLite.
-- Core does not know SQLite exists.
+- Infrastructure implements repository contracts with monthly JSON files.
+- Core does not know JSON file storage exists.
 - Timestamps must be stored consistently.
 - Public refs must be persisted and never reused.
-- Schema changes must be migration-friendly.
+- Writes must use a temporary file and atomic replacement.
+- One backup must be kept per monthly file.
+- Corrupted files should be recovered from backup when possible.
 
 ## Testing Architecture
 
@@ -270,7 +274,7 @@ Testing focus:
 
 - Core tests validate domain rules and state transitions.
 - Application tests validate use cases with mocked repositories.
-- Infrastructure tests validate SQLite persistence and migrations.
+- Infrastructure tests validate JSON file persistence, backup/recovery, and index rebuilds.
 - CLI tests validate command parsing, handlers, and output.
 - TUI tests validate view models, navigation state, and action dispatch where practical.
 
