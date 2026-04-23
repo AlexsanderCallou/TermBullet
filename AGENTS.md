@@ -4,6 +4,18 @@ This file provides operating instructions for AI coding agents and automation to
 
 The goal is to keep development aligned with the product vision, architecture decisions, and open source direction already documented in this repository.
 
+Official repository:
+
+```text
+https://github.com/AlexsanderCallou/TermBullet
+```
+
+The current base branch for development is:
+
+```text
+Development
+```
+
 ## Source of Truth
 
 Before making implementation decisions, agents must read and follow:
@@ -285,6 +297,8 @@ Agents must not revert user changes unless explicitly asked.
 Before editing existing files, inspect their current content.
 
 Keep changes scoped to the requested task.
+
+Use `Development` as the default base branch unless the maintainer explicitly asks for another branch.
 
 Do not perform destructive git operations such as hard resets, forced checkouts, or branch rewrites unless explicitly requested by the maintainer.
 

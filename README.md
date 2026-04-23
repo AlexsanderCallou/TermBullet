@@ -9,6 +9,20 @@ The project combines two first-class interfaces over the same functional core:
 
 > Status: this repository currently contains the product specification and architecture decisions. The commands and screens below represent the target product interface.
 
+## Repository
+
+Official repository:
+
+```text
+https://github.com/AlexsanderCallou/TermBullet
+```
+
+Main development branch:
+
+```text
+Development
+```
+
 ## Open Source
 
 TermBullet is intended to be an open source project for a global audience.
@@ -26,13 +40,13 @@ The preferred release artifact format is a self-contained executable per platfor
 Linux/macOS:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<org>/termbullet/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/Development/install.sh | sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/<org>/termbullet/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/Development/install.ps1 | iex
 ```
 
 ### .NET Tool
