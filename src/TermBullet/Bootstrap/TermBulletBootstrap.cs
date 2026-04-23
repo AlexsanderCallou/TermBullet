@@ -49,7 +49,15 @@ public static class TermBulletBootstrap
             new ShowItemUseCase(itemRepository),
             new GetTodayItemsUseCase(itemRepository),
             new GetWeekItemsUseCase(itemRepository),
-            new GetBacklogItemsUseCase(itemRepository));
+            new GetBacklogItemsUseCase(itemRepository),
+            new EditItemUseCase(itemRepository, clock),
+            new MarkDoneItemUseCase(itemRepository, clock),
+            new CancelItemUseCase(itemRepository, clock),
+            new MoveItemUseCase(itemRepository, clock),
+            new SetItemPriorityUseCase(itemRepository, clock),
+            new TagItemUseCase(itemRepository, clock),
+            new UntagItemUseCase(itemRepository, clock),
+            new MigrateItemUseCase(itemRepository, clock));
     }
 
     private sealed class SystemClock : IClock

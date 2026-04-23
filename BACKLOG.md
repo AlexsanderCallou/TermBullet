@@ -41,6 +41,7 @@ Already implemented:
 - [x] CLI module structure
 - [x] CLI command flow for `config`, `export`, `import`, and `history clear`
 - [x] CLI command flow for `add`, `list`, `show`, `today`, `week`, and `backlog`
+- [x] CLI command flow for `edit`, `done`, `cancel`, `move`, `tag`, `untag`, `priority`, and `migrate`
 - [x] project documentation baseline
 
 Still missing to finish V1:
@@ -160,19 +161,19 @@ Status: partially complete
 - [x] Implement `termbullet week`
 - [x] Implement `termbullet backlog`
 - [x] Implement `termbullet show`
-- [ ] Implement `termbullet edit`
-- [ ] Implement `termbullet done`
-- [ ] Implement `termbullet cancel`
-- [ ] Implement `termbullet migrate`
-- [ ] Implement `termbullet move`
-- [ ] Implement `termbullet tag`
-- [ ] Implement `termbullet untag`
-- [ ] Implement `termbullet priority`
+- [x] Implement `termbullet edit`
+- [x] Implement `termbullet done`
+- [x] Implement `termbullet cancel`
+- [x] Implement `termbullet migrate`
+- [x] Implement `termbullet move`
+- [x] Implement `termbullet tag`
+- [x] Implement `termbullet untag`
+- [x] Implement `termbullet priority`
 - [ ] Implement `termbullet search`
 - [ ] Implement global options where practical
 - [x] Add CLI tests for valid parsing
 - [x] Add CLI tests for missing required arguments
-- [ ] Add CLI tests for invalid options
+- [x] Add CLI tests for invalid options
 - [x] Add CLI tests for mocked handler execution
 - [x] Add CLI tests for success output
 - [ ] Add CLI tests for error output
@@ -261,7 +262,6 @@ A task is done only when:
 
 Recommended next execution slice, still aligned with the milestones above:
 
-- [ ] Milestone 4: item mutation CLI commands (`edit`, `done`, `cancel`, `move`, `tag`, `untag`, `priority`, `migrate`)
 - [ ] Milestone 3: month rollover and migration metadata
 
 ## Post-V1 Backlog

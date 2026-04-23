@@ -22,7 +22,15 @@ public sealed class TermBulletCliApp(
     ShowItemUseCase? showItemUseCase = null,
     GetTodayItemsUseCase? getTodayItemsUseCase = null,
     GetWeekItemsUseCase? getWeekItemsUseCase = null,
-    GetBacklogItemsUseCase? getBacklogItemsUseCase = null)
+    GetBacklogItemsUseCase? getBacklogItemsUseCase = null,
+    EditItemUseCase? editItemUseCase = null,
+    MarkDoneItemUseCase? markDoneItemUseCase = null,
+    CancelItemUseCase? cancelItemUseCase = null,
+    MoveItemUseCase? moveItemUseCase = null,
+    SetItemPriorityUseCase? setItemPriorityUseCase = null,
+    TagItemUseCase? tagItemUseCase = null,
+    UntagItemUseCase? untagItemUseCase = null,
+    MigrateItemUseCase? migrateItemUseCase = null)
 {
     public Task<int> InvokeAsync(string[] args, CancellationToken cancellationToken = default)
     {
@@ -80,6 +88,64 @@ public sealed class TermBulletCliApp(
                 "backlog",
                 "Show backlog items.",
                 getBacklogItemsUseCase.ExecuteAsync,
+                standardOutput,
+                standardError,
+                cancellationToken));
+        }
+
+        if (editItemUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildEditCommand(standardOutput, standardError, cancellationToken));
+        }
+
+        if (markDoneItemUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildSimpleMutationCommand(
+                "done",
+                "Mark an item as done",
+                markDoneItemUseCase.ExecuteAsync,
+                standardOutput,
+                standardError,
+                cancellationToken));
+        }
+
+        if (cancelItemUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildSimpleMutationCommand(
+                "cancel",
+                "Cancel an item",
+                cancelItemUseCase.ExecuteAsync,
+                standardOutput,
+                standardError,
+                cancellationToken));
+        }
+
+        if (moveItemUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildMoveCommand(standardOutput, standardError, cancellationToken));
+        }
+
+        if (setItemPriorityUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildPriorityCommand(standardOutput, standardError, cancellationToken));
+        }
+
+        if (tagItemUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildTagCommand("tag", "Add a tag to an item", true, standardOutput, standardError, cancellationToken));
+        }
+
+        if (untagItemUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildTagCommand("untag", "Remove a tag from an item", false, standardOutput, standardError, cancellationToken));
+        }
+
+        if (migrateItemUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildSimpleMutationCommand(
+                "migrate",
+                "Mark an item as migrated",
+                migrateItemUseCase.ExecuteAsync,
                 standardOutput,
                 standardError,
                 cancellationToken));
@@ -282,6 +348,210 @@ public sealed class TermBulletCliApp(
                 var publicRef = parseResult.GetValue(publicRefArgument)
                     ?? throw new InvalidOperationException("Public ref is required.");
                 var item = await showItemUseCase!.ExecuteAsync(publicRef, cancellationToken);
+                await WriteItemDetailAsync(item, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildEditCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var publicRefArgument = new Argument<string>("ref") { Description = "Public ref" };
+        var textArgument = new Argument<string>("text") { Description = "New content" };
+
+        var command = new Command("edit", "Edit item content")
+        {
+            publicRefArgument,
+            textArgument
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var publicRef = parseResult.GetValue(publicRefArgument)
+                    ?? throw new InvalidOperationException("Public ref is required.");
+                var content = parseResult.GetValue(textArgument)
+                    ?? throw new InvalidOperationException("Content is required.");
+                var item = await editItemUseCase!.ExecuteAsync(new EditItemRequest
+                {
+                    PublicRef = publicRef,
+                    Content = content
+                }, cancellationToken);
+                await WriteItemDetailAsync(item, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildMoveCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var publicRefArgument = new Argument<string>("ref") { Description = "Public ref" };
+        var collectionArgument = new Argument<string>("collection") { Description = "Target collection" };
+
+        var command = new Command("move", "Move an item to another collection")
+        {
+            publicRefArgument,
+            collectionArgument
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var publicRef = parseResult.GetValue(publicRefArgument)
+                    ?? throw new InvalidOperationException("Public ref is required.");
+                var collection = ParseCollection(parseResult.GetValue(collectionArgument))
+                    ?? throw new InvalidOperationException("Collection is required.");
+                var item = await moveItemUseCase!.ExecuteAsync(new MoveItemRequest
+                {
+                    PublicRef = publicRef,
+                    Collection = collection
+                }, cancellationToken);
+                await WriteItemDetailAsync(item, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildPriorityCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var publicRefArgument = new Argument<string>("ref") { Description = "Public ref" };
+        var priorityArgument = new Argument<string>("priority") { Description = "Priority value" };
+
+        var command = new Command("priority", "Set item priority")
+        {
+            publicRefArgument,
+            priorityArgument
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var publicRef = parseResult.GetValue(publicRefArgument)
+                    ?? throw new InvalidOperationException("Public ref is required.");
+                var priority = ParsePriority(parseResult.GetValue(priorityArgument));
+                var item = await setItemPriorityUseCase!.ExecuteAsync(new SetItemPriorityRequest
+                {
+                    PublicRef = publicRef,
+                    Priority = priority
+                }, cancellationToken);
+                await WriteItemDetailAsync(item, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildTagCommand(
+        string name,
+        string description,
+        bool addTag,
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var publicRefArgument = new Argument<string>("ref") { Description = "Public ref" };
+        var tagArgument = new Argument<string>("tag") { Description = "Tag value" };
+
+        var command = new Command(name, description)
+        {
+            publicRefArgument,
+            tagArgument
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var publicRef = parseResult.GetValue(publicRefArgument)
+                    ?? throw new InvalidOperationException("Public ref is required.");
+                var tag = parseResult.GetValue(tagArgument)
+                    ?? throw new InvalidOperationException("Tag is required.");
+
+                var item = addTag
+                    ? await tagItemUseCase!.ExecuteAsync(new TagItemRequest
+                    {
+                        PublicRef = publicRef,
+                        Tag = tag
+                    }, cancellationToken)
+                    : await untagItemUseCase!.ExecuteAsync(new UntagItemRequest
+                    {
+                        PublicRef = publicRef,
+                        Tag = tag
+                    }, cancellationToken);
+
+                await WriteItemDetailAsync(item, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildSimpleMutationCommand(
+        string name,
+        string description,
+        Func<string, CancellationToken, Task<ItemResult>> operation,
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var publicRefArgument = new Argument<string>("ref") { Description = "Public ref" };
+        var command = new Command(name, description)
+        {
+            publicRefArgument
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var publicRef = parseResult.GetValue(publicRefArgument)
+                    ?? throw new InvalidOperationException("Public ref is required.");
+                var item = await operation(publicRef, cancellationToken);
                 await WriteItemDetailAsync(item, standardOutput);
                 return 0;
             }
