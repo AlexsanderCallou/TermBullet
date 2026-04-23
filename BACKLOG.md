@@ -36,14 +36,19 @@ Already implemented:
 - [x] export/import application use cases
 - [x] configuration application use cases
 - [x] JSON export/import infrastructure
+- [x] scoped history maintenance service
+- [x] bootstrap/runtime composition start
+- [x] CLI module structure
+- [x] CLI command flow for `config`, `export`, `import`, and `history clear`
+- [x] CLI command flow for `add`, `list`, `show`, `today`, `week`, and `backlog`
 - [x] project documentation baseline
 
 Still missing to finish V1:
 
 - [ ] remaining Infrastructure items
 - [ ] missing Application use cases
-- [ ] Bootstrap/runtime composition
-- [ ] CLI MVP
+- [ ] remaining Bootstrap/runtime composition
+- [ ] remaining CLI MVP
 - [ ] export/import/config/history command flows
 - [ ] TUI MVP
 - [ ] V1 release candidate hardening
@@ -145,16 +150,16 @@ Remaining:
 
 ## Milestone 4 - CLI MVP
 
-Status: not started
+Status: partially complete
 
-- [ ] Add System.CommandLine dependency
-- [ ] Create CLI module structure
-- [ ] Implement `termbullet add`
-- [ ] Implement `termbullet list`
-- [ ] Implement `termbullet today`
-- [ ] Implement `termbullet week`
-- [ ] Implement `termbullet backlog`
-- [ ] Implement `termbullet show`
+- [x] Add System.CommandLine dependency
+- [x] Create CLI module structure
+- [x] Implement `termbullet add`
+- [x] Implement `termbullet list`
+- [x] Implement `termbullet today`
+- [x] Implement `termbullet week`
+- [x] Implement `termbullet backlog`
+- [x] Implement `termbullet show`
 - [ ] Implement `termbullet edit`
 - [ ] Implement `termbullet done`
 - [ ] Implement `termbullet cancel`
@@ -165,11 +170,11 @@ Status: not started
 - [ ] Implement `termbullet priority`
 - [ ] Implement `termbullet search`
 - [ ] Implement global options where practical
-- [ ] Add CLI tests for valid parsing
-- [ ] Add CLI tests for missing required arguments
+- [x] Add CLI tests for valid parsing
+- [x] Add CLI tests for missing required arguments
 - [ ] Add CLI tests for invalid options
-- [ ] Add CLI tests for mocked handler execution
-- [ ] Add CLI tests for success output
+- [x] Add CLI tests for mocked handler execution
+- [x] Add CLI tests for success output
 - [ ] Add CLI tests for error output
 - [ ] Add CLI tests for representative help output
 
@@ -177,13 +182,13 @@ Status: not started
 
 Status: partially complete
 
-- [ ] Implement `termbullet export`
-- [ ] Implement `termbullet import`
-- [ ] Implement `termbullet config list`
-- [ ] Implement `termbullet config get`
-- [ ] Implement `termbullet config set`
-- [ ] Implement `termbullet config path`
-- [ ] Implement `termbullet history clear`
+- [x] Implement `termbullet export`
+- [x] Implement `termbullet import`
+- [x] Implement `termbullet config list`
+- [x] Implement `termbullet config get`
+- [x] Implement `termbullet config set`
+- [x] Implement `termbullet config path`
+- [x] Implement `termbullet history clear`
 - [x] Define JSON export format
 - [x] Add tests for export empty data directory
 - [x] Add tests for export populated data directory
@@ -191,10 +196,10 @@ Status: partially complete
 - [x] Add tests for import malformed data
 - [x] Add tests for import duplicate public refs
 - [x] Validate exported data preserves IDs, refs, tags, status, collections, and timestamps
-- [ ] Add tests for config get/set
-- [ ] Add tests for missing config key
-- [ ] Add tests for history clear for one month
-- [ ] Add tests for history clear for all months
+- [x] Add tests for config get/set
+- [x] Add tests for missing config key
+- [x] Add tests for history clear for one month
+- [x] Add tests for history clear for all months
 
 ## Milestone 6 - TUI MVP
 
@@ -237,7 +242,7 @@ Status: not started
 - [ ] Validate `dotnet restore`
 - [ ] Validate `dotnet build`
 - [ ] Validate `dotnet test`
-- [ ] Run CLI smoke tests
+- [x] Run CLI smoke tests
 - [ ] Run TUI smoke tests
 - [ ] Ensure README and docs reflect actual behavior
 
@@ -256,8 +261,7 @@ A task is done only when:
 
 Recommended next execution slice, still aligned with the milestones above:
 
-- [ ] Milestone 4: bootstrap and CLI wiring start
-- [ ] Milestone 5: settings command flow on top of config use cases
+- [ ] Milestone 4: item mutation CLI commands (`edit`, `done`, `cancel`, `move`, `tag`, `untag`, `priority`, `migrate`)
 - [ ] Milestone 3: month rollover and migration metadata
 
 ## Post-V1 Backlog

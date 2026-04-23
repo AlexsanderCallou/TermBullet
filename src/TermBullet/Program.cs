@@ -1,2 +1,5 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+using TermBullet.Bootstrap;
+
+return await TermBulletBootstrap
+    .CreateCliApp(Directory.GetCurrentDirectory(), Console.Out, Console.Error)
+    .InvokeAsync(args);
