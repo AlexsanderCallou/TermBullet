@@ -2,16 +2,80 @@
 
 This document defines the initial V1 data model for TermBullet.
 
-V1 uses SQLite as the local offline database. PostgreSQL is reserved for the future V4 sync/cloud backend and must not be required for local usage.
+V1 uses local monthly JSON files as the operational data store. PostgreSQL is reserved for the future V4 sync/cloud backend and must not be required for local usage.
 
 ## Data Principles
 
-- Local data is the operational source of truth in V1.
+- Local JSON files are the operational source of truth in V1.
+- The app is designed for one active machine at a time in V1.
 - Every item has a stable internal ID and a human-facing public ref.
 - Public refs are persisted and never reused.
 - Timestamps are stored in UTC.
-- The schema must be migration-friendly.
-- The model must prepare for future entity-level sync without implementing sync in V1.
+- JSON files should be optimized for human readability.
+- Writes must be safe: write to a temporary file and then replace atomically.
+- Each monthly file keeps one backup file.
+- Corrupted monthly JSON files should be recovered from the latest backup when possible.
+- The model must prepare for future file-level sync without implementing multi-machine sync in V1.
+
+## File Layout
+
+Data files are separated by year.
+
+Required path pattern:
+
+```text
+data/<year>/data_<month>_<year>.json
+```
+
+Example:
+
+```text
+data/2026/data_04_2026.json
+data/2026/data_05_2026.json
+```
+
+Only this file naming pattern is supported.
+
+Monthly backup file pattern:
+
+```text
+data/<year>/data_<month>_<year>.backup.json
+```
+
+Example:
+
+```text
+data/2026/data_04_2026.backup.json
+```
+
+Only one backup per monthly file is kept.
+
+## Local Index
+
+The app should maintain a local JSON index for faster lookup.
+
+Recommended path:
+
+```text
+data/index.json
+```
+
+The index is derived data and can be rebuilt from monthly files.
+
+The index may include:
+
+- item ID;
+- public ref;
+- type;
+- status;
+- collection;
+- priority;
+- tags;
+- content summary;
+- source file;
+- created/updated timestamps.
+
+Simple views should use the current monthly file. More complex searches may read all monthly files when the index is insufficient.
 
 ## Main Concepts
 
@@ -49,14 +113,15 @@ Rules:
 - generated once;
 - immutable;
 - used as the real identity;
-- used for persistence, import/export, and future sync.
+- used for import/export and future sync;
+- preserved when an item is migrated between monthly files.
 
 ## Public Ref
 
 Public ref format:
 
 ```text
-<type>-<MMDD>-<sequence>
+<type>-<MMYY>-<sequence>
 ```
 
 Prefixes:
@@ -65,22 +130,24 @@ Prefixes:
 - `n` = note
 - `e` = event
 
-Examples:
+Examples for April 2026:
 
 ```text
-t-0422-1
-n-0422-1
-e-0422-1
+t-0426-1
+n-0426-1
+e-0426-1
 ```
 
 Rules:
 
-- sequence is independent by type and MMDD key;
-- sequence must be persisted;
-- public ref must never be reused;
-- public ref is not the real identity.
+- sequence is independent by type and month/year;
+- sequence is controlled inside the monthly file;
+- public ref must be persisted;
+- public ref must never be reused inside the same month/year;
+- public ref is not the real identity;
+- migrated items preserve their original public ref.
 
-Because the public ref does not include a year, the sequence for a given type/MMDD must continue across years instead of restarting if that would create a duplicate.
+The `MMYY` segment avoids collisions across years while keeping refs short.
 
 ## Item Status
 
@@ -100,8 +167,7 @@ Rules:
 - events may start as `open`;
 - `done` records completion;
 - `cancelled` records intentional cancellation;
-- `migrated` records movement to another collection or planning period;
-- deletion should prefer `deleted_at` for recoverability unless a hard delete is explicitly required.
+- `migrated` records movement to another monthly file or planning period.
 
 ## Priority
 
@@ -120,7 +186,7 @@ Default:
 none
 ```
 
-## Timestamps
+## Timestamps and Version
 
 Store timestamps as UTC ISO-8601 text:
 
@@ -128,161 +194,143 @@ Store timestamps as UTC ISO-8601 text:
 2026-04-22T12:34:56Z
 ```
 
-Required timestamps:
+Required per item:
 
 - `created_at`
 - `updated_at`
+- `version`
 
-Optional timestamps:
+Optional per item:
 
 - `due_at`
 - `scheduled_at`
 - `completed_at`
 - `cancelled_at`
 - `migrated_at`
-- `deleted_at`
 
-## SQLite Schema - Initial Draft
+The `version` field is incremented on item changes and prepares V4 merge behavior.
 
-### `schema_migrations`
+## Monthly JSON Structure
 
-Tracks applied database migrations.
+Recommended structure:
 
-```sql
-CREATE TABLE schema_migrations (
-    version INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    applied_at TEXT NOT NULL
-);
+```json
+{
+  "period": "2026-04",
+  "file_name": "data_04_2026.json",
+  "public_ref_sequences": {
+    "task": 3,
+    "note": 2,
+    "event": 1
+  },
+  "items": [
+    {
+      "id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
+      "public_ref": "t-0426-1",
+      "type": "task",
+      "content": "fix jwt authentication",
+      "description": null,
+      "status": "open",
+      "collection": "today",
+      "priority": "high",
+      "tags": ["jwt", "auth"],
+      "due_at": null,
+      "scheduled_at": null,
+      "estimate_minutes": null,
+      "version": 1,
+      "created_at": "2026-04-22T08:14:00Z",
+      "updated_at": "2026-04-22T08:14:00Z",
+      "completed_at": null,
+      "cancelled_at": null,
+      "migrated_at": null,
+      "migration": null
+    }
+  ],
+  "history": [
+    {
+      "id": "7d5b9856-045f-43ef-a646-4ee9c86fe2d8",
+      "item_id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
+      "public_ref": "t-0426-1",
+      "event_type": "created",
+      "occurred_at": "2026-04-22T08:14:00Z",
+      "data": {
+        "content": "fix jwt authentication"
+      }
+    }
+  ],
+  "settings": {}
+}
 ```
 
-### `public_ref_sequences`
+No per-file schema version is required in V1. The project assumes a single schema.
 
-Stores the next sequence for each item type and MMDD key.
+## History
 
-```sql
-CREATE TABLE public_ref_sequences (
-    item_type TEXT NOT NULL,
-    mmdd TEXT NOT NULL,
-    next_sequence INTEGER NOT NULL,
-    updated_at TEXT NOT NULL,
-    PRIMARY KEY (item_type, mmdd)
-);
+History is stored in a root-level `history` array inside the monthly JSON file.
+
+Only important events are stored:
+
+- `created`
+- `edited`
+- `done`
+- `cancelled`
+- `migrated`
+- `deleted`
+
+Delete behavior:
+
+- remove the item physically from the `items` array;
+- append a `deleted` event to `history`;
+- include a snapshot of the deleted item in the history event data.
+
+History cleanup:
+
+- users may clear history through a command;
+- cleanup removes history entries, not active items;
+- cleanup must create a backup before writing.
+
+## Migration Between Months
+
+Open tasks from the previous month should be migrated automatically on the first day of the next month.
+
+Rules:
+
+- the active item moves to the destination monthly file;
+- the original public ref is preserved;
+- the original internal ID is preserved;
+- the source monthly file keeps a history event indicating migration;
+- the destination monthly file stores the active item;
+- the source item record should not remain active in `items`;
+- migration details are represented in the `migration` field and/or root-level history.
+
+Recommended migration object on the active item:
+
+```json
+{
+  "from_period": "2026-04",
+  "to_period": "2026-05",
+  "migrated_at": "2026-05-01T00:05:00Z",
+  "reason": "automatic_month_rollover"
+}
 ```
 
-### `items`
+## AI Context Preparation
 
-Stores tasks, notes, and events.
+Future AI features must not send all JSON files by default.
 
-```sql
-CREATE TABLE items (
-    id TEXT PRIMARY KEY,
-    public_ref TEXT NOT NULL UNIQUE,
-    type TEXT NOT NULL CHECK (type IN ('task', 'note', 'event')),
-    content TEXT NOT NULL,
-    description TEXT NULL,
-    status TEXT NOT NULL CHECK (status IN ('open', 'in_progress', 'done', 'cancelled', 'migrated')),
-    collection TEXT NOT NULL CHECK (collection IN ('today', 'week', 'backlog', 'monthly', 'archived')),
-    priority TEXT NOT NULL CHECK (priority IN ('none', 'low', 'medium', 'high')),
-    due_at TEXT NULL,
-    scheduled_at TEXT NULL,
-    estimate_minutes INTEGER NULL,
-    version INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    completed_at TEXT NULL,
-    cancelled_at TEXT NULL,
-    migrated_at TEXT NULL,
-    deleted_at TEXT NULL
-);
-```
+The app should assemble a filtered context including only relevant data, such as:
 
-Recommended indexes:
+- current month;
+- selected item;
+- related tags;
+- recent history;
+- relevant backlog items.
 
-```sql
-CREATE INDEX idx_items_type ON items(type);
-CREATE INDEX idx_items_status ON items(status);
-CREATE INDEX idx_items_collection ON items(collection);
-CREATE INDEX idx_items_priority ON items(priority);
-CREATE INDEX idx_items_updated_at ON items(updated_at);
-CREATE INDEX idx_items_deleted_at ON items(deleted_at);
-```
-
-### `tags`
-
-Stores unique tag names.
-
-```sql
-CREATE TABLE tags (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    created_at TEXT NOT NULL
-);
-```
-
-### `item_tags`
-
-Maps items to tags.
-
-```sql
-CREATE TABLE item_tags (
-    item_id TEXT NOT NULL,
-    tag_id TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    PRIMARY KEY (item_id, tag_id),
-    FOREIGN KEY (item_id) REFERENCES items(id),
-    FOREIGN KEY (tag_id) REFERENCES tags(id)
-);
-```
-
-Recommended indexes:
-
-```sql
-CREATE INDEX idx_item_tags_tag_id ON item_tags(tag_id);
-```
-
-### `item_history`
-
-Records relevant state changes for preview, review, and future sync reasoning.
-
-```sql
-CREATE TABLE item_history (
-    id TEXT PRIMARY KEY,
-    item_id TEXT NOT NULL,
-    event_type TEXT NOT NULL,
-    event_data TEXT NULL,
-    created_at TEXT NOT NULL,
-    FOREIGN KEY (item_id) REFERENCES items(id)
-);
-```
-
-Examples of `event_type`:
-
-```text
-created
-updated
-status_changed
-collection_changed
-priority_changed
-tag_added
-tag_removed
-migrated
-deleted
-```
-
-### `app_settings`
-
-Stores local application settings.
-
-```sql
-CREATE TABLE app_settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-```
+If possible, sensitive or private fields should be excluded from AI context unless explicitly included by the user.
 
 ## Import and Export Contract
+
+Monthly JSON files are already portable, but export/import commands still exist for controlled backup and migration flows.
 
 Exported data must preserve:
 
@@ -295,33 +343,35 @@ Exported data must preserve:
 - priority;
 - tags;
 - timestamps;
-- item history when supported.
+- version;
+- migration metadata;
+- important history.
 
 Import must handle:
 
-- empty database import;
-- existing database import;
-- duplicate public refs;
+- valid monthly JSON files;
+- malformed JSON;
+- duplicate public refs inside a period;
 - duplicate internal IDs;
-- malformed files;
-- unsupported schema versions.
+- missing required fields;
+- corrupted file with available backup.
 
 ## Sync Preparation
 
-V1 does not implement sync, but the schema prepares for it through:
+V1 does not implement multi-machine sync.
 
-- stable internal IDs;
-- `version` on items;
-- UTC timestamps;
-- `deleted_at` for tombstone-like behavior;
-- item history for change reasoning.
+V1 rule:
 
-Future V4 sync may add:
+```text
+Use one active machine at a time.
+```
 
-- device identity;
-- operation log;
-- remote revision;
-- conflict records;
-- sync state.
+Future V4 sync/cloud will synchronize whole JSON files.
 
-These should be added later through migrations, not required in V1.
+Conflict rule planned for V4:
+
+```text
+Latest update wins.
+```
+
+PostgreSQL remains part of V4 as the cloud/backend database, but the server stores the same JSON file content rather than transforming it into a different entity model.

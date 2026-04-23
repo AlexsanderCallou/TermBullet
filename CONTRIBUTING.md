@@ -90,7 +90,7 @@ Respect dependency direction:
 - TUI calls Application use cases.
 - Bootstrap wires modules together.
 
-Do not put business rules in CLI handlers, TUI screens, or SQLite repositories.
+Do not put business rules in CLI handlers, TUI screens, or JSON file repositories.
 
 ## Commit Style
 
@@ -107,7 +107,7 @@ feat(cli): add item creation command
 fix(core): reject empty item content
 test(application): cover migrate item failures
 docs: add data model draft
-refactor(infrastructure): isolate sqlite migrations
+refactor(infrastructure): isolate json file writer
 ```
 
 Common types:
@@ -143,7 +143,7 @@ Before opening a pull request, verify:
 - `dotnet test` passes;
 - CLI help/output was checked when CLI behavior changed;
 - TUI navigation/rendering was checked when TUI behavior changed;
-- SQLite migrations were checked when persistence changed;
+- JSON file persistence, backup, and recovery were checked when persistence changed;
 - docs were updated when behavior or architecture changed;
 - ADR was added or updated for major decisions;
 - V1 scope was respected.
@@ -210,6 +210,4 @@ Future-facing interfaces are acceptable when they keep V1 simple.
 
 ## License
 
-The open source license has not been selected yet.
-
-Before public release, the project must add a `LICENSE` file and update this section.
+TermBullet is released under the MIT License. See [LICENSE](LICENSE).

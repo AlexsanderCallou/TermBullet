@@ -46,8 +46,9 @@ The accepted stack is:
 - **.NET 8 / C#** as the main platform and implementation language.
 - **Terminal.Gui** for the TUI.
 - **System.CommandLine** for the CLI.
-- **SQLite** as the local offline database in V1.
-- **PostgreSQL** as the future backend database for sync/cloud in V4.
+- **Monthly JSON files** as the local offline data store in V1.
+- **Local JSON index** for faster lookup and search.
+- **PostgreSQL** as the future backend database for sync/cloud in V4, storing the same JSON files.
 
 Do not replace or bypass this stack without creating an ADR and getting explicit maintainer approval.
 
@@ -63,11 +64,13 @@ V1 includes:
 - Today, Week, and Backlog;
 - CLI;
 - TUI;
-- local SQLite persistence;
+- local monthly JSON persistence;
 - search;
 - basic editing;
 - migration and movement of items;
 - local configuration;
+- monthly JSON file storage;
+- local JSON search index;
 - basic export and import.
 
 V1 does not include:
@@ -100,7 +103,9 @@ Production code should live in one .NET project and be separated by folders, nam
   - ports for persistence and integrations.
 
 - **Infrastructure**
-  - SQLite persistence;
+- monthly JSON file persistence;
+- backup/recovery services;
+- local JSON index;
   - export/import implementations;
   - future AI, calendar, sync, and PostgreSQL adapters.
 
@@ -120,7 +125,7 @@ Production code should live in one .NET project and be separated by folders, nam
   - dependency registration;
   - CLI/TUI dispatch.
 
-Core must not depend on CLI, TUI, Infrastructure, Terminal.Gui, System.CommandLine, SQLite, or PostgreSQL.
+Core must not depend on CLI, TUI, Infrastructure, Terminal.Gui, System.CommandLine, JSON file storage, or PostgreSQL.
 
 CLI and TUI must call Application use cases. They must not duplicate business rules.
 
@@ -136,7 +141,7 @@ Every relevant item must have:
 Public ref format:
 
 ```text
-<type>-<MMDD>-<sequence>
+<type>-<MMYY>-<sequence>
 ```
 
 Prefixes:
@@ -148,9 +153,9 @@ Prefixes:
 Examples:
 
 ```text
-t-0422-1
-n-0422-1
-e-0422-1
+t-0426-1
+n-0426-1
+e-0426-1
 ```
 
 The public ref is for humans. The internal ID is the real identity for persistence, import/export, and future sync.
@@ -191,20 +196,23 @@ The main TUI direction is a personal cockpit for planning and execution, visuall
 
 ## Persistence Rules
 
-SQLite is the V1 local operational store.
+Monthly JSON files are the V1 local operational store.
 
 Agents must:
 
 - preserve local-first behavior;
-- keep the database usable offline;
+- keep local files usable offline;
 - store internal IDs and public refs;
 - store consistent creation/update timestamps;
-- design schema changes with migration in mind;
-- keep future entity-level sync possible.
+- store item versions;
+- use safe writes with temporary files and atomic replacement;
+- keep one backup per monthly file;
+- recover corrupted monthly files from backup when possible;
+- keep future file-level sync possible.
 
 Do not make PostgreSQL required for V1 local usage.
 
-PostgreSQL is reserved for the optional V4 sync/cloud backend.
+PostgreSQL is reserved for the optional V4 sync/cloud backend and should store the same JSON file content.
 
 ## Testing and Verification
 
@@ -235,7 +243,7 @@ For changes affecting CLI behavior, verify command parsing and help output.
 
 For changes affecting TUI behavior, verify keyboard navigation, focus behavior, and rendering where possible.
 
-For persistence changes, verify migrations, read/write flows, and import/export compatibility.
+For persistence changes, verify backup/recovery, read/write flows, and import/export compatibility.
 
 If tests cannot be run, agents must explicitly report why and describe the remaining risk.
 
@@ -250,7 +258,7 @@ Use:
 - `ADR.md` for accepted architectural or technology decisions.
 - `AGENTS.md` for agent workflow and implementation guardrails.
 - `ARCHITECTURE.md` for concrete modular monolith structure.
-- `DATA_MODEL.md` for SQLite schema, entities, and sync preparation.
+- `DATA_MODEL.md` for monthly JSON files, entities, history, and sync preparation.
 - `DEVELOPMENT_PLAN.md` for V1 implementation order.
 - `CONTRIBUTING.md` for open source contribution rules.
 

@@ -12,7 +12,8 @@ Deliver a local-first, offline terminal productivity tool with:
 - TUI;
 - tasks, notes, and events;
 - Today, Week, and Backlog;
-- SQLite persistence;
+- monthly JSON file persistence;
+- local JSON index;
 - search;
 - basic editing;
 - migration and movement;
@@ -40,7 +41,7 @@ Examples:
 ```bash
 dotnet run --project src/TermBullet -- add "fix jwt authentication"
 dotnet run --project src/TermBullet -- today
-dotnet run --project src/TermBullet -- done t-0422-1
+dotnet run --project src/TermBullet -- done t-0426-1
 ```
 
 ## Milestone 0 - Repository Scaffold
@@ -101,7 +102,7 @@ Tests must cover:
 ### Done Criteria
 
 - all Core tests pass;
-- Core has no dependency on CLI, TUI, Infrastructure, or database libraries.
+- Core has no dependency on CLI, TUI, Infrastructure, or storage libraries.
 
 ## Milestone 2 - Application Use Cases
 
@@ -143,43 +144,50 @@ Tests must cover:
 ### Done Criteria
 
 - all Application tests pass;
-- use cases are independent from System.CommandLine, Terminal.Gui, and SQLite.
+- use cases are independent from System.CommandLine, Terminal.Gui, and JSON file storage.
 
-## Milestone 3 - SQLite Infrastructure
+## Milestone 3 - JSON File Infrastructure
 
 ### Goal
 
-Persist V1 data locally with SQLite.
+Persist V1 data locally with monthly JSON files.
 
 ### Deliverables
 
-- schema migrations;
-- SQLite connection management;
+- monthly file path resolver;
+- safe file writer with temporary file and atomic replacement;
+- one-backup-per-month behavior;
+- backup recovery for corrupted JSON;
 - item repository;
-- tag repository or tag handling inside item repository;
-- public ref sequence storage;
+- tag handling inside monthly files;
+- public ref sequence storage inside monthly files;
+- local JSON index;
 - local settings storage.
 
 ### Tests First
 
-Use temporary SQLite databases.
+Use temporary data directories and monthly JSON files.
 
 Tests must cover:
 
-- migration on empty database;
+- monthly file creation;
+- safe write behavior;
+- backup creation;
+- recovery from corrupted JSON when backup exists;
 - create/read item;
 - update item;
 - list by collection;
 - list by status;
 - tag add/remove persistence;
 - public ref sequence persistence;
-- soft delete or delete behavior;
+- physical delete with root-level history event;
+- local index rebuild;
 - malformed/invalid persistence inputs where applicable.
 
 ### Done Criteria
 
 - infrastructure tests pass;
-- schema matches `DATA_MODEL.md`;
+- JSON structure matches `DATA_MODEL.md`;
 - no PostgreSQL dependency is required for V1.
 
 ## Milestone 4 - CLI MVP
@@ -239,19 +247,22 @@ Add backup/migration support and local configuration.
 - `termbullet config get`;
 - `termbullet config set`;
 - `termbullet config path`;
+- `termbullet history clear`;
 - JSON export format.
 
 ### Tests First
 
 Tests must cover:
 
-- export empty database;
-- export populated database;
+- export empty data directory;
+- export populated data directory;
 - import valid data;
 - import malformed data;
 - import duplicate public refs;
 - config get/set;
-- missing config key.
+- missing config key;
+- history clear for one month;
+- history clear for all months.
 
 ### Done Criteria
 
@@ -306,7 +317,7 @@ Stabilize the offline V1.
 - documentation review;
 - command help review;
 - import/export validation;
-- database migration validation;
+- JSON file backup/recovery validation;
 - cross-platform smoke testing where practical;
 - release notes draft.
 

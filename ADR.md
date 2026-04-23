@@ -13,12 +13,14 @@ The ADRs below are derived from [product-spec.md](product-spec.md). They guide i
 - [ADR-0005 - Initial model with task, note, and event](#adr-0005---initial-model-with-task-note-and-event)
 - [ADR-0006 - Local persistence as the operational source](#adr-0006---local-persistence-as-the-operational-source)
 - [ADR-0007 - Optional and modular integrations](#adr-0007---optional-and-modular-integrations)
-- [ADR-0008 - Future synchronization at entity level](#adr-0008---future-synchronization-at-entity-level)
+- [ADR-0008 - Future synchronization at JSON file level](#adr-0008---future-synchronization-at-json-file-level)
 - [ADR-0009 - TUI based on screens, panels, and keyboard](#adr-0009---tui-based-on-screens-panels-and-keyboard)
 - [ADR-0010 - Export and import as basic portability](#adr-0010---export-and-import-as-basic-portability)
 - [ADR-0011 - Open source and English-first project](#adr-0011---open-source-and-english-first-project)
 - [ADR-0012 - Official technology stack](#adr-0012---official-technology-stack)
 - [ADR-0013 - Modular monolith structure](#adr-0013---modular-monolith-structure)
+- [ADR-0014 - Monthly JSON storage for V1](#adr-0014---monthly-json-storage-for-v1)
+- [ADR-0015 - MIT open source license](#adr-0015---mit-open-source-license)
 
 ---
 
@@ -51,7 +53,7 @@ External services will be treated as optional extensions in future versions.
 
 ### Consequences
 
-- The local database is the user's primary operational source.
+- Local JSON files are the user's primary operational source.
 - The product remains functional without network access.
 - The architecture must avoid direct dependency on external providers in the domain.
 - Future AI, calendar, and sync features must be attached through ports, adapters, or infrastructure modules.
@@ -94,7 +96,7 @@ Fast operations must be available through commands such as:
 ```bash
 termbullet add "fix jwt authentication"
 termbullet today
-termbullet done t-0422-1
+termbullet done t-0426-1
 termbullet search "jwt"
 ```
 
@@ -141,7 +143,7 @@ Central rule:
 
 - The domain remains protected from interface and provider details.
 - Replacing local persistence or adding future sync should not require rewriting use cases.
-- Business-rule tests can be written without depending on a terminal, a real database, or external integrations.
+- Business-rule tests can be written without depending on a terminal, real storage, or external integrations.
 - The project will have more initial structure than a simple script, but better support for evolution.
 
 ### Alternatives Considered
@@ -172,7 +174,7 @@ Each relevant entity will have two identifiers:
 Official public ref format:
 
 ```text
-<type>-<MMDD>-<sequence>
+<type>-<MMYY>-<sequence>
 ```
 
 Prefixes:
@@ -184,14 +186,14 @@ Prefixes:
 Examples:
 
 ```text
-t-0422-1
-n-0422-1
-e-0422-1
+t-0426-1
+n-0426-1
+e-0426-1
 ```
 
 Rules:
 
-- the sequence is independent by type and day;
+- the sequence is independent by type and month/year;
 - the public ref must be persisted;
 - the public ref must not be reused;
 - the internal ID remains the real entity identity.
@@ -257,7 +259,7 @@ The required initial collections are:
 
 ### Context
 
-V1 must work offline and store data locally. Persistence should be simple to start, but prepared for versioning, migrations, and future sync.
+V1 must work offline and store data locally. Persistence should be simple to start, human-readable, recoverable, and prepared for future file-level sync.
 
 Each relevant entity must record enough metadata for basic auditability and evolution:
 
@@ -271,30 +273,32 @@ Each relevant entity must record enough metadata for basic auditability and evol
 - current collection;
 - priority;
 - tags.
+- version.
 
 ### Decision
 
-Local persistence will be the primary operational source in V1.
+Monthly JSON file persistence will be the primary operational source in V1.
 
-The concrete storage implementation can be defined later, but it must satisfy these requirements:
+The storage implementation must satisfy these requirements:
 
 - operate offline;
 - allow fast queries for CLI and TUI;
 - store consistent timestamps;
-- support versioning or migrations;
+- support item-level versioning;
 - preserve internal IDs and public refs;
+- write safely with backup/recovery;
 - allow basic export and import;
 - avoid coupling the domain to storage details.
 
 ### Consequences
 
-- The domain should depend on repository contracts, not on a concrete database implementation.
-- The local database choice should consider simplicity, portability, and migration support.
-- The persistence format must anticipate future entity-level sync.
+- The domain should depend on repository contracts, not on concrete file storage implementation.
+- The local storage choice should consider simplicity, portability, and recovery support.
+- The persistence format must anticipate future file-level sync.
 
 ### Alternatives Considered
 
-- **Single file without migration structure:** rejected because it limits evolution.
+- **Single file for all data:** rejected because monthly files reduce file size and sync conflict scope.
 - **Mandatory remote database:** rejected because it breaks the local-first requirement.
 
 ---
@@ -324,7 +328,7 @@ In V2, AI will follow the BYOK model:
 
 In V3, Google Calendar will be an optional integration for schedule context.
 
-In V4, sync/cloud will be an optional layer over the local database.
+In V4, sync/cloud will be an optional layer over local JSON files.
 
 ### Consequences
 
@@ -340,33 +344,34 @@ In V4, sync/cloud will be an optional layer over the local database.
 
 ---
 
-## ADR-0008 - Future Synchronization at Entity Level
+## ADR-0008 - Future Synchronization at JSON File Level
 
-**Status:** Accepted  
+**Status:** Superseded by ADR-0014  
 **Date:** 2026-04-22
 
 ### Context
 
-The roadmap includes usage across multiple machines. A simple approach would be synchronizing the physical local database file directly, but this tends to cause corruption, opaque conflicts, and weak merge control.
+The roadmap includes usage across multiple machines. The original direction was entity-level sync over a local database, but the storage model has since moved to monthly JSON files, and V4 sync/cloud will synchronize whole JSON files.
 
-The product needs to preserve a complete local database on each machine.
+The product still needs to preserve complete local data on each machine.
 
 ### Decision
 
-Future synchronization will happen at entity level, not by directly synchronizing the physical local database file.
+Future synchronization will happen at JSON file level.
 
-Each machine will keep a complete local database. The sync layer must operate over records, changes, and entity metadata.
+Each machine will keep complete local JSON files. In V4, the sync layer will synchronize monthly files and use latest update wins for simple conflicts.
 
 ### Consequences
 
-- The global internal ID is mandatory for sync integrity.
-- The model needs consistent timestamps and metadata from V1.
+- The global internal ID remains mandatory for item identity.
+- Item `updated_at` and `version` remain useful for future merge and diagnostics.
 - Conflicts must be treated as a normal part of operation.
-- Sync can be implemented later without turning the local database into a disposable cache.
+- V1 does not implement multi-machine conflict handling and assumes one active machine at a time.
+- Sync can be implemented later without turning local files into a disposable cache.
 
 ### Alternatives Considered
 
-- **Synchronizing the local database file:** rejected because of conflict and corruption risk.
+- **Entity-level sync:** superseded by the monthly JSON file storage decision.
 - **Using only cloud as the source of truth:** rejected because it breaks local-first.
 
 ---
@@ -431,7 +436,7 @@ Export and import also help validate data contracts and prepare the project for 
 
 ### Decision
 
-V1 must provide local export and import in simple formats.
+V1 must provide local export and import in JSON format.
 
 These features must operate over the persisted model while preserving:
 
@@ -446,7 +451,7 @@ These features must operate over the persisted model while preserving:
 
 ### Consequences
 
-- The exported format must be stable enough for real backup.
+- The JSON export format must be stable enough for real backup.
 - Import must handle existing data and possible conflicts.
 - The export/import contract can become the basis for future migration tooling.
 
@@ -477,7 +482,7 @@ The project will be prepared for open source publication, including:
 - README in English;
 - product specification in English;
 - ADRs in English;
-- future `LICENSE` file;
+- MIT `LICENSE` file;
 - future contribution guidelines;
 - future code of conduct or governance notes if the project becomes community-driven.
 
@@ -486,7 +491,7 @@ The project will be prepared for open source publication, including:
 - New documentation should be written in English by default.
 - Command names and output examples should avoid non-English terms.
 - Product decisions should be documented publicly when they affect contributors or long-term architecture.
-- A license must be chosen before public release.
+- The project license is MIT.
 
 ### Alternatives Considered
 
@@ -519,23 +524,23 @@ TermBullet will use the following official technology stack:
 - **.NET 8 / C#** as the main platform and implementation language.
 - **Terminal.Gui** for the TUI, using a panel/window-based layout.
 - **System.CommandLine** for the command-line interface.
-- **SQLite** as the local offline database in V1.
-- **PostgreSQL** as the future backend database for synchronization/cloud in V4.
+- **Monthly JSON files** as the local offline data store in V1.
+- **Local JSON index** for faster lookup and search.
+- **PostgreSQL** as the future backend database for synchronization/cloud in V4, storing the same JSON files.
 
 Official references:
 
 - [.NET 8 / C#](https://learn.microsoft.com/pt-br/dotnet/core/whats-new/dotnet-8/overview)
 - [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui)
 - [System.CommandLine](https://learn.microsoft.com/en-us/dotnet/standard/commandline/)
-- [SQLite](https://www.sqlite.org/docs.html)
 - [PostgreSQL](https://www.postgresql.org/docs/)
 
 ### Consequences
 
 - The codebase can use a single language and runtime across Core, Application, Infrastructure, CLI, and TUI.
 - CLI and TUI can share the same Application layer without language or process boundaries.
-- SQLite supports the V1 local-first/offline requirement.
-- PostgreSQL is reserved for the optional V4 server-side sync/cloud layer and must not replace local SQLite as the user's operational store.
+- Monthly JSON files support the V1 local-first/offline requirement while remaining human-readable and easy to back up.
+- PostgreSQL is reserved for the optional V4 server-side sync/cloud layer and must not replace local monthly JSON files as the user's operational store.
 - Terminal.Gui shapes the TUI implementation around windows, panels, focus, keyboard navigation, and terminal rendering.
 - System.CommandLine shapes CLI implementation around explicit commands, arguments, options, help output, and future JSON-capable command flows.
 
@@ -544,6 +549,7 @@ Official references:
 - **Go with Bubble Tea/Lip Gloss:** strong for terminal apps, but would move the project away from the .NET/C# ecosystem.
 - **Rust with ratatui/clap:** strong performance and terminal tooling, but raises implementation complexity and contributor barrier for this project.
 - **Node.js with terminal UI libraries:** viable for CLI tooling, but weaker fit for a long-lived local-first desktop terminal app with rich persistence and future backend sharing.
+- **SQLite local storage:** rejected for V1 after review because monthly JSON files better fit simple backup, human readability, future AI context, and file-based sync.
 - **PostgreSQL-only storage:** rejected for V1 because it breaks the lightweight local-first/offline experience.
 
 ---
@@ -598,12 +604,117 @@ tests/TermBullet.Tests/TermBullet.Tests.csproj
 
 ---
 
+## ADR-0014 - Monthly JSON Storage for V1
+
+**Status:** Accepted  
+**Date:** 2026-04-23
+
+### Context
+
+TermBullet is local-first, personal, and expected to handle hundreds of items per month rather than large multi-user workloads. The storage model should be transparent, easy to back up, easy to inspect manually, and friendly to future AI context assembly.
+
+Monthly JSON files also make simple file sync services viable for single-machine-at-a-time usage in V1 and prepare the V4 cloud model to synchronize whole files.
+
+### Decision
+
+V1 will use monthly JSON files as the local operational store.
+
+File layout:
+
+```text
+data/<year>/data_<month>_<year>.json
+```
+
+Example:
+
+```text
+data/2026/data_04_2026.json
+```
+
+Rules:
+
+- only the official file naming pattern is supported;
+- the TUI loads the current month by default;
+- a local JSON index supports faster lookup and search;
+- complex searches may read all monthly files;
+- writes use a temporary file followed by atomic replacement;
+- one backup is kept per monthly file;
+- corrupted monthly files should recover from backup when possible;
+- V1 assumes one active machine at a time;
+- V4 sync/cloud will synchronize whole JSON files;
+- PostgreSQL remains part of V4 but stores the same JSON file content.
+
+Public refs use this format:
+
+```text
+<type>-<MMYY>-<sequence>
+```
+
+Examples:
+
+```text
+t-0426-1
+n-0426-1
+e-0426-1
+```
+
+History is stored as a root-level `history` array in each monthly file. Delete physically removes the item from active `items` and appends a `deleted` history event with an item snapshot.
+
+### Consequences
+
+- Local data is human-readable and easy to back up.
+- V1 avoids a database dependency.
+- The app must implement safe writes and backup recovery carefully.
+- Search needs a rebuildable local index.
+- Multi-machine conflict handling is deferred to V4.
+- JSON structure must remain stable and documented because users may inspect files directly.
+
+### Alternatives Considered
+
+- **SQLite:** rejected for V1 because monthly JSON files better support transparency, file backup, future AI context, and simple file-level sync.
+- **One JSON file for all data:** rejected because monthly files reduce file size and conflict scope.
+- **Entity-level cloud storage:** deferred because V4 will synchronize whole JSON files.
+
+---
+
+## ADR-0015 - MIT Open Source License
+
+**Status:** Accepted  
+**Date:** 2026-04-23
+
+### Context
+
+TermBullet is intended to be an open source project for a global audience. The license must be simple, widely understood, permissive, and friendly to community usage, modification, redistribution, and package manager distribution.
+
+### Decision
+
+TermBullet will use the MIT License.
+
+The repository must include a root `LICENSE` file using the standard MIT License text with:
+
+```text
+Copyright (c) 2026 TermBullet contributors
+```
+
+### Consequences
+
+- Users may use, copy, modify, merge, publish, distribute, sublicense, and sell copies under the MIT terms.
+- The copyright and permission notice must be included in substantial portions of the software.
+- The project is distributed without warranty as described by the MIT License.
+- Package manager distribution is simpler because MIT is broadly accepted.
+
+### Alternatives Considered
+
+- **Apache-2.0:** also permissive and mature, but more verbose and not necessary for the current project goals.
+- **GPL-family license:** rejected because a copyleft license would be more restrictive than intended for TermBullet.
+- **No license yet:** rejected because public open source usage would remain legally ambiguous.
+
+---
+
 ## Final Notes
 
-These decisions define TermBullet's initial architectural direction, but they do not yet choose:
+These decisions define TermBullet's initial architectural direction.
 
-- final export format;
-- default AI provider;
-- open source license.
+There are no known V1-blocking architecture decisions left open in this document.
 
-Those choices should be recorded in future ADRs when there is enough technical context for concrete decisions.
+Future ADRs may still be needed for release automation details, package manager ownership, V4 conflict handling implementation, and any optional AI provider presets if the BYOK model evolves.
