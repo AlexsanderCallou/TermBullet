@@ -1,0 +1,108 @@
+## help
+TermBullet - Local-First Terminal Planner
+
+Usage:
+  termbullet [command] [options]
+
+Subcommands:
+  add
+  backlog
+  cancel
+  config
+  delete
+  done
+  edit
+  export
+  history
+  import
+  list
+  migrate
+  move
+  priority
+  search
+  show
+  tag
+  today
+  untag
+  week
+
+Options:
+  --version    Mostrar informações de versão
+
+  -h, --help    Show help
+## history-clear-help
+Clear stored history entries without deleting active items.
+
+Usage:
+  termbullet history clear [options]
+
+Options:
+  --all    Clear history from all month files
+  --force    Clear without confirmation
+  --month    Clear history for a specific month file
+
+  -h, --help    Show help
+## import-error
+Argumento obrigatório ausente para o comando: 'import'.
+## unknown-error
+O comando necessário não foi fornecido.
+Comando ou argumento 'unknown-command' não reconhecido.
+## add-task
+t-0426-1 Fix authentication flow
+## add-note
+n-0426-1 Investigate stacktrace
+## add-event
+e-0426-1 Team daily at 09:00
+## list
+e-0426-1 [open] [today] Team daily at 09:00
+n-0426-1 [open] [today] Investigate stacktrace
+t-0426-1 [open] [today] Fix authentication flow
+## move
+t-0426-1 Fix authentication flow
+type: task
+status: open
+collection: backlog
+priority: none
+## priority
+t-0426-1 Fix authentication flow
+type: task
+status: open
+collection: backlog
+priority: high
+## tag
+t-0426-1 Fix authentication flow
+type: task
+status: open
+collection: backlog
+priority: high
+tags: backend
+## search
+t-0426-1 [open] [backlog] Fix authentication flow
+## done
+t-0426-1 Fix authentication flow
+type: task
+status: done
+collection: backlog
+priority: high
+tags: backend
+## cancel
+n-0426-1 Investigate stacktrace
+type: note
+status: cancelled
+collection: today
+priority: none
+## migrate
+e-0426-1 Team daily at 09:00
+type: event
+status: migrated
+collection: week
+priority: none
+## delete
+deleted: n-0426-1
+## show-task
+t-0426-1 Fix authentication flow
+type: task
+status: done
+collection: backlog
+priority: high
+tags: backend

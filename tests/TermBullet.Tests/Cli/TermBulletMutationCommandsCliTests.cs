@@ -60,7 +60,7 @@ public sealed class TermBulletMutationCommandsCliTests
         var repository = CreateSeededRepository();
         var app = CreateApp(repository);
 
-        var exitCode = await app.App.InvokeAsync(["move", "t-0426-1", "backlog"]);
+        var exitCode = await app.App.InvokeAsync(["move", "t-0426-1", "--to", "backlog"]);
 
         Assert.Equal(0, exitCode);
         var item = Assert.Single(repository.Items);
@@ -110,12 +110,25 @@ public sealed class TermBulletMutationCommandsCliTests
     }
 
     [Fact]
+    public async Task InvokeAsync_runs_delete_and_removes_item()
+    {
+        var repository = CreateSeededRepository();
+        var app = CreateApp(repository);
+
+        var exitCode = await app.App.InvokeAsync(["delete", "t-0426-1", "--force"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Empty(repository.Items);
+        Assert.Contains("deleted: t-0426-1", app.Output.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task InvokeAsync_returns_error_for_invalid_collection_value()
     {
         var repository = CreateSeededRepository();
         var app = CreateApp(repository);
 
-        var exitCode = await app.App.InvokeAsync(["move", "t-0426-1", "invalid"]);
+        var exitCode = await app.App.InvokeAsync(["move", "t-0426-1", "--to", "invalid"]);
 
         Assert.Equal(1, exitCode);
         Assert.Contains("Unsupported collection", app.Error.ToString());
@@ -154,7 +167,8 @@ public sealed class TermBulletMutationCommandsCliTests
                 new SetItemPriorityUseCase(repository, clock),
                 new TagItemUseCase(repository, clock),
                 new UntagItemUseCase(repository, clock),
-                new MigrateItemUseCase(repository, clock)),
+                new MigrateItemUseCase(repository, clock),
+                new DeleteItemUseCase(repository)),
             output,
             error);
     }
@@ -194,7 +208,18 @@ public sealed class TermBulletMutationCommandsCliTests
             => Task.CompletedTask;
 
         public Task DeleteByPublicRefAsync(string publicRef, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
+        {
+            var item = Items.FirstOrDefault(existingItem =>
+                string.Equals(existingItem.PublicRef.Value, publicRef, StringComparison.Ordinal));
+
+            if (item is null)
+            {
+                throw new KeyNotFoundException();
+            }
+
+            Items.Remove(item);
+            return Task.CompletedTask;
+        }
 
         public Task ClearHistoryAsync(CancellationToken cancellationToken = default)
             => Task.CompletedTask;

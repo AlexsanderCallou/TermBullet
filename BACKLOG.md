@@ -169,6 +169,7 @@ Status: partially complete
 - [x] Implement `termbullet cancel`
 - [x] Implement `termbullet migrate`
 - [x] Implement `termbullet move`
+- [x] Implement `termbullet delete`
 - [x] Implement `termbullet tag`
 - [x] Implement `termbullet untag`
 - [x] Implement `termbullet priority`
@@ -180,8 +181,8 @@ Status: partially complete
 - [x] Add CLI tests for mocked handler execution
 - [x] Add CLI tests for success output
 - [x] Add CLI smoke tests for core flows
-- [ ] Add CLI tests for error output
-- [ ] Add CLI tests for representative help output
+- [x] Add CLI tests for error output
+- [x] Add CLI tests for representative help output
 
 ## Milestone 5 - Export, Import, and Config
 
@@ -234,7 +235,7 @@ Status: not started
 Status: not started
 
 - [ ] Documentation review
-- [ ] Command help review
+- [x] Command help review
 - [ ] Import/export validation
 - [ ] JSON file backup/recovery validation
 - [ ] Cross-platform smoke testing where practical
@@ -266,7 +267,8 @@ A task is done only when:
 
 Recommended next execution slice, still aligned with the milestones above:
 
-- [ ] Milestone 4/5: expand CLI help and error output coverage
+- [ ] Milestone 4: decide whether practical global options stay in V1 or move to post-MVP
+- [ ] Milestone 6: start TUI MVP when no command is provided
 
 ## Post-V1 Backlog
 

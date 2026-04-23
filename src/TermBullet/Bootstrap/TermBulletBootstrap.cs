@@ -60,6 +60,7 @@ public static class TermBulletBootstrap
             new TagItemUseCase(itemRepository, clock),
             new UntagItemUseCase(itemRepository, clock),
             new MigrateItemUseCase(itemRepository, clock),
+            new DeleteItemUseCase(itemRepository),
             new SearchItemsUseCase(itemRepository),
             startupAction: startupMaintenanceUseCase.ExecuteAsync);
     }
