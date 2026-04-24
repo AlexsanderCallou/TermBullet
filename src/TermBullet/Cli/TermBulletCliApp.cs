@@ -32,6 +32,7 @@ public sealed class TermBulletCliApp(
     TagItemUseCase? tagItemUseCase = null,
     UntagItemUseCase? untagItemUseCase = null,
     MigrateItemUseCase? migrateItemUseCase = null,
+    DeleteItemUseCase? deleteItemUseCase = null,
     SearchItemsUseCase? searchItemsUseCase = null,
     Func<CancellationToken, Task>? startupAction = null)
 {
@@ -40,15 +41,41 @@ public sealed class TermBulletCliApp(
         return InvokeInternalAsync(args, cancellationToken);
     }
 
+    public const string Version = "1.0.0";
+
     private async Task<int> InvokeInternalAsync(string[] args, CancellationToken cancellationToken)
     {
+        if (HasVersionRequest(args))
+        {
+            await output.WriteLineAsync(Version);
+            return 0;
+        }
+
         if (startupAction is not null)
         {
             await startupAction(cancellationToken);
         }
 
         var rootCommand = BuildRootCommand(output, error, cancellationToken);
-        return await rootCommand.Parse(args).InvokeAsync();
+        var parseResult = rootCommand.Parse(args);
+
+        if (HasHelpRequest(args))
+        {
+            await WriteHelpAsync(parseResult.CommandResult.Command, output);
+            return 0;
+        }
+
+        if (parseResult.Errors.Count > 0)
+        {
+            foreach (var parseError in parseResult.Errors)
+            {
+                await error.WriteLineAsync(parseError.Message);
+            }
+
+            return 1;
+        }
+
+        return await parseResult.InvokeAsync(cancellationToken: cancellationToken);
     }
 
     public RootCommand BuildRootCommand(
@@ -155,13 +182,12 @@ public sealed class TermBulletCliApp(
 
         if (migrateItemUseCase is not null)
         {
-            rootCommand.Subcommands.Add(BuildSimpleMutationCommand(
-                "migrate",
-                "Mark an item as migrated",
-                migrateItemUseCase.ExecuteAsync,
-                standardOutput,
-                standardError,
-                cancellationToken));
+            rootCommand.Subcommands.Add(BuildMigrateCommand(standardOutput, standardError, cancellationToken));
+        }
+
+        if (deleteItemUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildDeleteCommand(standardOutput, standardError, cancellationToken));
         }
 
         if (searchItemsUseCase is not null)
@@ -233,6 +259,10 @@ public sealed class TermBulletCliApp(
         {
             Description = "Item content"
         };
+        var taskOption = new Option<bool>("--task")
+        {
+            Description = "Create as task (default)"
+        };
         var noteOption = new Option<bool>("--note")
         {
             Description = "Create a note"
@@ -259,6 +289,7 @@ public sealed class TermBulletCliApp(
         var command = new Command("add", "Create a new item")
         {
             textArgument,
+            taskOption,
             noteOption,
             eventOption,
             priorityOption,
@@ -273,6 +304,7 @@ public sealed class TermBulletCliApp(
                 var content = parseResult.GetValue(textArgument)
                     ?? throw new InvalidOperationException("Item content is required.");
                 var itemType = ResolveItemType(
+                    parseResult.GetValue(taskOption),
                     parseResult.GetValue(noteOption),
                     parseResult.GetValue(eventOption));
                 var priority = ParsePriority(parseResult.GetValue(priorityOption));
@@ -425,12 +457,16 @@ public sealed class TermBulletCliApp(
         CancellationToken cancellationToken)
     {
         var publicRefArgument = new Argument<string>("ref") { Description = "Public ref" };
-        var collectionArgument = new Argument<string>("collection") { Description = "Target collection" };
+        var toOption = new Option<string>("--to")
+        {
+            Description = "Destination collection",
+            Required = true
+        };
 
         var command = new Command("move", "Move an item to another collection")
         {
             publicRefArgument,
-            collectionArgument
+            toOption
         };
 
         command.SetAction(async parseResult =>
@@ -439,7 +475,7 @@ public sealed class TermBulletCliApp(
             {
                 var publicRef = parseResult.GetValue(publicRefArgument)
                     ?? throw new InvalidOperationException("Public ref is required.");
-                var collection = ParseCollection(parseResult.GetValue(collectionArgument))
+                var collection = ParseCollection(parseResult.GetValue(toOption))
                     ?? throw new InvalidOperationException("Collection is required.");
                 var item = await moveItemUseCase!.ExecuteAsync(new MoveItemRequest
                 {
@@ -583,6 +619,55 @@ public sealed class TermBulletCliApp(
         return command;
     }
 
+    private Command BuildMigrateCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var publicRefArgument = new Argument<string>("ref") { Description = "Public ref" };
+        var toOption = new Option<string?>("--to")
+        {
+            Description = "Migration destination"
+        };
+
+        var command = new Command("migrate", "Mark an item as migrated")
+        {
+            publicRefArgument,
+            toOption
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var publicRef = parseResult.GetValue(publicRefArgument)
+                    ?? throw new InvalidOperationException("Public ref is required.");
+                var destination = parseResult.GetValue(toOption);
+                if (!string.IsNullOrWhiteSpace(destination))
+                {
+                    var collection = ParseCollection(destination)
+                        ?? throw new InvalidOperationException("Destination collection is required.");
+                    await moveItemUseCase!.ExecuteAsync(new MoveItemRequest
+                    {
+                        PublicRef = publicRef,
+                        Collection = collection
+                    }, cancellationToken);
+                }
+
+                var item = await migrateItemUseCase!.ExecuteAsync(publicRef, cancellationToken);
+                await WriteItemDetailAsync(item, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
     private Command BuildSearchCommand(
         TextWriter standardOutput,
         TextWriter standardError,
@@ -609,6 +694,47 @@ public sealed class TermBulletCliApp(
                     Query = query
                 }, cancellationToken);
                 await WriteItemsAsync(items, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildDeleteCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var publicRefArgument = new Argument<string>("ref")
+        {
+            Description = "Public ref"
+        };
+        var forceOption = new Option<bool>("--force")
+        {
+            Description = "Remove without confirmation"
+        };
+
+        var command = new Command("delete", "Remove an item")
+        {
+            publicRefArgument,
+            forceOption
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var publicRef = parseResult.GetValue(publicRefArgument)
+                    ?? throw new InvalidOperationException("Public ref is required.");
+
+                await deleteItemUseCase!.ExecuteAsync(publicRef, cancellationToken);
+                await standardOutput.WriteLineAsync($"deleted: {publicRef}");
                 return 0;
             }
             catch (Exception exception)
@@ -938,11 +1064,11 @@ public sealed class TermBulletCliApp(
         return true;
     }
 
-    private static ItemType ResolveItemType(bool note, bool @event)
+    private static ItemType ResolveItemType(bool task, bool note, bool @event)
     {
-        if (note && @event)
+        if ((task && note) || (task && @event) || (note && @event))
         {
-            throw new ArgumentException("Use either --note or --event, not both.");
+            throw new ArgumentException("Use only one type flag: --task, --note, or --event.");
         }
 
         return note
@@ -950,6 +1076,149 @@ public sealed class TermBulletCliApp(
             : @event
                 ? ItemType.Event
                 : ItemType.Task;
+    }
+
+    private static bool HasHelpRequest(string[] args) =>
+        args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || string.Equals(arg, "-h", StringComparison.Ordinal));
+
+    private static bool HasVersionRequest(string[] args) =>
+        args.Any(arg => string.Equals(arg, "--version", StringComparison.Ordinal) || string.Equals(arg, "-v", StringComparison.Ordinal));
+
+    private static async Task WriteHelpAsync(Command command, TextWriter writer)
+    {
+        await writer.WriteLineAsync(command.Description);
+        await writer.WriteLineAsync();
+        await writer.WriteLineAsync("Usage:");
+        await writer.WriteLineAsync($"  {BuildUsage(command)}");
+
+        if (command.Arguments.Count > 0)
+        {
+            await writer.WriteLineAsync();
+            await writer.WriteLineAsync("Arguments:");
+            foreach (var argument in command.Arguments)
+            {
+                await writer.WriteLineAsync($"  <{argument.Name}>");
+            }
+        }
+
+        if (command.Subcommands.Count > 0)
+        {
+            await writer.WriteLineAsync();
+            await writer.WriteLineAsync("Subcommands:");
+            foreach (var subcommand in command.Subcommands.OrderBy(subcommand => subcommand.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                await writer.WriteLineAsync($"  {subcommand.Name}");
+            }
+        }
+
+        var visibleOptions = command.Options
+            .Where(option => !option.Aliases.Any(alias =>
+                string.Equals(alias, "--help", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(alias, "-h", StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(option => option.Name.TrimStart('-'), StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (visibleOptions.Length > 0)
+        {
+            await writer.WriteLineAsync();
+            await writer.WriteLineAsync("Options:");
+            foreach (var option in visibleOptions)
+            {
+                var aliases = string.Join(", ", option.Aliases
+                    .Append(option.Name)
+                    .Select(FormatAlias)
+                    .Where(alias => !string.IsNullOrWhiteSpace(alias))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(alias => alias.Length)
+                    .ThenBy(alias => alias, StringComparer.OrdinalIgnoreCase));
+                await writer.WriteLineAsync($"  {aliases}    {GetOptionDescription(option)}");
+            }
+        }
+
+        await writer.WriteLineAsync();
+        await writer.WriteLineAsync("  -h, --help    Show help");
+    }
+
+    private static string? GetOptionDescription(Option option) =>
+        IsVersionOption(option)
+            ? "Show version"
+            : option.Description;
+
+    private static bool IsVersionOption(Option option) =>
+        string.Equals(option.Name, "version", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(option.Name, "--version", StringComparison.OrdinalIgnoreCase)
+        || option.Aliases.Any(alias =>
+            string.Equals(alias, "--version", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(alias, "-v", StringComparison.OrdinalIgnoreCase));
+
+    private static string BuildUsage(Command command)
+    {
+        var segments = new List<string> { "termbullet" };
+        var commandPath = GetCommandPath(command);
+
+        if (commandPath.Count == 0)
+        {
+            segments.Add("[command]");
+        }
+        else
+        {
+            segments.AddRange(commandPath);
+        }
+
+        foreach (var argument in command.Arguments)
+        {
+            segments.Add($"<{argument.Name}>");
+        }
+
+        if (command.Options.Count > 0)
+        {
+            segments.Add("[options]");
+        }
+
+        return string.Join(' ', segments.Where(segment => !string.IsNullOrWhiteSpace(segment) && segment != "root"));
+    }
+
+    private static IReadOnlyList<string> GetCommandPath(Command command)
+    {
+        if (command is RootCommand)
+        {
+            return [];
+        }
+
+        var names = new List<string>();
+        Symbol? current = command;
+
+        while (current is Command currentCommand)
+        {
+            if (currentCommand is RootCommand)
+            {
+                break;
+            }
+
+            if (!string.IsNullOrWhiteSpace(currentCommand.Name) && !string.Equals(currentCommand.Name, "root", StringComparison.OrdinalIgnoreCase))
+            {
+                names.Add(currentCommand.Name);
+            }
+
+            current = currentCommand.Parents.OfType<Symbol>().FirstOrDefault();
+        }
+
+        names.Reverse();
+        return names;
+    }
+
+    private static string FormatAlias(string alias)
+    {
+        if (string.IsNullOrWhiteSpace(alias))
+        {
+            return alias;
+        }
+
+        if (alias.StartsWith("--", StringComparison.Ordinal) || alias.StartsWith("-", StringComparison.Ordinal))
+        {
+            return alias;
+        }
+
+        return alias.Length == 1 ? $"-{alias}" : $"--{alias}";
     }
 
     private static ItemCollection? ParseCollection(string? value)

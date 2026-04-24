@@ -8,6 +8,7 @@ using TermBullet.Cli;
 using TermBullet.Infrastructure.Export;
 using TermBullet.Infrastructure.Identity;
 using TermBullet.Infrastructure.Persistence.JsonFiles;
+using TermBullet.Tui;
 
 namespace TermBullet.Bootstrap;
 
@@ -18,22 +19,8 @@ public static class TermBulletBootstrap
         TextWriter output,
         TextWriter error)
     {
-        var fileStore = new SafeJsonFileStore();
-        var settingsStore = new LocalSettingsStore(projectRootPath, fileStore);
-        var clock = new SystemClock();
-        var itemRepository = new JsonFileItemRepository(
-            clock,
-            new MonthlyJsonFilePathResolver(projectRootPath),
-            fileStore,
-            new LocalJsonIndexService(projectRootPath, fileStore));
-        var dataTransferService = new JsonDataTransferService(
-            projectRootPath,
-            fileStore,
-            new LocalJsonIndexService(projectRootPath, fileStore));
-        var historyMaintenanceService = new LocalHistoryMaintenanceService(
-            projectRootPath,
-            new MonthlyJsonFilePathResolver(projectRootPath),
-            fileStore);
+        var (clock, itemRepository, dataTransferService, historyMaintenanceService, settingsStore) =
+            CreateSharedServices(projectRootPath);
         var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
 
         return new TermBulletCliApp(
@@ -60,8 +47,51 @@ public static class TermBulletBootstrap
             new TagItemUseCase(itemRepository, clock),
             new UntagItemUseCase(itemRepository, clock),
             new MigrateItemUseCase(itemRepository, clock),
+            new DeleteItemUseCase(itemRepository),
             new SearchItemsUseCase(itemRepository),
             startupAction: startupMaintenanceUseCase.ExecuteAsync);
+    }
+
+    public static TermBulletTuiApp CreateTuiApp(string projectRootPath)
+    {
+        var (clock, itemRepository, _, _, settingsStore) = CreateSharedServices(projectRootPath);
+        var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
+
+        return new TermBulletTuiApp(
+            new GetTodayItemsUseCase(itemRepository),
+            new GetBacklogItemsUseCase(itemRepository),
+            new GetWeekItemsUseCase(itemRepository),
+            new ListItemsUseCase(itemRepository),
+            new SearchItemsUseCase(itemRepository),
+            new ListConfigurationUseCase(settingsStore),
+            new CreateItemUseCase(itemRepository, clock, new GuidIdGenerator()),
+            new MarkDoneItemUseCase(itemRepository, clock),
+            new CancelItemUseCase(itemRepository, clock),
+            new MigrateItemUseCase(itemRepository, clock),
+            new DeleteItemUseCase(itemRepository),
+            startupAction: startupMaintenanceUseCase.ExecuteAsync);
+    }
+
+    private static (
+        IClock Clock,
+        JsonFileItemRepository ItemRepository,
+        JsonDataTransferService DataTransferService,
+        LocalHistoryMaintenanceService HistoryMaintenanceService,
+        LocalSettingsStore SettingsStore)
+        CreateSharedServices(string projectRootPath)
+    {
+        var fileStore = new SafeJsonFileStore();
+        var clock = new SystemClock();
+        var pathResolver = new MonthlyJsonFilePathResolver(projectRootPath);
+        var indexService = new LocalJsonIndexService(projectRootPath, fileStore);
+        var itemRepository = new JsonFileItemRepository(clock, pathResolver, fileStore, indexService);
+        var dataTransferService = new JsonDataTransferService(
+            projectRootPath, fileStore, new LocalJsonIndexService(projectRootPath, fileStore));
+        var historyMaintenanceService = new LocalHistoryMaintenanceService(
+            projectRootPath, pathResolver, fileStore);
+        var settingsStore = new LocalSettingsStore(projectRootPath, fileStore);
+
+        return (clock, itemRepository, dataTransferService, historyMaintenanceService, settingsStore);
     }
 
     private sealed class SystemClock : IClock

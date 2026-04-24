@@ -74,6 +74,7 @@ public sealed class TermBulletSearchCommandCliTests
                 null,
                 null,
                 null,
+                null,
                 new SearchItemsUseCase(repository)),
             output,
             error);

@@ -9,7 +9,7 @@ The project combines two first-class interfaces over the same functional core:
 - **TUI**: the main visual interface, with screens and panels inspired by tools such as LazyDocker and LazyGit.
 - **CLI**: a fast interface for capturing, querying, and manipulating items without opening the TUI.
 
-> Status: this repository currently contains the product specification and architecture decisions. The commands and screens below represent the target product interface.
+> Status: TermBullet is approaching an experimental MVP. The CLI and local JSON persistence are the most complete areas. The active TUI MVP is intentionally limited to Main Dashboard, Search, and Add Item while broader TUI screens remain planned.
 
 ## Repository
 
@@ -114,11 +114,7 @@ macOS:   ~/Library/Application Support/TermBullet/data
 Linux:   ~/.local/share/termbullet/data
 ```
 
-The data directory can be overridden with:
-
-```bash
-termbullet --data <path>
-```
+Custom data directory support is planned after the first MVP. For now, TermBullet uses the platform default data directory.
 
 ## Objective
 
@@ -142,7 +138,7 @@ The first version of TermBullet should deliver the offline core:
 
 - creation and manipulation of tasks, notes, and events;
 - Today, Week, and Backlog collections;
-- main TUI with keyboard navigation;
+- main TUI MVP with keyboard navigation;
 - CLI for capture and fast operations;
 - search;
 - basic editing;
@@ -262,10 +258,13 @@ termbullet show t-0426-1
 termbullet search "jwt"
 ```
 
-Planned global options:
+Global options:
 
 - `-h`, `--help`: show help.
 - `-v`, `--version`: show version.
+
+Deferred global options:
+
 - `--json`: JSON output when supported.
 - `--no-color`: disable colors.
 - `--data <path>`: use an alternative local data directory.
@@ -280,18 +279,19 @@ The TUI should work as a personal cockpit for planning and execution:
 - dense, clear, and operational;
 - based on screens, panels, visual focus, and consistent shortcuts.
 
-Required V1 screens:
+Active MVP screens:
 
 - Main Dashboard;
+- Search / Command Palette;
+- Add Item as an auxiliary keyboard-only flow.
+
+Deferred TUI screens:
+
 - Daily Focus;
 - Weekly Planning;
 - Backlog Triage;
 - Review;
-- Search / Command Palette;
-- Config.
-
-Future screens:
-
+- Config;
 - Calendar View in V3;
 - Sync / Cloud in V4.
 
@@ -353,9 +353,9 @@ Official references:
 
 ## Roadmap
 
-### V1 - Offline Core
+### V1 - Offline Core MVP
 
-- TUI;
+- TUI MVP with Main Dashboard, Search, and Add Item;
 - CLI;
 - tasks, notes, and events;
 - today, week, and backlog;
@@ -394,7 +394,7 @@ Official references:
 V1 is considered adequate when:
 
 1. users can use TermBullet locally without internet access;
-2. the TUI offers consistent screen and panel navigation;
+2. the TUI MVP offers consistent keyboard navigation for Main Dashboard, Search, and Add Item;
 3. the CLI can manipulate the main items without opening the TUI;
 4. tasks, notes, and events can be created, listed, edited, and changed;
 5. the system uses readable public refs in the official format;

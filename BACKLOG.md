@@ -47,22 +47,16 @@ Already implemented:
 - [x] repository/schema conformance for optional fields
 - [x] project documentation baseline
 
-Still missing to finish V1:
+Still missing to finish the experimental MVP:
 
-- [ ] remaining Infrastructure items
-- [ ] missing Application use cases
-- [ ] remaining Bootstrap/runtime composition
-- [ ] remaining CLI MVP
-- [ ] export/import/config/history command flows
-- [ ] TUI MVP
 - [ ] V1 release candidate hardening
 
 ## Standard Verification Commands
 
-- [ ] `dotnet restore`
-- [ ] `dotnet build`
-- [ ] `dotnet test`
-- [ ] `dotnet run --project src/TermBullet -- [command] [arguments] [options]`
+- [x] `dotnet restore`
+- [x] `dotnet build`
+- [x] `dotnet test`
+- [x] `dotnet run --project src/TermBullet -- [command] [arguments] [options]`
 
 ## Milestone 0 - Repository Scaffold
 
@@ -88,7 +82,7 @@ Status: complete
 
 ## Milestone 2 - Application Use Cases
 
-Status: partially complete
+Status: complete
 
 Completed:
 
@@ -119,7 +113,7 @@ Remaining:
 
 ## Milestone 3 - JSON File Infrastructure
 
-Status: partially complete
+Status: complete
 
 Completed:
 
@@ -154,7 +148,7 @@ Remaining:
 
 ## Milestone 4 - CLI MVP
 
-Status: partially complete
+Status: complete
 
 - [x] Add System.CommandLine dependency
 - [x] Create CLI module structure
@@ -169,23 +163,26 @@ Status: partially complete
 - [x] Implement `termbullet cancel`
 - [x] Implement `termbullet migrate`
 - [x] Implement `termbullet move`
+- [x] Implement `termbullet delete`
 - [x] Implement `termbullet tag`
 - [x] Implement `termbullet untag`
 - [x] Implement `termbullet priority`
 - [x] Implement `termbullet search`
-- [ ] Implement global options where practical
+- [x] Implement global options where practical
+  - [x] `-v, --version`: implemented in V1
+  - post-MVP: `--data`, `--json`, `--no-color`, `--profile` (global)
 - [x] Add CLI tests for valid parsing
 - [x] Add CLI tests for missing required arguments
 - [x] Add CLI tests for invalid options
 - [x] Add CLI tests for mocked handler execution
 - [x] Add CLI tests for success output
 - [x] Add CLI smoke tests for core flows
-- [ ] Add CLI tests for error output
-- [ ] Add CLI tests for representative help output
+- [x] Add CLI tests for error output
+- [x] Add CLI tests for representative help output
 
 ## Milestone 5 - Export, Import, and Config
 
-Status: partially complete
+Status: complete
 
 - [x] Implement `termbullet export`
 - [x] Implement `termbullet import`
@@ -208,33 +205,48 @@ Status: partially complete
 
 ## Milestone 6 - TUI MVP
 
-Status: not started
+Status: complete
 
-- [ ] Add Terminal.Gui dependency
-- [ ] Create TUI module structure
-- [ ] Start TUI when no command is provided
-- [ ] Implement Main Dashboard
-- [ ] Implement Daily Focus
-- [ ] Implement Backlog Triage
-- [ ] Implement Search
-- [ ] Implement Config
-- [ ] Implement keyboard focus model
-- [ ] Implement footer shortcuts
-- [ ] Implement action dispatch to Application use cases
-- [ ] Add TUI tests for screen state initialization
-- [ ] Add TUI tests for focus movement
-- [ ] Add TUI tests for selected item changes
-- [ ] Add TUI tests for action dispatch
-- [ ] Add TUI tests for search query state
-- [ ] Add TUI tests for view model mapping from use case results
-- [ ] Run manual terminal rendering smoke test
+MVP scope adjustment: the active TUI code now keeps only Main Dashboard, Search, and the auxiliary Add Item flow. Daily Focus, Weekly Planning, Backlog Triage, Review, and Config are deferred until after this MVP is stable.
+
+- [x] Add Terminal.Gui dependency (1.19.0)
+- [x] Create TUI module structure (Tui/Navigation/, Tui/Screens/)
+- [x] Start TUI when no command is provided
+- [x] Implement Main Dashboard (shell + panels 1/2/3 + q to quit)
+- [x] Add TUI tests for screen state initialization (TuiNavigationState)
+- [x] Add TUI tests for focus movement (MoveNextPanel, MovePreviousPanel, wrap)
+- [x] Add TUI tests for selected item changes (SelectNextDayItem, SelectPreviousDayItem)
+- [x] Add TUI tests for view model mapping from use case results (symbols, priority, collection)
+- [x] Add TUI tests for action dispatch (HandleDoneAsync, HandleCancelAsync, HandleDeleteAsync, HandleMigrateAsync)
+- [x] Implement keyboard focus model (Tab/Shift+Tab wired in TermBulletTuiApp)
+- [x] Implement footer shortcuts (x done, > migrate, d delete visible in footer)
+- [x] Reduce active MVP TUI scope to Main Dashboard, Search, and Add Item
+- [x] Remove deferred screen code and tests from the active MVP TUI path
+- [x] Implement multi-screen navigation (RunLoop + NavigateTo + NavigateBack)
+- [x] Add TUI tests for screen navigation (CanNavigateBack, NavigateTo, NavigateBack)
+- [x] Implement Search screen
+- [ ] Post-MVP: restore Daily Focus screen when needed
+- [ ] Post-MVP: restore Backlog Triage screen when needed
+- [ ] Post-MVP: restore Weekly Planning screen when needed
+- [ ] Post-MVP: restore Review screen when needed
+- [ ] Post-MVP: restore Config screen when needed
+- [x] Add contextual help overlay (`?`) for active TUI screens and Add Item flow
+- [x] Strengthen active panel styling with live title/focus updates
+- [x] Refresh screen previews after in-screen selection changes
+- [x] Run startup maintenance when opening the TUI
+- [x] Add TUI tests for search query state
+- [x] Refactor TUI runtime to use one Terminal.Gui session with replaceable screen roots
+- [x] Reimplement TUI add flow (`c`) without freezing the terminal runtime
+- [x] Wire dashboard task lifecycle shortcuts through global TUI key handling (`x` done, `z` cancel, `>` migrate, `d` delete)
+- [x] Add manual TUI validation for add/create persistence and JSON write completion
+- [x] Run manual terminal rendering smoke test
 
 ## Milestone 7 - V1 Release Candidate
 
-Status: not started
+Status: partial
 
-- [ ] Documentation review
-- [ ] Command help review
+- [x] Documentation review
+- [x] Command help review
 - [ ] Import/export validation
 - [ ] JSON file backup/recovery validation
 - [ ] Cross-platform smoke testing where practical
@@ -244,12 +256,12 @@ Status: not started
 - [ ] Regression tests for CLI and Application consistency
 - [ ] Regression tests for persistence round trip
 - [ ] Regression tests for export/import round trip
-- [ ] Validate `dotnet restore`
-- [ ] Validate `dotnet build`
-- [ ] Validate `dotnet test`
+- [x] Validate `dotnet restore`
+- [x] Validate `dotnet build`
+- [x] Validate `dotnet test`
 - [x] Run CLI smoke tests
-- [ ] Run TUI smoke tests
-- [ ] Ensure README and docs reflect actual behavior
+- [x] Run TUI smoke tests
+- [x] Ensure README and docs reflect actual behavior
 
 ## Definition of Done
 
@@ -266,7 +278,28 @@ A task is done only when:
 
 Recommended next execution slice, still aligned with the milestones above:
 
-- [ ] Milestone 4/5: expand CLI help and error output coverage
+- [x] Milestone 4: global options decided — `-v/--version` implemented; `--data`, `--json`, `--no-color`, `--profile` (global) deferred to post-MVP
+- [x] Milestone 6: TUI runtime refactored to avoid stop/restart navigation and root handler accumulation
+- [x] Milestone 6: reimplement TUI add (`c`) with a non-modal, keyboard-only flow that never performs persistence inside the UI event handler
+- [x] Manual smoke validation: `c -> Enter -> item persisted -> JSON file finalized`
+- [x] Manual smoke validation: dashboard navigation, Search, `?`, `Esc`, and `q`
+- [x] After manual smoke passes, mark Milestone 6 complete
+
+## Manual TUI Smoke Checklist
+
+Use a clean temporary working directory and run the built executable.
+
+- [x] Open the TUI with no command.
+- [x] Confirm the Main Dashboard renders.
+- [x] Press `?` and confirm contextual help opens in English.
+- [x] Press `Esc` and confirm help closes without leaving the TUI.
+- [x] Press `c`, type `- Manual smoke task`, press `Enter`, and confirm the TUI returns to the dashboard.
+- [x] Confirm the created task appears in the dashboard.
+- [x] Confirm `data/<year>/data_<month>_<year>.json` is finalized, not left as only a temp file.
+- [x] Press `/` or open Search from the dashboard.
+- [x] Search for `Manual smoke task` and confirm the item appears.
+- [x] Press `Esc` from Search and confirm it returns to the dashboard.
+- [x] Press `q` and confirm the TUI exits cleanly.
 
 ## Post-V1 Backlog
 

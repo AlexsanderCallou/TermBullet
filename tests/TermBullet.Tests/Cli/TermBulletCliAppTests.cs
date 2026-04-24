@@ -92,6 +92,12 @@ public sealed class TermBulletCliAppTests
         var exitCode = await app.InvokeAsync(["import"]);
 
         Assert.Equal(1, exitCode);
+        var errorOutput = dependencies.Error.ToString();
+        Assert.False(string.IsNullOrWhiteSpace(errorOutput));
+        Assert.True(
+            errorOutput.Contains("required argument missing", StringComparison.OrdinalIgnoreCase)
+            || errorOutput.Contains("argumento obrigat", StringComparison.OrdinalIgnoreCase),
+            $"Unexpected error output: {errorOutput}");
     }
 
     [Fact]
@@ -133,6 +139,76 @@ public sealed class TermBulletCliAppTests
 
         Assert.Equal(0, exitCode);
         Assert.True(startupCalled);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_writes_root_help_to_output()
+    {
+        var dependencies = CreateDependencies();
+        var app = CreateApp(dependencies);
+
+        var exitCode = await app.InvokeAsync(["--help"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("TermBullet - Local-First Terminal Planner", dependencies.Output.ToString());
+        Assert.Contains("config", dependencies.Output.ToString());
+        Assert.Contains("export", dependencies.Output.ToString());
+        Assert.DoesNotContain("Mostrar", dependencies.Output.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_writes_nested_help_to_output()
+    {
+        var dependencies = CreateDependencies();
+        var app = CreateApp(dependencies);
+
+        var exitCode = await app.InvokeAsync(["history", "clear", "--help"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Clear stored history entries", dependencies.Output.ToString());
+        Assert.Contains("--month", dependencies.Output.ToString());
+        Assert.Contains("--all", dependencies.Output.ToString());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_writes_version_for_version_flag()
+    {
+        var dependencies = CreateDependencies();
+        var app = CreateApp(dependencies);
+
+        var exitCode = await app.InvokeAsync(["--version"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("1.0.0", dependencies.Output.ToString());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_writes_version_for_short_version_flag()
+    {
+        var dependencies = CreateDependencies();
+        var app = CreateApp(dependencies);
+
+        var exitCode = await app.InvokeAsync(["-v"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("1.0.0", dependencies.Output.ToString());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_writes_parse_error_for_unknown_command()
+    {
+        var dependencies = CreateDependencies();
+        var app = CreateApp(dependencies);
+
+        var exitCode = await app.InvokeAsync(["unknown-command"]);
+
+        Assert.Equal(1, exitCode);
+        var errorOutput = dependencies.Error.ToString();
+        Assert.False(string.IsNullOrWhiteSpace(errorOutput));
+        Assert.True(
+            errorOutput.Contains("unrecognized command", StringComparison.OrdinalIgnoreCase)
+            || errorOutput.Contains("comando", StringComparison.OrdinalIgnoreCase),
+            $"Unexpected error output: {errorOutput}");
     }
 
     private static TermBulletCliApp CreateApp(
