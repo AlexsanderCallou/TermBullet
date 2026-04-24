@@ -18,3 +18,7 @@ Thumbs.db
 
 # Manual Testes
 manual-tests/
+
+manual-tui-smoke/
+
+screens.pen
