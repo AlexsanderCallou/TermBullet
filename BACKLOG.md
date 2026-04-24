@@ -174,7 +174,9 @@ Status: partially complete
 - [x] Implement `termbullet untag`
 - [x] Implement `termbullet priority`
 - [x] Implement `termbullet search`
-- [ ] Implement global options where practical
+- [x] Implement global options where practical
+  - [x] `-v, --version`: implemented in V1
+  - post-MVP: `--data`, `--json`, `--no-color`, `--profile` (global)
 - [x] Add CLI tests for valid parsing
 - [x] Add CLI tests for missing required arguments
 - [x] Add CLI tests for invalid options
@@ -209,25 +211,35 @@ Status: partially complete
 
 ## Milestone 6 - TUI MVP
 
-Status: not started
+Status: complete (pending manual smoke test)
 
-- [ ] Add Terminal.Gui dependency
-- [ ] Create TUI module structure
-- [ ] Start TUI when no command is provided
-- [ ] Implement Main Dashboard
-- [ ] Implement Daily Focus
-- [ ] Implement Backlog Triage
-- [ ] Implement Search
-- [ ] Implement Config
-- [ ] Implement keyboard focus model
-- [ ] Implement footer shortcuts
-- [ ] Implement action dispatch to Application use cases
-- [ ] Add TUI tests for screen state initialization
-- [ ] Add TUI tests for focus movement
-- [ ] Add TUI tests for selected item changes
-- [ ] Add TUI tests for action dispatch
-- [ ] Add TUI tests for search query state
-- [ ] Add TUI tests for view model mapping from use case results
+- [x] Add Terminal.Gui dependency (1.19.0)
+- [x] Create TUI module structure (Tui/Navigation/, Tui/Screens/)
+- [x] Start TUI when no command is provided
+- [x] Implement Main Dashboard (shell + panels 1/2/3 + q to quit)
+- [x] Add TUI tests for screen state initialization (TuiNavigationState)
+- [x] Add TUI tests for focus movement (MoveNextPanel, MovePreviousPanel, wrap)
+- [x] Add TUI tests for selected item changes (SelectNextDayItem, SelectPreviousDayItem)
+- [x] Add TUI tests for view model mapping from use case results (symbols, priority, collection)
+- [x] Add TUI tests for action dispatch (HandleDoneAsync, HandleCancelAsync, HandleDeleteAsync, HandleMigrateAsync)
+- [x] Implement keyboard focus model (Tab/Shift+Tab wired in TermBulletTuiApp)
+- [x] Implement footer shortcuts (x done, > migrate, d delete visible in footer)
+- [x] Implement DailyFocusViewModel + DailyFocusSection (grouping by status, section navigation)
+- [x] Implement Daily Focus screen (Terminal.Gui shell — 3 panels + Esc back)
+- [x] Implement Backlog Triage (BacklogTriageViewModel + BacklogTriageScreen — filter by tag/priority + 3 panels)
+- [x] Implement multi-screen navigation (RunLoop + NavigateTo + NavigateBack)
+- [x] Add TUI tests for screen navigation (CanNavigateBack, NavigateTo, NavigateBack)
+- [x] Implement Search screen
+- [x] Implement Config screen
+- [x] Implement Weekly Planning screen
+- [x] Implement Review screen
+- [x] Add contextual help overlay (`?`) per TUI screen
+- [x] Implement quick capture flow (`c`) with task/note/event parsing
+- [x] Strengthen active panel styling with live title/focus updates
+- [x] Refresh screen previews after in-screen selection changes
+- [x] Run startup maintenance when opening the TUI
+- [x] Add TUI tests for search query state
+- [x] Add TUI tests for config section/option navigation
 - [ ] Run manual terminal rendering smoke test
 
 ## Milestone 7 - V1 Release Candidate
@@ -267,8 +279,8 @@ A task is done only when:
 
 Recommended next execution slice, still aligned with the milestones above:
 
-- [ ] Milestone 4: decide whether practical global options stay in V1 or move to post-MVP
-- [ ] Milestone 6: start TUI MVP when no command is provided
+- [x] Milestone 4: global options decided — `-v/--version` implemented; `--data`, `--json`, `--no-color`, `--profile` (global) deferred to post-MVP
+- [x] Milestone 6: TUI MVP complete — all screens implemented and tested (278 tests passing)
 
 ## Post-V1 Backlog
 

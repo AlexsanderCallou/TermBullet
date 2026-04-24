@@ -41,8 +41,16 @@ public sealed class TermBulletCliApp(
         return InvokeInternalAsync(args, cancellationToken);
     }
 
+    public const string Version = "1.0.0";
+
     private async Task<int> InvokeInternalAsync(string[] args, CancellationToken cancellationToken)
     {
+        if (HasVersionRequest(args))
+        {
+            await output.WriteLineAsync(Version);
+            return 0;
+        }
+
         if (startupAction is not null)
         {
             await startupAction(cancellationToken);
@@ -1072,6 +1080,9 @@ public sealed class TermBulletCliApp(
 
     private static bool HasHelpRequest(string[] args) =>
         args.Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || string.Equals(arg, "-h", StringComparison.Ordinal));
+
+    private static bool HasVersionRequest(string[] args) =>
+        args.Any(arg => string.Equals(arg, "--version", StringComparison.Ordinal) || string.Equals(arg, "-v", StringComparison.Ordinal));
 
     private static async Task WriteHelpAsync(Command command, TextWriter writer)
     {

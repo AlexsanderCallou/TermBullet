@@ -170,6 +170,30 @@ public sealed class TermBulletCliAppTests
     }
 
     [Fact]
+    public async Task InvokeAsync_writes_version_for_version_flag()
+    {
+        var dependencies = CreateDependencies();
+        var app = CreateApp(dependencies);
+
+        var exitCode = await app.InvokeAsync(["--version"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("1.0.0", dependencies.Output.ToString());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_writes_version_for_short_version_flag()
+    {
+        var dependencies = CreateDependencies();
+        var app = CreateApp(dependencies);
+
+        var exitCode = await app.InvokeAsync(["-v"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("1.0.0", dependencies.Output.ToString());
+    }
+
+    [Fact]
     public async Task InvokeAsync_writes_parse_error_for_unknown_command()
     {
         var dependencies = CreateDependencies();
