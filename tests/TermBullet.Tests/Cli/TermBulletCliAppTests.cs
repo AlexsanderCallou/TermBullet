@@ -153,6 +153,7 @@ public sealed class TermBulletCliAppTests
         Assert.Contains("TermBullet - Local-First Terminal Planner", dependencies.Output.ToString());
         Assert.Contains("config", dependencies.Output.ToString());
         Assert.Contains("export", dependencies.Output.ToString());
+        Assert.DoesNotContain("Mostrar", dependencies.Output.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -69,9 +69,9 @@ public sealed class TuiNavigationStateTests
         var state = new TuiNavigationState(panelCount: 3);
         state.MoveNextPanel();
 
-        state.NavigateTo(TuiScreen.DailyFocus, panelCount: 4);
+        state.NavigateTo(TuiScreen.Search, panelCount: 2);
 
-        Assert.Equal(TuiScreen.DailyFocus, state.CurrentScreen);
+        Assert.Equal(TuiScreen.Search, state.CurrentScreen);
         Assert.Equal(0, state.FocusedPanelIndex);
     }
 

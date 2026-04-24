@@ -33,7 +33,8 @@ public sealed class TermBulletTuiApp(
         var snapshot = await snapshotLoader.LoadAsync(cancellationToken);
         var searchVm = new SearchViewModel();
         var navigation = new TuiNavigationState(panelCount: 6);
-        var addSourceScreen = TuiScreen.MainDashboard;
+        var auxiliaryFlow = TuiAuxiliaryFlow.None;
+        string? selectedPublicRef = null;
         string? addError = null;
 
         MainDashboardActionHandler? actionHandler = null;
@@ -70,11 +71,10 @@ public sealed class TermBulletTuiApp(
                 ScheduleRender();
             }
 
-            void OpenAddItem(TuiScreen sourceScreen)
+            void OpenAddItem()
             {
-                addSourceScreen = sourceScreen;
                 addError = null;
-                navigation.NavigateTo(TuiScreen.AddItem, panelCount: 1);
+                auxiliaryFlow = TuiAuxiliaryFlow.AddItem;
                 ScheduleRender();
             }
 
@@ -95,12 +95,13 @@ public sealed class TermBulletTuiApp(
 
             TGui.RootKeyEvent = keyEvent =>
             {
-                if (navigation.CurrentScreen == TuiScreen.AddItem)
+                if (auxiliaryFlow == TuiAuxiliaryFlow.AddItem)
                 {
                     if (keyEvent.Key == Key.Esc)
                     {
                         addError = null;
-                        NavigateBack();
+                        auxiliaryFlow = TuiAuxiliaryFlow.None;
+                        ScheduleRender();
                         return true;
                     }
 
@@ -127,7 +128,7 @@ public sealed class TermBulletTuiApp(
 
                 if (keyEvent.Key == (Key)'c' && createItemUseCase is not null)
                 {
-                    OpenAddItem(navigation.CurrentScreen);
+                    OpenAddItem();
                     return true;
                 }
 
@@ -135,6 +136,26 @@ public sealed class TermBulletTuiApp(
                 {
                     NavigateTo(TuiScreen.Search, GetPanelCount(TuiScreen.Search));
                     return true;
+                }
+
+                if (selectedPublicRef is not null
+                    && actionHandler is not null
+                    && TuiItemActionShortcutMapper.TryMap(keyEvent.Key, out var action))
+                {
+                    Func<string, CancellationToken, Task<ActionResult>>? handler = action switch
+                    {
+                        TuiItemActionShortcut.Done => actionHandler.HandleDoneAsync,
+                        TuiItemActionShortcut.Cancel => actionHandler.HandleCancelAsync,
+                        TuiItemActionShortcut.Migrate => actionHandler.HandleMigrateAsync,
+                        TuiItemActionShortcut.Delete => actionHandler.HandleDeleteAsync,
+                        _ => null
+                    };
+
+                    if (handler is not null)
+                    {
+                        DispatchAction(selectedPublicRef, handler, RefreshAndRender, cancellationToken);
+                        return true;
+                    }
                 }
 
                 return false;
@@ -145,48 +166,61 @@ public sealed class TermBulletTuiApp(
                 var root = host.ReplaceContent();
                 var dashboardVm = new MainDashboardViewModel(snapshot.TodayItems, snapshot.BacklogItems);
 
+                if (auxiliaryFlow == TuiAuxiliaryFlow.AddItem)
+                {
+                    var addItemVm = TuiAddItemViewModel.ForMainDashboard();
+                    if (addError is not null)
+                    {
+                        addItemVm = addItemVm.WithError(addError);
+                    }
+
+                    AddItemScreen.Build(
+                        root,
+                        addItemVm,
+                        rawInput =>
+                        {
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    if (createItemUseCase is null)
+                                    {
+                                        throw new InvalidOperationException("Add item is not available.");
+                                    }
+
+                                    var request = QuickCaptureParser.Parse(rawInput, addItemVm.Collection);
+                                    await createItemUseCase.ExecuteAsync(request, cancellationToken);
+                                    var refreshed = await snapshotLoader.LoadAsync(cancellationToken);
+                                    TGui.MainLoop?.Invoke(() =>
+                                    {
+                                        snapshot = refreshed;
+                                        addError = null;
+                                        auxiliaryFlow = TuiAuxiliaryFlow.None;
+                                        ScheduleRender();
+                                    });
+                                }
+                                catch (Exception ex) when (ex is not OperationCanceledException)
+                                {
+                                    TGui.MainLoop?.Invoke(() =>
+                                    {
+                                        addError = ex.Message;
+                                        ScheduleRender();
+                                    });
+                                }
+                            }, cancellationToken);
+                        },
+                        () =>
+                        {
+                            addError = null;
+                            auxiliaryFlow = TuiAuxiliaryFlow.None;
+                            ScheduleRender();
+                        },
+                        Quit);
+                    return;
+                }
+
                 switch (navigation.CurrentScreen)
                 {
-                    case TuiScreen.DailyFocus:
-                        DailyFocusScreen.Build(
-                            root,
-                            new DailyFocusViewModel(snapshot.TodayItems),
-                            navigation,
-                            NavigateBack,
-                            Quit,
-                            () => OpenAddItem(TuiScreen.DailyFocus));
-                        break;
-
-                    case TuiScreen.WeeklyPlanning:
-                        WeeklyPlanningScreen.Build(
-                            root,
-                            new WeeklyPlanningViewModel(snapshot.WeekItems, snapshot.BacklogItems),
-                            navigation,
-                            NavigateBack,
-                            Quit,
-                            () => OpenAddItem(TuiScreen.WeeklyPlanning));
-                        break;
-
-                    case TuiScreen.BacklogTriage:
-                        BacklogTriageScreen.Build(
-                            root,
-                            new BacklogTriageViewModel(snapshot.BacklogItems),
-                            navigation,
-                            NavigateBack,
-                            Quit,
-                            () => OpenAddItem(TuiScreen.BacklogTriage));
-                        break;
-
-                    case TuiScreen.Review:
-                        ReviewScreen.Build(
-                            root,
-                            new ReviewViewModel(snapshot.AllItems),
-                            navigation,
-                            NavigateBack,
-                            Quit,
-                            () => OpenAddItem(TuiScreen.Review));
-                        break;
-
                     case TuiScreen.Search:
                         SearchScreen.Build(
                             root,
@@ -212,65 +246,6 @@ public sealed class TermBulletTuiApp(
                             });
                         break;
 
-                    case TuiScreen.Config:
-                        ConfigScreen.Build(
-                            root,
-                            new ConfigViewModel(snapshot.Configuration),
-                            navigation,
-                            NavigateBack,
-                            Quit);
-                        break;
-
-                    case TuiScreen.AddItem:
-                        var addItemVm = TuiAddItemViewModel.ForSourceScreen(addSourceScreen);
-                        if (addError is not null)
-                        {
-                            addItemVm = addItemVm.WithError(addError);
-                        }
-
-                        AddItemScreen.Build(
-                            root,
-                            addItemVm,
-                            rawInput =>
-                            {
-                                _ = Task.Run(async () =>
-                                {
-                                    try
-                                    {
-                                        if (createItemUseCase is null)
-                                        {
-                                            throw new InvalidOperationException("Add item is not available.");
-                                        }
-
-                                        var request = QuickCaptureParser.Parse(rawInput, addItemVm.Collection);
-                                        await createItemUseCase.ExecuteAsync(request, cancellationToken);
-                                        var refreshed = await snapshotLoader.LoadAsync(cancellationToken);
-                                        TGui.MainLoop?.Invoke(() =>
-                                        {
-                                            snapshot = refreshed;
-                                            addError = null;
-                                            navigation.NavigateBack();
-                                            ScheduleRender();
-                                        });
-                                    }
-                                    catch (Exception ex) when (ex is not OperationCanceledException)
-                                    {
-                                        TGui.MainLoop?.Invoke(() =>
-                                        {
-                                            addError = ex.Message;
-                                            ScheduleRender();
-                                        });
-                                    }
-                                }, cancellationToken);
-                            },
-                            () =>
-                            {
-                                addError = null;
-                                NavigateBack();
-                            },
-                            Quit);
-                        break;
-
                     default:
                         BuildMainDashboard(
                             root,
@@ -278,8 +253,9 @@ public sealed class TermBulletTuiApp(
                             navigation,
                             actionHandler,
                             createItemUseCase,
+                            publicRef => selectedPublicRef = publicRef,
                             screen => NavigateTo(screen, GetPanelCount(screen)),
-                            () => OpenAddItem(TuiScreen.MainDashboard),
+                            OpenAddItem,
                             RefreshAndRender,
                             Quit,
                             cancellationToken);
@@ -303,6 +279,7 @@ public sealed class TermBulletTuiApp(
         TuiNavigationState navigation,
         MainDashboardActionHandler? actionHandler,
         CreateItemUseCase? createItemUseCase,
+        Action<string?> onSelectedPublicRefChanged,
         Action<TuiScreen> onNavigate,
         Action onAdd,
         Action onRefresh,
@@ -315,7 +292,7 @@ public sealed class TermBulletTuiApp(
             X = 0, Y = 0, Width = Dim.Fill()
         };
 
-        var footer = new Label(" / filter  c add  e edit  x done  > migrate  Enter zoom  Tab focus  ? help  q quit")
+        var footer = new Label(" / filter  c add  e edit  x done  z cancel  > migrate  d delete  Enter zoom  Tab focus  ? help  q quit")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
@@ -325,7 +302,7 @@ public sealed class TermBulletTuiApp(
         {
             X = 0, Y = 1, Width = Dim.Percent(20), Height = upperHeight
         };
-        var collectionEntries = new[] { "> Daily", "  Weekly", "  Monthly", "  Backlog", "  Review", "  Search", "  Config" };
+        var collectionEntries = new[] { "> Dashboard", "  Search" };
         var collectionsList = new ListView(collectionEntries)
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
@@ -409,6 +386,7 @@ public sealed class TermBulletTuiApp(
         };
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
+        onSelectedPublicRefChanged(viewModel.SelectedDayItem?.PublicRef);
 
         root.Add(topBar, collectionsPanel, dayItemsPanel, previewPanel, projectsPanel, filteredBacklogPanel, suggestedPlanPanel, footer);
 
@@ -429,6 +407,7 @@ public sealed class TermBulletTuiApp(
                     ? viewModel.FilteredBacklogItems.Select(r => $"{r.Symbol} {r.PublicRef} {r.Content}").ToArray()
                     : ["(no related backlog)"]);
             TuiScreenUtilities.RefreshListView(suggestedPlanList, viewModel.SuggestedPlanLines.ToArray());
+            onSelectedPublicRefChanged(viewModel.SelectedDayItem?.PublicRef);
         };
 
         root.KeyPress += args =>
@@ -490,12 +469,7 @@ public sealed class TermBulletTuiApp(
     {
         var screen = selectedIndex switch
         {
-            0 => TuiScreen.DailyFocus,
-            1 => TuiScreen.WeeklyPlanning,
-            3 => TuiScreen.BacklogTriage,
-            4 => TuiScreen.Review,
-            5 => TuiScreen.Search,
-            6 => TuiScreen.Config,
+            1 => TuiScreen.Search,
             _ => (TuiScreen?)null
         };
 
@@ -508,13 +482,8 @@ public sealed class TermBulletTuiApp(
     private static int GetPanelCount(TuiScreen screen) =>
         screen switch
         {
-            TuiScreen.DailyFocus => 6,
-            TuiScreen.WeeklyPlanning => 6,
-            TuiScreen.Review => 6,
             TuiScreen.Search => 2,
-            TuiScreen.Config => 3,
-            TuiScreen.AddItem => 1,
-            _ => 3
+            _ => 6
         };
 
     private static void DispatchAction(

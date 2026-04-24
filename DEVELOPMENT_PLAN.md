@@ -9,9 +9,9 @@ TermBullet follows TDD. Each milestone starts with tests, uses mocked good and b
 Deliver a local-first, offline terminal productivity tool with:
 
 - CLI;
-- TUI;
+- TUI MVP;
 - tasks, notes, and events;
-- Today, Week, and Backlog;
+- Today, Week, and Backlog through CLI and shared use cases;
 - monthly JSON file persistence;
 - local JSON index;
 - search;
@@ -273,16 +273,22 @@ Tests must cover:
 
 ### Goal
 
-Implement the first usable TUI experience.
+Implement the first usable TUI experience with a deliberately small scope.
+
+The active MVP TUI scope is:
+
+- Main Dashboard;
+- Search;
+- Add Item as an auxiliary keyboard-only flow.
+
+Daily Focus, Weekly Planning, Backlog Triage, Review, and Config are deferred until after the first MVP is stable.
 
 ### Deliverables
 
 - TUI startup when no command is provided;
 - Main Dashboard;
-- Daily Focus;
-- Backlog Triage;
 - Search;
-- Config;
+- Add Item auxiliary flow;
 - keyboard focus model;
 - footer shortcuts;
 - action dispatch to Application use cases.
@@ -296,6 +302,7 @@ Tests should focus on non-rendering logic first:
 - selected item changes;
 - action dispatch;
 - search query state;
+- add item state;
 - view model mapping from use case results.
 
 Manual verification may be required for terminal rendering.

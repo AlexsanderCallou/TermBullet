@@ -101,7 +101,7 @@ public static class AddItemScreen
         {
             if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
             {
-                TuiScreenUtilities.ShowContextHelp(TuiScreen.AddItem);
+                TuiScreenUtilities.ShowAddItemHelp();
                 args.Handled = true;
                 return;
             }

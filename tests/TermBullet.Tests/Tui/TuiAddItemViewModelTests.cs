@@ -1,30 +1,22 @@
 using TermBullet.Core.Items;
-using TermBullet.Tui.Navigation;
 using TermBullet.Tui.Screens;
 
 namespace TermBullet.Tests.Tui;
 
 public sealed class TuiAddItemViewModelTests
 {
-    [Theory]
-    [InlineData(TuiScreen.MainDashboard, ItemCollection.Today)]
-    [InlineData(TuiScreen.DailyFocus, ItemCollection.Today)]
-    [InlineData(TuiScreen.WeeklyPlanning, ItemCollection.Week)]
-    [InlineData(TuiScreen.BacklogTriage, ItemCollection.Backlog)]
-    [InlineData(TuiScreen.Review, ItemCollection.Monthly)]
-    public void ForSourceScreen_ResolvesExpectedDefaultCollection(
-        TuiScreen sourceScreen,
-        ItemCollection expectedCollection)
+    [Fact]
+    public void ForMainDashboard_UsesTodayAsDefaultCollection()
     {
-        var viewModel = TuiAddItemViewModel.ForSourceScreen(sourceScreen);
+        var viewModel = TuiAddItemViewModel.ForMainDashboard();
 
-        Assert.Equal(expectedCollection, viewModel.Collection);
+        Assert.Equal(ItemCollection.Today, viewModel.Collection);
     }
 
     [Fact]
-    public void ForSourceScreen_ProvidesTaskNoteAndEventExamples()
+    public void ForMainDashboard_ProvidesTaskNoteAndEventExamples()
     {
-        var viewModel = TuiAddItemViewModel.ForSourceScreen(TuiScreen.MainDashboard);
+        var viewModel = TuiAddItemViewModel.ForMainDashboard();
 
         Assert.Contains(viewModel.Examples, line => line.Contains("- Review pull request", StringComparison.Ordinal));
         Assert.Contains(viewModel.Examples, line => line.Contains(". Investigate stacktrace", StringComparison.Ordinal));
@@ -35,10 +27,10 @@ public sealed class TuiAddItemViewModelTests
     public void WithError_PreservesSourceCollectionAndExposesError()
     {
         var viewModel = TuiAddItemViewModel
-            .ForSourceScreen(TuiScreen.BacklogTriage)
+            .ForMainDashboard()
             .WithError("Capture text is required.");
 
-        Assert.Equal(ItemCollection.Backlog, viewModel.Collection);
+        Assert.Equal(ItemCollection.Today, viewModel.Collection);
         Assert.Equal("Capture text is required.", viewModel.Error);
     }
 }

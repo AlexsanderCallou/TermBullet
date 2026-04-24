@@ -1130,13 +1130,25 @@ public sealed class TermBulletCliApp(
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(alias => alias.Length)
                     .ThenBy(alias => alias, StringComparer.OrdinalIgnoreCase));
-                await writer.WriteLineAsync($"  {aliases}    {option.Description}");
+                await writer.WriteLineAsync($"  {aliases}    {GetOptionDescription(option)}");
             }
         }
 
         await writer.WriteLineAsync();
         await writer.WriteLineAsync("  -h, --help    Show help");
     }
+
+    private static string? GetOptionDescription(Option option) =>
+        IsVersionOption(option)
+            ? "Show version"
+            : option.Description;
+
+    private static bool IsVersionOption(Option option) =>
+        string.Equals(option.Name, "version", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(option.Name, "--version", StringComparison.OrdinalIgnoreCase)
+        || option.Aliases.Any(alias =>
+            string.Equals(alias, "--version", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(alias, "-v", StringComparison.OrdinalIgnoreCase));
 
     private static string BuildUsage(Command command)
     {

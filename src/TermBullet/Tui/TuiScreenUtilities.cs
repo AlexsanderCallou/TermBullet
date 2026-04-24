@@ -48,4 +48,10 @@ public static class TuiScreenUtilities
         var lines = string.Join(Environment.NewLine, TuiContextHelp.GetLines(screen));
         MessageBox.Query("Help", lines, "Close");
     }
+
+    public static void ShowAddItemHelp()
+    {
+        var lines = string.Join(Environment.NewLine, TuiContextHelp.GetAddItemLines());
+        MessageBox.Query("Help", lines, "Close");
+    }
 }

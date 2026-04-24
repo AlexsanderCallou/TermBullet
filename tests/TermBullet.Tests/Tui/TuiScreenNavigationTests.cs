@@ -5,23 +5,13 @@ namespace TermBullet.Tests.Tui;
 public sealed class TuiScreenNavigationTests
 {
     [Fact]
-    public void NavigateTo_DailyFocus_changes_screen()
+    public void NavigateTo_Search_changes_screen()
     {
         var state = new TuiNavigationState();
 
-        state.NavigateTo(TuiScreen.DailyFocus, panelCount: 6);
+        state.NavigateTo(TuiScreen.Search, panelCount: 2);
 
-        Assert.Equal(TuiScreen.DailyFocus, state.CurrentScreen);
-    }
-
-    [Fact]
-    public void NavigateTo_BacklogTriage_changes_screen()
-    {
-        var state = new TuiNavigationState();
-
-        state.NavigateTo(TuiScreen.BacklogTriage, panelCount: 6);
-
-        Assert.Equal(TuiScreen.BacklogTriage, state.CurrentScreen);
+        Assert.Equal(TuiScreen.Search, state.CurrentScreen);
     }
 
     [Fact]
@@ -31,7 +21,7 @@ public sealed class TuiScreenNavigationTests
         state.MoveNextPanel();
         state.MoveNextPanel();
 
-        state.NavigateTo(TuiScreen.DailyFocus, panelCount: 6);
+        state.NavigateTo(TuiScreen.Search, panelCount: 2);
 
         Assert.Equal(0, state.FocusedPanelIndex);
     }
@@ -49,7 +39,7 @@ public sealed class TuiScreenNavigationTests
     {
         var state = new TuiNavigationState();
 
-        state.NavigateTo(TuiScreen.DailyFocus, panelCount: 6);
+        state.NavigateTo(TuiScreen.Search, panelCount: 2);
 
         Assert.True(state.CanNavigateBack);
     }
@@ -58,7 +48,7 @@ public sealed class TuiScreenNavigationTests
     public void NavigateBack_returns_to_previous_screen()
     {
         var state = new TuiNavigationState();
-        state.NavigateTo(TuiScreen.DailyFocus, panelCount: 6);
+        state.NavigateTo(TuiScreen.Search, panelCount: 2);
 
         state.NavigateBack();
 

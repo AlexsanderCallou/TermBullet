@@ -15,6 +15,15 @@ public sealed class TuiContextHelpTests
     }
 
     [Fact]
+    public void AddItem_help_contains_submit_and_cancel_actions()
+    {
+        var lines = TuiContextHelp.GetAddItemLines();
+
+        Assert.Contains(lines, line => line.Contains("press Enter", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(lines, line => line.Contains("Esc", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Search_help_contains_search_specific_shortcuts()
     {
         var lines = TuiContextHelp.GetLines(TuiScreen.Search);
