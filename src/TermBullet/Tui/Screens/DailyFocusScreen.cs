@@ -1,16 +1,16 @@
 using Terminal.Gui;
 using TermBullet.Tui.Navigation;
-using TGui = Terminal.Gui.Application;
 
 namespace TermBullet.Tui.Screens;
 
 public static class DailyFocusScreen
 {
     public static void Build(
-        Toplevel top,
+        View root,
         DailyFocusViewModel viewModel,
         TuiNavigationState navigation,
         Action onBack,
+        Action onQuit,
         Action? onQuickCapture = null)
     {
         var date = DateTime.Today.ToString("yyyy-MM-dd");
@@ -21,7 +21,7 @@ public static class DailyFocusScreen
             Width = Dim.Fill()
         };
 
-        var footer = new Label(" / filter  c capture  e edit  x done  > migrate  Enter detail  Tab focus  ? help  q quit")
+        var footer = new Label(" / filter  c add  e edit  x done  > migrate  Enter detail  Tab focus  ? help  q quit")
         {
             X = 0,
             Y = Pos.AnchorEnd(1),
@@ -88,7 +88,7 @@ public static class DailyFocusScreen
         };
         detailsPanel.Add(detailList);
 
-        var quickCapturePanel = new FrameView(TuiScreenUtilities.GetPanelTitle(4, "Quick Capture", navigation, 3))
+        var quickCapturePanel = new FrameView(TuiScreenUtilities.GetPanelTitle(4, "Quick Add", navigation, 3))
         {
             X = 0,
             Y = Pos.Bottom(sectionsPanel),
@@ -130,7 +130,7 @@ public static class DailyFocusScreen
         };
         var panelTitles = new[]
         {
-            "Sections", "Daily Log", "Details", "Quick Capture", "Short History", "Actions"
+            "Sections", "Daily Log", "Details", "Quick Add", "Short History", "Actions"
         };
         var focusTargets = new View[]
         {
@@ -139,10 +139,17 @@ public static class DailyFocusScreen
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
 
-        top.Add(topBar, sectionsPanel, logPanel, detailsPanel, quickCapturePanel, shortHistoryPanel, actionsPanel, footer);
+        root.Add(topBar, sectionsPanel, logPanel, detailsPanel, quickCapturePanel, shortHistoryPanel, actionsPanel, footer);
 
-        top.KeyPress += args =>
+        root.KeyPress += args =>
         {
+            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            {
+                TuiScreenUtilities.ShowContextHelp(TuiScreen.DailyFocus);
+                args.Handled = true;
+                return;
+            }
+
             switch (args.KeyEvent.Key)
             {
                 case Key.Tab:
@@ -157,16 +164,12 @@ public static class DailyFocusScreen
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                     args.Handled = true;
                     break;
-                case Key x when x == (Key)'?':
-                    TuiScreenUtilities.ShowContextHelp(TuiScreen.DailyFocus);
-                    args.Handled = true;
-                    break;
                 case Key x when x == (Key)'c' && onQuickCapture is not null:
                     onQuickCapture();
                     args.Handled = true;
                     break;
                 case Key.q:
-                    TGui.RequestStop();
+                    onQuit();
                     args.Handled = true;
                     break;
                 case Key.Esc:

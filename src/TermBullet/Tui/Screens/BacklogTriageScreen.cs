@@ -1,16 +1,16 @@
 using Terminal.Gui;
 using TermBullet.Tui.Navigation;
-using TGui = Terminal.Gui.Application;
 
 namespace TermBullet.Tui.Screens;
 
 public static class BacklogTriageScreen
 {
     public static void Build(
-        Toplevel top,
+        View root,
         BacklogTriageViewModel viewModel,
         TuiNavigationState navigation,
         Action onBack,
+        Action onQuit,
         Action? onQuickCapture = null)
     {
         var topBar = new Label(" TermBullet \u2500 Backlog \u2500 data:local \u2500 ai:off \u2500 sync:idle \u2500 mode:filter")
@@ -20,7 +20,7 @@ public static class BacklogTriageScreen
             Width = Dim.Fill()
         };
 
-        var footer = new Label(" / filter  c capture  > migrate  Enter zoom  Tab focus  ? help  q quit")
+        var footer = new Label(" / filter  c add  > migrate  Enter zoom  Tab focus  ? help  q quit")
         {
             X = 0,
             Y = Pos.AnchorEnd(1),
@@ -91,10 +91,17 @@ public static class BacklogTriageScreen
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
 
-        top.Add(topBar, filtersPanel, itemsPanel, previewPanel, footer);
+        root.Add(topBar, filtersPanel, itemsPanel, previewPanel, footer);
 
-        top.KeyPress += args =>
+        root.KeyPress += args =>
         {
+            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            {
+                TuiScreenUtilities.ShowContextHelp(TuiScreen.BacklogTriage);
+                args.Handled = true;
+                return;
+            }
+
             switch (args.KeyEvent.Key)
             {
                 case Key.Tab:
@@ -109,16 +116,12 @@ public static class BacklogTriageScreen
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                     args.Handled = true;
                     break;
-                case Key x when x == (Key)'?':
-                    TuiScreenUtilities.ShowContextHelp(TuiScreen.BacklogTriage);
-                    args.Handled = true;
-                    break;
                 case Key x when x == (Key)'c' && onQuickCapture is not null:
                     onQuickCapture();
                     args.Handled = true;
                     break;
                 case Key.q:
-                    TGui.RequestStop();
+                    onQuit();
                     args.Handled = true;
                     break;
                 case Key.Esc:

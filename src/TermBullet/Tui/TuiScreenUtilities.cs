@@ -5,6 +5,11 @@ namespace TermBullet.Tui;
 
 public static class TuiScreenUtilities
 {
+    public static bool IsHelpKey(KeyEvent keyEvent) =>
+        keyEvent.Key == (Key)'?'
+        || keyEvent.KeyValue == '?'
+        || (keyEvent.KeyValue == '/' && keyEvent.IsShift);
+
     public static string GetPanelTitle(int number, string title, TuiNavigationState navigation, int panelIndex) =>
         navigation.IsPanelFocused(panelIndex)
             ? $"> {number} {title}"

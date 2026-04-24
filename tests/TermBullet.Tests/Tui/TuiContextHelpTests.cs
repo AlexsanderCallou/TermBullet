@@ -10,7 +10,7 @@ public sealed class TuiContextHelpTests
     {
         var lines = TuiContextHelp.GetLines(TuiScreen.MainDashboard);
 
-        Assert.Contains(lines, line => line.Contains("quick capture", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(lines, line => line.Contains("add item", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(lines, line => line.Contains("move panel focus", StringComparison.OrdinalIgnoreCase));
     }
 

@@ -30,8 +30,11 @@ public sealed class TermBulletTuiApp(
             listItemsUseCase,
             listConfigurationUseCase,
             startupAction);
+        var snapshot = await snapshotLoader.LoadAsync(cancellationToken);
         var searchVm = new SearchViewModel();
         var navigation = new TuiNavigationState(panelCount: 6);
+        var addSourceScreen = TuiScreen.MainDashboard;
+        string? addError = null;
 
         MainDashboardActionHandler? actionHandler = null;
         if (markDoneItemUseCase is not null && cancelItemUseCase is not null
@@ -44,137 +47,266 @@ public sealed class TermBulletTuiApp(
         TGui.Init();
         try
         {
-            await RunLoopAsync(snapshotLoader, searchVm, navigation, actionHandler, cancellationToken);
+            var top = new Toplevel();
+            var host = new TuiScreenHost(top);
+
+            void ScheduleRender()
+            {
+                _ = Task.Run(() =>
+                {
+                    TGui.MainLoop?.Invoke(Render);
+                }, cancellationToken);
+            }
+
+            void NavigateTo(TuiScreen screen, int panelCount)
+            {
+                navigation.NavigateTo(screen, panelCount);
+                ScheduleRender();
+            }
+
+            void NavigateBack()
+            {
+                navigation.NavigateBack();
+                ScheduleRender();
+            }
+
+            void OpenAddItem(TuiScreen sourceScreen)
+            {
+                addSourceScreen = sourceScreen;
+                addError = null;
+                navigation.NavigateTo(TuiScreen.AddItem, panelCount: 1);
+                ScheduleRender();
+            }
+
+            void Quit() => TGui.RequestStop();
+
+            void RefreshAndRender()
+            {
+                _ = Task.Run(async () =>
+                {
+                    var refreshed = await snapshotLoader.LoadAsync(cancellationToken);
+                    TGui.MainLoop?.Invoke(() =>
+                    {
+                        snapshot = refreshed;
+                        ScheduleRender();
+                    });
+                }, cancellationToken);
+            }
+
+            TGui.RootKeyEvent = keyEvent =>
+            {
+                if (navigation.CurrentScreen == TuiScreen.AddItem)
+                {
+                    if (keyEvent.Key == Key.Esc)
+                    {
+                        addError = null;
+                        NavigateBack();
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                if (TuiScreenUtilities.IsHelpKey(keyEvent))
+                {
+                    TuiScreenUtilities.ShowContextHelp(navigation.CurrentScreen);
+                    return true;
+                }
+
+                if (keyEvent.Key == Key.q)
+                {
+                    Quit();
+                    return true;
+                }
+
+                if (keyEvent.Key == Key.Esc && navigation.CurrentScreen != TuiScreen.MainDashboard)
+                {
+                    NavigateBack();
+                    return true;
+                }
+
+                if (keyEvent.Key == (Key)'c' && createItemUseCase is not null)
+                {
+                    OpenAddItem(navigation.CurrentScreen);
+                    return true;
+                }
+
+                if (keyEvent.Key == (Key)'/' && navigation.CurrentScreen == TuiScreen.MainDashboard)
+                {
+                    NavigateTo(TuiScreen.Search, GetPanelCount(TuiScreen.Search));
+                    return true;
+                }
+
+                return false;
+            };
+
+            void Render()
+            {
+                var root = host.ReplaceContent();
+                var dashboardVm = new MainDashboardViewModel(snapshot.TodayItems, snapshot.BacklogItems);
+
+                switch (navigation.CurrentScreen)
+                {
+                    case TuiScreen.DailyFocus:
+                        DailyFocusScreen.Build(
+                            root,
+                            new DailyFocusViewModel(snapshot.TodayItems),
+                            navigation,
+                            NavigateBack,
+                            Quit,
+                            () => OpenAddItem(TuiScreen.DailyFocus));
+                        break;
+
+                    case TuiScreen.WeeklyPlanning:
+                        WeeklyPlanningScreen.Build(
+                            root,
+                            new WeeklyPlanningViewModel(snapshot.WeekItems, snapshot.BacklogItems),
+                            navigation,
+                            NavigateBack,
+                            Quit,
+                            () => OpenAddItem(TuiScreen.WeeklyPlanning));
+                        break;
+
+                    case TuiScreen.BacklogTriage:
+                        BacklogTriageScreen.Build(
+                            root,
+                            new BacklogTriageViewModel(snapshot.BacklogItems),
+                            navigation,
+                            NavigateBack,
+                            Quit,
+                            () => OpenAddItem(TuiScreen.BacklogTriage));
+                        break;
+
+                    case TuiScreen.Review:
+                        ReviewScreen.Build(
+                            root,
+                            new ReviewViewModel(snapshot.AllItems),
+                            navigation,
+                            NavigateBack,
+                            Quit,
+                            () => OpenAddItem(TuiScreen.Review));
+                        break;
+
+                    case TuiScreen.Search:
+                        SearchScreen.Build(
+                            root,
+                            searchVm,
+                            navigation,
+                            NavigateBack,
+                            Quit,
+                            async query =>
+                            {
+                                if (searchItemsUseCase is null || string.IsNullOrWhiteSpace(query))
+                                {
+                                    return;
+                                }
+
+                                var results = await searchItemsUseCase.ExecuteAsync(
+                                    new SearchItemsRequest { Query = query },
+                                    cancellationToken);
+                                TGui.MainLoop?.Invoke(() =>
+                                {
+                                    searchVm.SetResults(results);
+                                    ScheduleRender();
+                                });
+                            });
+                        break;
+
+                    case TuiScreen.Config:
+                        ConfigScreen.Build(
+                            root,
+                            new ConfigViewModel(snapshot.Configuration),
+                            navigation,
+                            NavigateBack,
+                            Quit);
+                        break;
+
+                    case TuiScreen.AddItem:
+                        var addItemVm = TuiAddItemViewModel.ForSourceScreen(addSourceScreen);
+                        if (addError is not null)
+                        {
+                            addItemVm = addItemVm.WithError(addError);
+                        }
+
+                        AddItemScreen.Build(
+                            root,
+                            addItemVm,
+                            rawInput =>
+                            {
+                                _ = Task.Run(async () =>
+                                {
+                                    try
+                                    {
+                                        if (createItemUseCase is null)
+                                        {
+                                            throw new InvalidOperationException("Add item is not available.");
+                                        }
+
+                                        var request = QuickCaptureParser.Parse(rawInput, addItemVm.Collection);
+                                        await createItemUseCase.ExecuteAsync(request, cancellationToken);
+                                        var refreshed = await snapshotLoader.LoadAsync(cancellationToken);
+                                        TGui.MainLoop?.Invoke(() =>
+                                        {
+                                            snapshot = refreshed;
+                                            addError = null;
+                                            navigation.NavigateBack();
+                                            ScheduleRender();
+                                        });
+                                    }
+                                    catch (Exception ex) when (ex is not OperationCanceledException)
+                                    {
+                                        TGui.MainLoop?.Invoke(() =>
+                                        {
+                                            addError = ex.Message;
+                                            ScheduleRender();
+                                        });
+                                    }
+                                }, cancellationToken);
+                            },
+                            () =>
+                            {
+                                addError = null;
+                                NavigateBack();
+                            },
+                            Quit);
+                        break;
+
+                    default:
+                        BuildMainDashboard(
+                            root,
+                            dashboardVm,
+                            navigation,
+                            actionHandler,
+                            createItemUseCase,
+                            screen => NavigateTo(screen, GetPanelCount(screen)),
+                            () => OpenAddItem(TuiScreen.MainDashboard),
+                            RefreshAndRender,
+                            Quit,
+                            cancellationToken);
+                        break;
+                }
+            }
+
+            Render();
+            TGui.Run(top);
         }
         finally
         {
+            TGui.RootKeyEvent = null;
             TGui.Shutdown();
         }
     }
 
-    private async Task RunLoopAsync(
-        TuiSnapshotLoader snapshotLoader,
-        SearchViewModel searchVm,
-        TuiNavigationState navigation,
-        MainDashboardActionHandler? actionHandler,
-        CancellationToken cancellationToken)
-    {
-        while (true)
-        {
-            var snapshot = await snapshotLoader.LoadAsync(cancellationToken);
-            var dashboardVm = new MainDashboardViewModel(snapshot.TodayItems, snapshot.BacklogItems);
-            var dailyFocusVm = new DailyFocusViewModel(snapshot.TodayItems);
-            var weeklyPlanningVm = new WeeklyPlanningViewModel(snapshot.WeekItems, snapshot.BacklogItems);
-            var backlogTriageVm = new BacklogTriageViewModel(snapshot.BacklogItems);
-            var reviewVm = new ReviewViewModel(snapshot.AllItems);
-            var configVm = new ConfigViewModel(snapshot.Configuration);
-            var top = new Toplevel();
-
-            switch (navigation.CurrentScreen)
-            {
-                case TuiScreen.DailyFocus:
-                    DailyFocusScreen.Build(top, dailyFocusVm, navigation, () =>
-                    {
-                        navigation.NavigateBack();
-                        TGui.RequestStop();
-                    },
-                    () =>
-                    {
-                        if (TryQuickCapture(navigation.CurrentScreen, createItemUseCase, cancellationToken))
-                        {
-                            TGui.RequestStop();
-                        }
-                    });
-                    break;
-
-                case TuiScreen.BacklogTriage:
-                    BacklogTriageScreen.Build(top, backlogTriageVm, navigation, () =>
-                    {
-                        navigation.NavigateBack();
-                        TGui.RequestStop();
-                    },
-                    () =>
-                    {
-                        if (TryQuickCapture(navigation.CurrentScreen, createItemUseCase, cancellationToken))
-                        {
-                            TGui.RequestStop();
-                        }
-                    });
-                    break;
-
-                case TuiScreen.WeeklyPlanning:
-                    WeeklyPlanningScreen.Build(top, weeklyPlanningVm, navigation, () =>
-                    {
-                        navigation.NavigateBack();
-                        TGui.RequestStop();
-                    },
-                    () =>
-                    {
-                        if (TryQuickCapture(navigation.CurrentScreen, createItemUseCase, cancellationToken))
-                        {
-                            TGui.RequestStop();
-                        }
-                    });
-                    break;
-
-                case TuiScreen.Review:
-                    ReviewScreen.Build(top, reviewVm, navigation, () =>
-                    {
-                        navigation.NavigateBack();
-                        TGui.RequestStop();
-                    },
-                    () =>
-                    {
-                        if (TryQuickCapture(navigation.CurrentScreen, createItemUseCase, cancellationToken))
-                        {
-                            TGui.RequestStop();
-                        }
-                    });
-                    break;
-
-                case TuiScreen.Search:
-                    SearchScreen.Build(top, searchVm, navigation, () =>
-                    {
-                        navigation.NavigateBack();
-                        TGui.RequestStop();
-                    },
-                    async query =>
-                    {
-                        if (searchItemsUseCase is not null && !string.IsNullOrWhiteSpace(query))
-                        {
-                            var results = await searchItemsUseCase.ExecuteAsync(
-                                new SearchItemsRequest { Query = query }, cancellationToken);
-                            searchVm.SetResults(results);
-                        }
-                    });
-                    break;
-
-                case TuiScreen.Config:
-                    ConfigScreen.Build(top, configVm, navigation, () =>
-                    {
-                        navigation.NavigateBack();
-                        TGui.RequestStop();
-                    });
-                    break;
-
-                default:
-                    BuildMainDashboard(top, dashboardVm, navigation, actionHandler, createItemUseCase, cancellationToken);
-                    break;
-            }
-
-            TGui.Run(top);
-
-            if (navigation.CurrentScreen == TuiScreen.MainDashboard && !navigation.CanNavigateBack)
-                break;
-        }
-    }
-
     private static void BuildMainDashboard(
-        Toplevel top,
+        View root,
         MainDashboardViewModel viewModel,
         TuiNavigationState navigation,
         MainDashboardActionHandler? actionHandler,
         CreateItemUseCase? createItemUseCase,
+        Action<TuiScreen> onNavigate,
+        Action onAdd,
+        Action onRefresh,
+        Action onQuit,
         CancellationToken cancellationToken)
     {
         var date = DateTime.Today.ToString("yyyy-MM-dd");
@@ -183,14 +315,12 @@ public sealed class TermBulletTuiApp(
             X = 0, Y = 0, Width = Dim.Fill()
         };
 
-        var footer = new Label(" / filter  c capture  e edit  x done  > migrate  Enter zoom  Tab focus  ? help  q quit")
+        var footer = new Label(" / filter  c add  e edit  x done  > migrate  Enter zoom  Tab focus  ? help  q quit")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
 
         var upperHeight = Dim.Percent(55);
-
-        // Panel 1: Collections
         var collectionsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, "Collections", navigation, 0))
         {
             X = 0, Y = 1, Width = Dim.Percent(20), Height = upperHeight
@@ -202,24 +332,23 @@ public sealed class TermBulletTuiApp(
         };
         collectionsPanel.Add(collectionsList);
 
-        // Panel 2: Day Items
         var dayItemsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(2, "Day Items", navigation, 1))
         {
             X = Pos.Right(collectionsPanel), Y = 1, Width = Dim.Percent(50), Height = upperHeight
         };
-        var dayItemRows = viewModel.DayItems.Count > 0
-            ? viewModel.DayItems.Select(r => $"{r.Symbol} {r.PublicRef} {r.Content}").ToArray()
-            : new[] { "(no items)" };
-        var dayItemsList = new ListView(dayItemRows)
+        var dayItemsList = new ListView(
+            viewModel.DayItems.Count > 0
+                ? viewModel.DayItems.Select(r => $"{r.Symbol} {r.PublicRef} {r.Content}").ToArray()
+                : ["(no items)"])
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
         };
         if (viewModel.SelectedDayItemIndex >= 0)
+        {
             dayItemsList.SelectedItem = viewModel.SelectedDayItemIndex;
-
+        }
         dayItemsPanel.Add(dayItemsList);
 
-        // Panel 3: Preview
         var previewPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Preview / AI", navigation, 2))
         {
             X = Pos.Right(dayItemsPanel), Y = 1, Width = Dim.Fill(), Height = upperHeight
@@ -281,7 +410,7 @@ public sealed class TermBulletTuiApp(
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
 
-        top.Add(topBar, collectionsPanel, dayItemsPanel, previewPanel, projectsPanel, filteredBacklogPanel, suggestedPlanPanel, footer);
+        root.Add(topBar, collectionsPanel, dayItemsPanel, previewPanel, projectsPanel, filteredBacklogPanel, suggestedPlanPanel, footer);
 
         dayItemsList.SelectedItemChanged += _ =>
         {
@@ -302,72 +431,62 @@ public sealed class TermBulletTuiApp(
             TuiScreenUtilities.RefreshListView(suggestedPlanList, viewModel.SuggestedPlanLines.ToArray());
         };
 
-        top.KeyPress += args =>
+        root.KeyPress += args =>
         {
+            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            {
+                TuiScreenUtilities.ShowContextHelp(TuiScreen.MainDashboard);
+                args.Handled = true;
+                return;
+            }
+
             switch (args.KeyEvent.Key)
             {
                 case Key.q:
-                    TGui.RequestStop();
+                    onQuit();
                     args.Handled = true;
                     break;
-
                 case Key.Tab:
                     navigation.MoveNextPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                     args.Handled = true;
                     break;
-
                 case Key.BackTab:
                     navigation.MovePreviousPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                     args.Handled = true;
                     break;
-
                 case Key.Enter:
-                    NavigateFromCollections(collectionsList.SelectedItem, navigation);
+                    NavigateFromCollections(collectionsList.SelectedItem, onNavigate);
                     args.Handled = true;
                     break;
-
                 case Key x when x == (Key)'/' :
-                    navigation.NavigateTo(TuiScreen.Search, panelCount: 2);
-                    TGui.RequestStop();
+                    onNavigate(TuiScreen.Search);
                     args.Handled = true;
                     break;
-
-                case Key x when x == (Key)'?':
-                    TuiScreenUtilities.ShowContextHelp(TuiScreen.MainDashboard);
-                    args.Handled = true;
-                    break;
-
                 case Key x when x == (Key)'c' && createItemUseCase is not null:
-                    if (TryQuickCapture(TuiScreen.MainDashboard, createItemUseCase, cancellationToken))
-                    {
-                        TGui.RequestStop();
-                    }
+                    onAdd();
                     args.Handled = true;
                     break;
-
                 case Key x when x == (Key)'x' && actionHandler is not null:
-                    DispatchAction(viewModel.SelectedDayItem?.PublicRef, actionHandler.HandleDoneAsync, cancellationToken);
+                    DispatchAction(viewModel.SelectedDayItem?.PublicRef, actionHandler.HandleDoneAsync, onRefresh, cancellationToken);
                     args.Handled = true;
                     break;
-
                 case Key y when y == (Key)'>' && actionHandler is not null:
-                    DispatchAction(viewModel.SelectedDayItem?.PublicRef, actionHandler.HandleMigrateAsync, cancellationToken);
+                    DispatchAction(viewModel.SelectedDayItem?.PublicRef, actionHandler.HandleMigrateAsync, onRefresh, cancellationToken);
                     args.Handled = true;
                     break;
-
                 case Key z when z == (Key)'d' && actionHandler is not null:
-                    DispatchAction(viewModel.SelectedDayItem?.PublicRef, actionHandler.HandleDeleteAsync, cancellationToken);
+                    DispatchAction(viewModel.SelectedDayItem?.PublicRef, actionHandler.HandleDeleteAsync, onRefresh, cancellationToken);
                     args.Handled = true;
                     break;
             }
         };
     }
 
-    private static void NavigateFromCollections(int selectedIndex, TuiNavigationState navigation)
+    private static void NavigateFromCollections(int selectedIndex, Action<TuiScreen> onNavigate)
     {
         var screen = selectedIndex switch
         {
@@ -382,57 +501,46 @@ public sealed class TermBulletTuiApp(
 
         if (screen.HasValue)
         {
-            var panelCount = screen.Value switch
-            {
-                TuiScreen.DailyFocus => 6,
-                TuiScreen.WeeklyPlanning => 6,
-                TuiScreen.Review => 6,
-                TuiScreen.Search => 2,
-                TuiScreen.Config => 3,
-                _ => 3
-            };
-            navigation.NavigateTo(screen.Value, panelCount);
-            TGui.RequestStop();
+            onNavigate(screen.Value);
         }
     }
+
+    private static int GetPanelCount(TuiScreen screen) =>
+        screen switch
+        {
+            TuiScreen.DailyFocus => 6,
+            TuiScreen.WeeklyPlanning => 6,
+            TuiScreen.Review => 6,
+            TuiScreen.Search => 2,
+            TuiScreen.Config => 3,
+            TuiScreen.AddItem => 1,
+            _ => 3
+        };
 
     private static void DispatchAction(
         string? publicRef,
         Func<string, CancellationToken, Task<ActionResult>> handler,
+        Action onRefresh,
         CancellationToken cancellationToken)
     {
         if (publicRef is null) return;
         _ = Task.Run(async () =>
         {
             await handler(publicRef, cancellationToken);
-            TGui.MainLoop?.Invoke(() => TGui.RequestStop());
+            TGui.MainLoop?.Invoke(onRefresh);
         }, cancellationToken);
     }
 
     private static string[] BuildPreviewLines(ItemDisplayRow? item) =>
         item is not null
-            ? new[]
-            {
+            ?
+            [
                 item.PublicRef,
                 $"type: {item.Type}",
                 $"status: {item.Status}",
                 $"priority: {item.Priority}",
                 $"collection: {item.Collection}",
                 $"tags: {(item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "(none)")}"
-            }
-            : new[] { "(nothing selected)" };
-
-    private static bool TryQuickCapture(
-        TuiScreen screen,
-        CreateItemUseCase? createItemUseCase,
-        CancellationToken cancellationToken)
-    {
-        if (createItemUseCase is null)
-        {
-            return false;
-        }
-
-        return QuickCaptureDialog.Show(screen, createItemUseCase, cancellationToken);
-    }
-
+            ]
+            : ["(nothing selected)"];
 }

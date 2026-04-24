@@ -1,16 +1,16 @@
 using Terminal.Gui;
 using TermBullet.Tui.Navigation;
-using TGui = Terminal.Gui.Application;
 
 namespace TermBullet.Tui.Screens;
 
 public static class WeeklyPlanningScreen
 {
     public static void Build(
-        Toplevel top,
+        View root,
         WeeklyPlanningViewModel viewModel,
         TuiNavigationState navigation,
         Action onBack,
+        Action onQuit,
         Action? onQuickCapture = null)
     {
         var weekLabel = $"{DateTime.Today:yyyy}-W{System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Today):00}";
@@ -19,7 +19,7 @@ public static class WeeklyPlanningScreen
             X = 0, Y = 0, Width = Dim.Fill()
         };
 
-        var footer = new Label(" / filter  c capture  p plan  > migrate  Enter zoom  Tab focus  ? help  q quit")
+        var footer = new Label(" / filter  c add  p plan  > migrate  Enter zoom  Tab focus  ? help  q quit")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
@@ -42,9 +42,16 @@ public static class WeeklyPlanningScreen
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
 
-        top.Add(topBar, bucketsPanel, weekPanel, contextPanel, metricsPanel, backlogPanel, notesPanel, footer);
-        top.KeyPress += args =>
+        root.Add(topBar, bucketsPanel, weekPanel, contextPanel, metricsPanel, backlogPanel, notesPanel, footer);
+        root.KeyPress += args =>
         {
+            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            {
+                TuiScreenUtilities.ShowContextHelp(TuiScreen.WeeklyPlanning);
+                args.Handled = true;
+                return;
+            }
+
             switch (args.KeyEvent.Key)
             {
                 case Key.Tab:
@@ -59,16 +66,12 @@ public static class WeeklyPlanningScreen
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                     args.Handled = true;
                     break;
-                case Key x when x == (Key)'?':
-                    TuiScreenUtilities.ShowContextHelp(TuiScreen.WeeklyPlanning);
-                    args.Handled = true;
-                    break;
                 case Key x when x == (Key)'c' && onQuickCapture is not null:
                     onQuickCapture();
                     args.Handled = true;
                     break;
                 case Key.q:
-                    TGui.RequestStop();
+                    onQuit();
                     args.Handled = true;
                     break;
                 case Key.Esc:

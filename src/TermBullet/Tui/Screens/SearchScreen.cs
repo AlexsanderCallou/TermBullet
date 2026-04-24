@@ -1,16 +1,16 @@
 using Terminal.Gui;
 using TermBullet.Tui.Navigation;
-using TGui = Terminal.Gui.Application;
 
 namespace TermBullet.Tui.Screens;
 
 public static class SearchScreen
 {
     public static void Build(
-        Toplevel top,
+        View root,
         SearchViewModel viewModel,
         TuiNavigationState navigation,
         Action onBack,
+        Action onQuit,
         Func<string, Task> onSearch)
     {
         var topBar = new Label(" TermBullet \u2500 Search \u2500 data:local \u2500 ai:off \u2500 sync:idle \u2500 mode:search")
@@ -72,7 +72,7 @@ public static class SearchScreen
         var focusTargets = new View[] { queryField, previewList };
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
 
-        top.Add(topBar, queryLabel, queryField, separator, resultsPanel, previewPanel, footer);
+        root.Add(topBar, queryLabel, queryField, separator, resultsPanel, previewPanel, footer);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
 
         queryField.KeyPress += args =>
@@ -81,17 +81,20 @@ public static class SearchScreen
             {
                 var query = queryField.Text?.ToString() ?? string.Empty;
                 viewModel.UpdateQuery(query);
-                _ = Task.Run(async () =>
-                {
-                    await onSearch(query);
-                    TGui.MainLoop?.Invoke(() => TGui.RequestStop());
-                });
+                _ = Task.Run(() => onSearch(query));
                 args.Handled = true;
             }
         };
 
-        top.KeyPress += args =>
+        root.KeyPress += args =>
         {
+            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            {
+                TuiScreenUtilities.ShowContextHelp(TuiScreen.Search);
+                args.Handled = true;
+                return;
+            }
+
             switch (args.KeyEvent.Key)
             {
                 case Key.Tab:
@@ -106,12 +109,8 @@ public static class SearchScreen
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                     args.Handled = true;
                     break;
-                case Key x when x == (Key)'?':
-                    TuiScreenUtilities.ShowContextHelp(TuiScreen.Search);
-                    args.Handled = true;
-                    break;
                 case Key.q:
-                    TGui.RequestStop();
+                    onQuit();
                     args.Handled = true;
                     break;
                 case Key.Esc:

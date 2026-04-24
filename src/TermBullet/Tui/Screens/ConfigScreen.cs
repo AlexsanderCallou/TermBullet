@@ -1,16 +1,16 @@
 using Terminal.Gui;
 using TermBullet.Tui.Navigation;
-using TGui = Terminal.Gui.Application;
 
 namespace TermBullet.Tui.Screens;
 
 public static class ConfigScreen
 {
     public static void Build(
-        Toplevel top,
+        View root,
         ConfigViewModel viewModel,
         TuiNavigationState navigation,
-        Action onBack)
+        Action onBack,
+        Action onQuit)
     {
         var topBar = new Label(" TermBullet \u2500 Config \u2500 data:local \u2500 ai:off \u2500 sync:idle \u2500 mode:normal")
         {
@@ -31,12 +31,6 @@ public static class ConfigScreen
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
         };
-        sectionsList.SelectedItemChanged += _ =>
-        {
-            var index = sectionsList.SelectedItem;
-            if (index >= 0 && index < viewModel.Sections.Count)
-                viewModel.ChangeSection(viewModel.Sections[index]);
-        };
         sectionsPanel.Add(sectionsList);
 
         // Panel 2: Options
@@ -48,14 +42,6 @@ public static class ConfigScreen
         var optionsList = new ListView(optionKeys.Length > 0 ? optionKeys : new[] { "(no options)" })
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
-        };
-        optionsList.SelectedItemChanged += _ =>
-        {
-            var diff = optionsList.SelectedItem - viewModel.SelectedOptionIndex;
-            if (diff > 0)
-                for (var i = 0; i < diff; i++) viewModel.SelectNextOption();
-            else if (diff < 0)
-                for (var i = 0; i < -diff; i++) viewModel.SelectPreviousOption();
         };
         optionsPanel.Add(optionsList);
 
@@ -80,10 +66,17 @@ public static class ConfigScreen
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
 
-        top.Add(topBar, sectionsPanel, optionsPanel, valuePanel, footer);
+        root.Add(topBar, sectionsPanel, optionsPanel, valuePanel, footer);
 
-        top.KeyPress += args =>
+        root.KeyPress += args =>
         {
+            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            {
+                TuiScreenUtilities.ShowContextHelp(TuiScreen.Config);
+                args.Handled = true;
+                return;
+            }
+
             switch (args.KeyEvent.Key)
             {
                 case Key.Tab:
@@ -98,12 +91,8 @@ public static class ConfigScreen
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                     args.Handled = true;
                     break;
-                case Key x when x == (Key)'?':
-                    TuiScreenUtilities.ShowContextHelp(TuiScreen.Config);
-                    args.Handled = true;
-                    break;
                 case Key.q:
-                    TGui.RequestStop();
+                    onQuit();
                     args.Handled = true;
                     break;
                 case Key.Esc:

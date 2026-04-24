@@ -8,5 +8,6 @@ public enum TuiScreen
     BacklogTriage,
     Review,
     Search,
-    Config
+    Config,
+    AddItem
 }

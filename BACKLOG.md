@@ -211,7 +211,7 @@ Status: partially complete
 
 ## Milestone 6 - TUI MVP
 
-Status: complete (pending manual smoke test)
+Status: partial
 
 - [x] Add Terminal.Gui dependency (1.19.0)
 - [x] Create TUI module structure (Tui/Navigation/, Tui/Screens/)
@@ -234,12 +234,14 @@ Status: complete (pending manual smoke test)
 - [x] Implement Weekly Planning screen
 - [x] Implement Review screen
 - [x] Add contextual help overlay (`?`) per TUI screen
-- [x] Implement quick capture flow (`c`) with task/note/event parsing
 - [x] Strengthen active panel styling with live title/focus updates
 - [x] Refresh screen previews after in-screen selection changes
 - [x] Run startup maintenance when opening the TUI
 - [x] Add TUI tests for search query state
 - [x] Add TUI tests for config section/option navigation
+- [x] Refactor TUI runtime to use one Terminal.Gui session with replaceable screen roots
+- [x] Reimplement TUI add flow (`c`) without freezing the terminal runtime
+- [ ] Add manual TUI validation for add/create persistence and JSON write completion
 - [ ] Run manual terminal rendering smoke test
 
 ## Milestone 7 - V1 Release Candidate
@@ -280,7 +282,10 @@ A task is done only when:
 Recommended next execution slice, still aligned with the milestones above:
 
 - [x] Milestone 4: global options decided — `-v/--version` implemented; `--data`, `--json`, `--no-color`, `--profile` (global) deferred to post-MVP
-- [x] Milestone 6: TUI MVP complete — all screens implemented and tested (278 tests passing)
+- [x] Milestone 6: TUI runtime refactored to avoid stop/restart navigation and root handler accumulation
+- [x] Milestone 6: reimplement TUI add (`c`) with a non-modal, keyboard-only flow that never performs persistence inside the UI event handler
+- [ ] Add a focused smoke validation for `c -> Enter -> item persisted -> JSON file finalized`
+- [ ] Only after that, rerun the broader TUI smoke test and mark Milestone 6 complete
 
 ## Post-V1 Backlog
 

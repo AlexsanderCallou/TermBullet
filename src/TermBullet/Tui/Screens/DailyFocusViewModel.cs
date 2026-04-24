@@ -54,7 +54,7 @@ public sealed class DailyFocusViewModel
         "- review swagger",
         ". empty audience bug",
         "o sync 16:00",
-        "[Enter to insert]"
+        "[Enter to add]"
     ];
 
     public IReadOnlyList<string> ShortHistoryLines =>

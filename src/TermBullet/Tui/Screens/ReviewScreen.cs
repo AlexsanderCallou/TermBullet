@@ -1,16 +1,16 @@
 using Terminal.Gui;
 using TermBullet.Tui.Navigation;
-using TGui = Terminal.Gui.Application;
 
 namespace TermBullet.Tui.Screens;
 
 public static class ReviewScreen
 {
     public static void Build(
-        Toplevel top,
+        View root,
         ReviewViewModel viewModel,
         TuiNavigationState navigation,
         Action onBack,
+        Action onQuit,
         Action? onQuickCapture = null)
     {
         var topBar = new Label(" TermBullet \u2500 Review \u2500 data:local \u2500 ai:off \u2500 sync:idle \u2500 mode:normal")
@@ -18,7 +18,7 @@ public static class ReviewScreen
             X = 0, Y = 0, Width = Dim.Fill()
         };
 
-        var footer = new Label(" r generate review  a AI  c capture  > migrate pending  Tab focus  ? help  q quit")
+        var footer = new Label(" r generate review  a AI  c add  > migrate pending  Tab focus  ? help  q quit")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
@@ -35,9 +35,16 @@ public static class ReviewScreen
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
 
-        top.Add(topBar, collectionsPanel, summaryPanel, insightsPanel, movedPanel, blockedPanel, nextCyclePanel, footer);
-        top.KeyPress += args =>
+        root.Add(topBar, collectionsPanel, summaryPanel, insightsPanel, movedPanel, blockedPanel, nextCyclePanel, footer);
+        root.KeyPress += args =>
         {
+            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            {
+                TuiScreenUtilities.ShowContextHelp(TuiScreen.Review);
+                args.Handled = true;
+                return;
+            }
+
             switch (args.KeyEvent.Key)
             {
                 case Key.Tab:
@@ -52,16 +59,12 @@ public static class ReviewScreen
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                     args.Handled = true;
                     break;
-                case Key x when x == (Key)'?':
-                    TuiScreenUtilities.ShowContextHelp(TuiScreen.Review);
-                    args.Handled = true;
-                    break;
                 case Key x when x == (Key)'c' && onQuickCapture is not null:
                     onQuickCapture();
                     args.Handled = true;
                     break;
                 case Key.q:
-                    TGui.RequestStop();
+                    onQuit();
                     args.Handled = true;
                     break;
                 case Key.Esc:
