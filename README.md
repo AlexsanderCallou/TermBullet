@@ -77,7 +77,51 @@ The installer downloads the latest Windows x64 release, verifies the SHA256 chec
 
 and adds that directory to the user `PATH`.
 
-Manual download:
+After installation, open a new terminal and run:
+
+```powershell
+termbullet --help
+```
+
+### Update
+
+For future releases, run the installer again:
+
+```powershell
+irm https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/main/install.ps1 | iex
+```
+
+The installer always resolves the latest GitHub Release by default and replaces the local `termbullet.exe`.
+
+To install a specific version:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/main/install.ps1))) -Version v0.1.0
+```
+
+### Uninstall
+
+Remove the installed executable directory:
+
+```powershell
+Remove-Item "$env:LOCALAPPDATA\TermBullet\bin" -Recurse -Force
+```
+
+Then remove this entry from the user `PATH`:
+
+```text
+%LOCALAPPDATA%\TermBullet\bin
+```
+
+TermBullet data is stored separately and is not removed by deleting the executable.
+
+To remove local data as well:
+
+```powershell
+Remove-Item "$env:APPDATA\TermBullet" -Recurse -Force
+```
+
+### Manual Download
 
 Download:
 
@@ -115,7 +159,7 @@ Linux and macOS binaries are planned for future releases.
 
 The following install methods are planned after the first public releases:
 
-- install scripts for Linux/macOS and Windows PowerShell
+- install scripts for Linux/macOS
 - .NET global tool
 - Homebrew
 - Scoop
