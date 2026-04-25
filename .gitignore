@@ -21,4 +21,7 @@ manual-tests/
 
 manual-tui-smoke/
 
+# Local release/build artifacts
+artifacts/
+
 screens.pen
