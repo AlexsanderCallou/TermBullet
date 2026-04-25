@@ -83,9 +83,33 @@ After installation, open a new terminal and run:
 termbullet --help
 ```
 
+### Linux x64
+
+Install with `curl`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/main/install.sh | sh
+```
+
+The installer downloads the latest Linux x64 release, verifies the SHA256 checksum, installs `termbullet` into:
+
+```text
+~/.local/bin
+```
+
+The script requires `curl`, `tar`, and either `sha256sum` or `shasum`.
+
+After installation, run:
+
+```bash
+termbullet --help
+```
+
+If `termbullet` is not found, add the install directory to your shell `PATH`.
+
 ### Update
 
-For future releases, run the installer again:
+For future Windows releases, run the PowerShell installer again:
 
 ```powershell
 irm https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/main/install.ps1 | iex
@@ -93,15 +117,29 @@ irm https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/main/install.p
 
 The installer always resolves the latest GitHub Release by default and replaces the local `termbullet.exe`.
 
-To install a specific version:
+For future Linux releases, run the shell installer again:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/main/install.sh | sh
+```
+
+The Linux installer always resolves the latest GitHub Release by default and replaces the local `termbullet`.
+
+To install a specific version on Windows:
 
 ```powershell
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/main/install.ps1))) -Version v0.1.0
 ```
 
+To install a specific version on Linux:
+
+```bash
+VERSION=v0.1.0 sh -c "$(curl -fsSL https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/main/install.sh)"
+```
+
 ### Uninstall
 
-Remove the installed executable directory:
+On Windows, remove the installed executable directory:
 
 ```powershell
 Remove-Item "$env:LOCALAPPDATA\TermBullet\bin" -Recurse -Force
@@ -121,18 +159,41 @@ To remove local data as well:
 Remove-Item "$env:APPDATA\TermBullet" -Recurse -Force
 ```
 
+On Linux, remove the installed executable:
+
+```bash
+rm -f "$HOME/.local/bin/termbullet"
+```
+
+TermBullet data is stored separately and is not removed by deleting the executable.
+
+To remove local data as well:
+
+```bash
+rm -rf "$HOME/.local/share/termbullet"
+```
+
 ### Manual Download
 
 Download:
 
 ```text
 termbullet_0.1.0_windows_x64.zip
+termbullet_0.1.0_linux_x64.tar.gz
 ```
 
-Extract the archive and run:
+On Windows, extract the archive and run:
 
 ```powershell
 .\termbullet.exe --help
+```
+
+On Linux, extract the archive and run:
+
+```bash
+tar -xzf termbullet_0.1.0_linux_x64.tar.gz
+chmod +x ./termbullet
+./termbullet --help
 ```
 
 Optionally, add the extracted folder to your `PATH`.
@@ -151,15 +212,19 @@ Then compare the SHA256 hash:
 Get-FileHash .\termbullet_0.1.0_windows_x64.zip -Algorithm SHA256
 ```
 
+```bash
+sha256sum termbullet_0.1.0_linux_x64.tar.gz
+```
+
 ### Other Platforms
 
-Linux and macOS binaries are planned for future releases.
+macOS binaries are planned for future releases.
 
 ### Planned Install Methods
 
 The following install methods are planned after the first public releases:
 
-- install scripts for Linux/macOS
+- install script for macOS
 - .NET global tool
 - Homebrew
 - Scoop
