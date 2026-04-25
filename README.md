@@ -47,56 +47,60 @@ The project license is Apache License 2.0 in [LICENSE](LICENSE).
 
 ## Installation
 
-TermBullet is planned to be distributed through GitHub Releases with prebuilt binaries for Windows, Linux, and macOS.
+TermBullet is distributed through GitHub Releases.
 
-The preferred release artifact format is a self-contained executable per platform, so users do not need to install the .NET runtime manually.
-
-### Install Script
-
-Linux/macOS:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/Development/install.sh | sh
-```
-
-Windows PowerShell:
-
-```powershell
-irm https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/Development/install.ps1 | iex
-```
-
-### .NET Tool
-
-For users who already have the .NET SDK installed:
-
-```bash
-dotnet tool install --global TermBullet
-```
-
-Update:
-
-```bash
-dotnet tool update --global TermBullet
-```
-
-### Manual Installation
-
-Download the archive for your platform from GitHub Releases, extract it, and place the `termbullet` executable in your `PATH`.
-
-Planned release artifacts:
+Current release:
 
 ```text
-termbullet_<version>_windows_x64.zip
-termbullet_<version>_linux_x64.tar.gz
-termbullet_<version>_linux_arm64.tar.gz
-termbullet_<version>_macos_x64.tar.gz
-termbullet_<version>_macos_arm64.tar.gz
+v0.1.0 - Experimental MVP
 ```
 
-### Planned Package Managers
+Release page:
 
-Package manager support is planned after the first public releases:
+```text
+https://github.com/AlexsanderCallou/TermBullet/releases/latest
+```
 
+### Windows x64
+
+Download:
+
+```text
+termbullet_0.1.0_windows_x64.zip
+```
+
+Extract the archive and run:
+
+```powershell
+.\termbullet.exe --help
+```
+
+Optionally, add the extracted folder to your `PATH`.
+
+### Verify Checksum
+
+Download the checksum file from the same release:
+
+```text
+termbullet_0.1.0_checksums.txt
+```
+
+Then compare the SHA256 hash:
+
+```powershell
+Get-FileHash .\termbullet_0.1.0_windows_x64.zip -Algorithm SHA256
+```
+
+### Other Platforms
+
+Linux and macOS binaries are planned for future releases.
+
+### Planned Install Methods
+
+The following install methods are planned after the first public releases:
+
+- install scripts for Linux/macOS and Windows PowerShell
+- .NET global tool
 - Homebrew
 - Scoop
 - Winget
