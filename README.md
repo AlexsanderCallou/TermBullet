@@ -63,6 +63,22 @@ https://github.com/AlexsanderCallou/TermBullet/releases/latest
 
 ### Windows x64
 
+Install with PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/main/install.ps1 | iex
+```
+
+The installer downloads the latest Windows x64 release, verifies the SHA256 checksum, installs `termbullet.exe` into:
+
+```text
+%LOCALAPPDATA%\TermBullet\bin
+```
+
+and adds that directory to the user `PATH`.
+
+Manual download:
+
 Download:
 
 ```text
