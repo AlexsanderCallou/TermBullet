@@ -141,15 +141,17 @@ The TUI is documented in [screens.md](screens.md). The active MVP scope is:
 - Main Dashboard;
 - Search / Command Palette;
 - Item Detail;
+- Planning placeholder;
+- Week View;
+- Backlog Triage;
+- Forgotten Review;
 - Migrate Item;
 - Add Item as an auxiliary keyboard-only flow.
 
 Deferred TUI screens:
 
 - Daily Focus;
-- Weekly Planning;
-- Backlog Triage;
-- Forgotten Review;
+- AI Planning;
 - Review;
 - Calendar View in V3;
 - Sync / Cloud in V4.
@@ -173,6 +175,7 @@ data set.
 
 ### V2 - AI Planning
 
+- Planning workspace with AI-assisted goal-to-task support;
 - BYOK AI setup;
 - provider/model/key/base URL setup;
 - daily planning and review;

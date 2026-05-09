@@ -10,6 +10,8 @@ Source checked:
 - `src/TermBullet/Tui/TermBulletTuiApp.cs`
 - `src/TermBullet/Tui/Screens/SearchScreen.cs`
 - `src/TermBullet/Tui/Screens/AddItemScreen.cs`
+- `src/TermBullet/Tui/Screens/PlanningScreen.cs`
+- `src/TermBullet/Tui/Screens/WeekScreen.cs`
 - `src/TermBullet/Tui/Screens/ItemDetailScreen.cs`
 - `src/TermBullet/Tui/Screens/MigrateItemScreen.cs`
 
@@ -19,17 +21,19 @@ Current implemented screens:
 - Search
 - Add Item auxiliary flow
 - Item Detail
+- Planning placeholder
+- Week View
+- Backlog
+- Forgotten
 - Migrate Item
 
 Planned but not currently implemented as TUI screens:
 
 - Daily Focus
-- Weekly Planning
-- Backlog Triage
-- Forgotten Review
 - Notes
 - Calendar
 - Tags
+- AI Planning
 - Review
 - Calendar View
 - Sync / Cloud
@@ -93,13 +97,14 @@ Notes:
   for the selected item's actual content.
 - `Context` shows collection counts, the Week planning view, and active tags.
   Week is a view derived from `planned_for`, not a persisted collection.
+- `Planning` opens a future AI-assisted planning placeholder. It is not the
+  Week View and is not part of the V1 execution workflow.
 - `Tags` opens the catalog view where tags can be created, inspected, and later
   selected while editing or creating items.
 - `Content` is the main reading/editing surface for the selected item. It
   should show the item's `content` and optional `description`; tasks do not
   currently have an embedded notes collection in the JSON model.
-- `Enter open` should open the selected item in the Item Detail screen. The
-  current dashboard implementation does not fully support this yet.
+- `Enter open` opens the selected item in the Item Detail screen.
 - The footer includes `e edit`, but edit is not currently handled by the
   dashboard key handling code.
 
@@ -458,7 +463,52 @@ Notes:
 - For notes and events, task-only fields may be shown as `-` or omitted only if
   the screen remains clear and complete.
 
-## Screen 05 - Week View
+## Screen 05 - Planning
+
+Status: implemented placeholder.
+
+Role: future AI-assisted planning workspace. Planning is where the user will
+eventually ask TermBullet to help turn goals, backlog context, notes, and dated
+work into proposed tasks.
+
+This screen is not part of the V1 execution workflow. In V1 it must stay empty
+and must not call AI, persist suggestions, or mutate items.
+
+Entry points:
+
+- `Enter` on `Planning` from the Main Dashboard menu.
+
+Navigation:
+
+- `Esc` returns to the dashboard.
+- `?` opens contextual help.
+- `q` quits.
+
+Target ASCII layout:
+
+```text
++ TermBullet - Planning ------------------------------------------------------------------+
+| Future AI Planning                                                                       |
+|                                                                                          |
+| Planning will become the AI-assisted workspace for turning goals into tasks.              |
+|                                                                                          |
+| For now, this screen is intentionally empty. V1 keeps planning manual and local-first.    |
+|                                                                                          |
+| Future scope: goals, context selection, task suggestions, and preview before saving.      |
++------------------------------------------------------------------------------------------+
+| ? help  Esc back  q quit                                                                 |
++------------------------------------------------------------------------------------------+
+```
+
+Notes:
+
+- Planning is a future V2 surface, not a synonym for Week View.
+- Planning must not create, edit, migrate, or delete items in V1.
+- Future AI behavior must preview suggestions before saving them.
+- Future AI behavior must operate on filtered local context, not the whole data
+  set by default.
+
+## Screen 06 - Week View
 
 Status: implemented.
 
@@ -468,8 +518,8 @@ a separate persisted collection.
 
 Entry points:
 
-- `Enter` on `Planning` from the Main Dashboard menu.
 - Future shortcut: `w` from the dashboard.
+- Future menu entry if Week View becomes a top-level dashboard route again.
 
 Navigation:
 
@@ -515,7 +565,7 @@ Notes:
   the original task can be migrated when appropriate instead of silently editing
   history.
 
-## Screen 06 - Backlog
+## Screen 07 - Backlog
 
 Status: implemented.
 
@@ -570,7 +620,7 @@ Notes:
 - Event rows should not normally appear here because events require
   `scheduled_at`.
 
-## Screen 07 - Forgotten
+## Screen 08 - Forgotten
 
 Status: implemented.
 
@@ -626,7 +676,7 @@ Notes:
 - Events may need a later overdue-events review, but this screen is task-first
   for V1.
 
-## Screen 08 - Notes
+## Screen 09 - Notes
 
 Status: target design pending validation.
 
@@ -678,7 +728,7 @@ Notes:
   description, tags, and timestamps.
 - Deleting a note must use the same delete use case as other item types.
 
-## Screen 09 - Calendar
+## Screen 10 - Calendar
 
 Status: target design pending validation.
 
@@ -753,7 +803,7 @@ Notes:
   appropriate; moving an event should be treated as an edit/reschedule behavior
   when that workflow exists.
 
-## Screen 10 - Tags
+## Screen 11 - Tags
 
 Status: target design pending validation.
 
@@ -807,7 +857,7 @@ Notes:
 - Deleting a tag needs a clear business rule before implementation: block
   deletion while referenced, or remove it from all items after confirmation.
 
-## Flow 11 - Create Tag
+## Flow 12 - Create Tag
 
 Status: target design pending validation.
 
@@ -854,7 +904,7 @@ Notes:
 - If tags become first-class catalog records instead of derived strings,
   documentation must update `DATA_MODEL.md` before implementation.
 
-## Flow 12 - Migrate Item
+## Flow 13 - Migrate Item
 
 Status: implemented.
 
@@ -937,10 +987,10 @@ Notes:
 
 ## Implementation Gap Notes
 
-The product spec describes a broader V1 TUI with Daily Focus, Weekly Planning,
+The product spec describes a broader TUI with Daily Focus, AI Planning, Week,
 Backlog Triage, Forgotten Review, Review, and Search. The active codebase
-currently contains `MainDashboard`, `Search`, `ItemDetail`, `Week`, `Backlog`,
-`Forgotten`, and `MigrateItem` in `TuiScreen`, plus the Add Item auxiliary flow
-for type picking, quick task capture, and type-specific creation forms. Notes,
-Calendar, and Tags are target designs pending validation before
+currently contains `MainDashboard`, `Search`, `ItemDetail`, `Planning`, `Week`,
+`Backlog`, `Forgotten`, and `MigrateItem` in `TuiScreen`, plus the Add Item
+auxiliary flow for type picking, quick task capture, and type-specific creation
+forms. Notes, Calendar, and Tags are target designs pending validation before
 implementation. Review remains a future screen outside the current route set.

@@ -49,13 +49,27 @@ public static class AddItemTypePickerScreen
 
         void Confirm()
         {
-            onChoose(selectedIndex switch
-            {
-                1 => ItemType.Note,
-                2 => ItemType.Event,
-                _ => ItemType.Task
-            });
+            onChoose(ResolveType(selectedIndex));
         }
+
+        list.SelectedItemChanged += _ =>
+        {
+            if (list.SelectedItem < 0 || list.SelectedItem > 2)
+            {
+                return;
+            }
+
+            selectedIndex = list.SelectedItem;
+            TuiScreenUtilities.RefreshListView(list, BuildRows(selectedIndex));
+            list.SelectedItem = selectedIndex;
+        };
+        list.KeyPress += args =>
+        {
+            if (TuiScreenUtilities.TryHandleEnter(args.KeyEvent.Key, Confirm))
+            {
+                args.Handled = true;
+            }
+        };
 
         root.KeyPress += args =>
         {
@@ -94,6 +108,14 @@ public static class AddItemTypePickerScreen
 
         list.SetFocus();
     }
+
+    public static ItemType ResolveType(int selectedIndex) =>
+        selectedIndex switch
+        {
+            1 => ItemType.Note,
+            2 => ItemType.Event,
+            _ => ItemType.Task
+        };
 
     private static string[] BuildRows(int selectedIndex)
     {

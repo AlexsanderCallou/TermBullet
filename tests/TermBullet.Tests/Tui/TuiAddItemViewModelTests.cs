@@ -35,4 +35,15 @@ public sealed class TuiAddItemViewModelTests
         Assert.Equal(ItemCollection.Today, viewModel.Collection);
         Assert.Equal("Capture text is required.", viewModel.Error);
     }
+
+    [Theory]
+    [InlineData(0, ItemType.Task)]
+    [InlineData(1, ItemType.Note)]
+    [InlineData(2, ItemType.Event)]
+    public void AddItemTypePicker_resolves_selected_index_to_item_type(int selectedIndex, ItemType expectedType)
+    {
+        var type = AddItemTypePickerScreen.ResolveType(selectedIndex);
+
+        Assert.Equal(expectedType, type);
+    }
 }

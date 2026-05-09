@@ -372,6 +372,10 @@ public sealed class TermBulletTuiApp(
                             NavigateBack);
                         break;
 
+                    case TuiScreen.Planning:
+                        PlanningScreen.Build(root, NavigateBack, Quit);
+                        break;
+
                     case TuiScreen.Week:
                         WeekScreen.Build(
                             root,
@@ -658,7 +662,7 @@ public sealed class TermBulletTuiApp(
         var screen = selectedIndex switch
         {
             1 => TuiScreen.Search,
-            2 => TuiScreen.Week,
+            2 => TuiScreen.Planning,
             3 => TuiScreen.Backlog,
             4 => TuiScreen.Forgotten,
             _ => (TuiScreen?)null
@@ -676,6 +680,7 @@ public sealed class TermBulletTuiApp(
             TuiScreen.Search => 2,
             TuiScreen.ItemDetail => 5,
             TuiScreen.MigrateItem => 3,
+            TuiScreen.Planning => 1,
             TuiScreen.Week => 7,
             TuiScreen.Backlog => 3,
             TuiScreen.Forgotten => 3,

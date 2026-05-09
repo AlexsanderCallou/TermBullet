@@ -39,6 +39,13 @@ public static class TuiContextHelp
                 "Esc: cancel migration",
                 "Destination: choose Date or Backlog"
             ],
+            TuiScreen.Planning =>
+            [
+                "Planning is a future AI-assisted workspace",
+                "V1 keeps this screen empty and local-first",
+                "Esc: return to previous screen",
+                "q: quit"
+            ],
             TuiScreen.Week =>
             [
                 "Tab / Shift+Tab: move between weekday panels and preview",

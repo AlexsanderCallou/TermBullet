@@ -53,6 +53,15 @@ public sealed class TuiContextHelpTests
         Assert.Contains(lines, line => line.Contains("confirm", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void Planning_help_describes_future_ai_workspace()
+    {
+        var lines = TuiContextHelp.GetLines(TuiScreen.Planning);
+
+        Assert.Contains(lines, line => line.Contains("future AI-assisted workspace", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(lines, line => line.Contains("empty", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Theory]
     [InlineData(TuiScreen.Week, "weekday")]
     [InlineData(TuiScreen.Backlog, "Backlog")]

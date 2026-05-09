@@ -6,6 +6,7 @@ public enum TuiScreen
     Search,
     ItemDetail,
     MigrateItem,
+    Planning,
     Week,
     Backlog,
     Forgotten
