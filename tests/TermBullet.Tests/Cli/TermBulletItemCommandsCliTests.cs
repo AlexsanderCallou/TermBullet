@@ -154,6 +154,8 @@ public sealed class TermBulletItemCommandsCliTests
             collection,
             Priority.None,
             [],
+            null,
+            null,
             1,
             Now,
             Now);

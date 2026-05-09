@@ -135,6 +135,13 @@ public static class SearchScreen
 
             TuiScreenUtilities.RefreshListView(previewList, BuildPreviewLines(viewModel.SelectedResult));
         };
+        resultsList.KeyPress += args =>
+        {
+            if (TuiScreenUtilities.TryHandleEnter(args.KeyEvent.Key, () => onOpenSelected(viewModel.SelectedResult)))
+            {
+                args.Handled = true;
+            }
+        };
     }
 
     private static string[] BuildPreviewLines(ItemDisplayRow? selected) =>

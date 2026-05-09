@@ -13,6 +13,7 @@ public sealed class MigrateItemViewModelTests
 
         Assert.Contains(vm.ItemLines, line => line.Contains("ref: t-0526-1", StringComparison.Ordinal));
         Assert.Contains(vm.ItemLines, line => line.Contains("content: Fix auth flow", StringComparison.Ordinal));
+        Assert.Contains(vm.ItemLines, line => line.Contains("planned_for: 2026-05-09", StringComparison.Ordinal));
         Assert.Contains(vm.DestinationLines, line => line.Contains("(x) Date", StringComparison.Ordinal));
         Assert.Contains(vm.DestinationLines, line => line.Contains("planned_for: 2026-05-12", StringComparison.Ordinal));
         Assert.Contains(vm.ResultLines, line => line.Contains("original: t-0526-1 -> migrate", StringComparison.Ordinal));
@@ -40,6 +41,8 @@ public sealed class MigrateItemViewModelTests
             Collection: ItemCollection.Today,
             Priority: Priority.High,
             Tags: ["auth", "cli"],
+            PlannedFor: new DateOnly(2026, 5, 9),
+            ScheduledAt: null,
             Version: 1,
             CreatedAt: DateTimeOffset.UtcNow,
             UpdatedAt: DateTimeOffset.UtcNow);

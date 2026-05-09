@@ -60,7 +60,20 @@ public sealed class SafeJsonFileStore
             throw new FileNotFoundException("Monthly file not found.", filePath);
         }
 
-        var mainContent = await File.ReadAllTextAsync(filePath, cancellationToken);
+        string mainContent;
+        try
+        {
+            mainContent = await File.ReadAllTextAsync(filePath, cancellationToken);
+        }
+        catch (IOException) when (File.Exists(backupPath))
+        {
+            return await RecoverFromBackupAsync(filePath, backupPath, cancellationToken);
+        }
+        catch (UnauthorizedAccessException) when (File.Exists(backupPath))
+        {
+            return await RecoverFromBackupAsync(filePath, backupPath, cancellationToken);
+        }
+
         if (IsValidJson(mainContent))
         {
             return mainContent;
@@ -77,7 +90,46 @@ public sealed class SafeJsonFileStore
             throw new InvalidDataException("Both monthly file and backup are corrupted.");
         }
 
-        await ReplaceMainFileFromRecoveryAsync(filePath, backupContent, cancellationToken);
+        try
+        {
+            await ReplaceMainFileFromRecoveryAsync(filePath, backupContent, cancellationToken);
+        }
+        catch (IOException)
+        {
+            // If the main file is temporarily locked, return the recovered content.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // If the main file is temporarily locked, return the recovered content.
+        }
+
+        return backupContent;
+    }
+
+    private static async Task<string> RecoverFromBackupAsync(
+        string filePath,
+        string backupPath,
+        CancellationToken cancellationToken)
+    {
+        var backupContent = await File.ReadAllTextAsync(backupPath, cancellationToken);
+        if (!IsValidJson(backupContent))
+        {
+            throw new InvalidDataException("Monthly file is unreadable and backup is corrupted.");
+        }
+
+        try
+        {
+            await ReplaceMainFileFromRecoveryAsync(filePath, backupContent, cancellationToken);
+        }
+        catch (IOException)
+        {
+            // If the main file is temporarily locked, return the recovered content.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // If the main file is temporarily locked, return the recovered content.
+        }
+
         return backupContent;
     }
 

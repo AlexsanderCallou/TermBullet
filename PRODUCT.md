@@ -23,7 +23,7 @@ V1 delivers the offline core:
 
 - tasks, notes, and events;
 - Today, Backlog, and Forgotten collections;
-- Week as a planning view derived from task dates;
+- Week as a planning view derived from task `planned_for` dates;
 - CLI;
 - TUI MVP;
 - local monthly JSON persistence;
@@ -82,7 +82,7 @@ placement. The destination remains executable as an open task.
 
 Tasks created for today are planned for today by default. A task should only get
 a future planned date when the user intentionally creates or moves it to that
-date.
+date. Backlog tasks may keep `planned_for` as `null`.
 
 `forgotten` is the review area for open tasks that were planned for a previous
 day and were not done, cancelled, or marked migrate. At the beginning of a day, the

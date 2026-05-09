@@ -384,9 +384,8 @@ public sealed class JsonFileItemRepository(
             Collection = ToCollectionKey(item.Collection),
             Priority = ToPriorityKey(item.Priority),
             Tags = [.. item.Tags],
-            DueAt = item.DueAt,
+            PlannedFor = item.PlannedFor,
             ScheduledAt = item.ScheduledAt,
-            EstimateMinutes = item.EstimateMinutes,
             Version = item.Version,
             CreatedAt = item.CreatedAt,
             UpdatedAt = item.UpdatedAt,
@@ -431,9 +430,8 @@ public sealed class JsonFileItemRepository(
             item.Version,
             item.CreatedAt,
             item.UpdatedAt,
-            item.DueAt,
+            item.PlannedFor,
             item.ScheduledAt,
-            item.EstimateMinutes,
             item.CompletedAt,
             item.CancelledAt,
             item.MigratedAt,
@@ -467,9 +465,8 @@ public sealed class JsonFileItemRepository(
             Collection = sourceItem.Collection,
             Priority = sourceItem.Priority,
             Tags = [.. sourceItem.Tags],
-            DueAt = sourceItem.DueAt,
+            PlannedFor = sourceItem.PlannedFor,
             ScheduledAt = sourceItem.ScheduledAt,
-            EstimateMinutes = sourceItem.EstimateMinutes,
             Version = sourceItem.Version + 1,
             CreatedAt = sourceItem.CreatedAt,
             UpdatedAt = now,
@@ -632,14 +629,11 @@ public sealed class JsonFileItemRepository(
         [JsonPropertyName("tags")]
         public List<string> Tags { get; set; } = [];
 
-        [JsonPropertyName("due_at")]
-        public DateTimeOffset? DueAt { get; set; }
+        [JsonPropertyName("planned_for")]
+        public DateOnly? PlannedFor { get; set; }
 
         [JsonPropertyName("scheduled_at")]
         public DateTimeOffset? ScheduledAt { get; set; }
-
-        [JsonPropertyName("estimate_minutes")]
-        public int? EstimateMinutes { get; set; }
 
         [JsonPropertyName("version")]
         public int Version { get; set; } = 1;

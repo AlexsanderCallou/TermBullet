@@ -10,6 +10,17 @@ public static class TuiScreenUtilities
         || keyEvent.KeyValue == '?'
         || (keyEvent.KeyValue == '/' && keyEvent.IsShift);
 
+    public static bool TryHandleEnter(Key key, Action action)
+    {
+        if (key != Key.Enter)
+        {
+            return false;
+        }
+
+        action();
+        return true;
+    }
+
     public static string GetPanelTitle(int number, string title, TuiNavigationState navigation, int panelIndex) =>
         navigation.IsPanelFocused(panelIndex)
             ? $"> {number} {title}"

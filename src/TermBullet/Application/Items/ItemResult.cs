@@ -12,6 +12,8 @@ public sealed record ItemResult(
     ItemCollection Collection,
     Priority Priority,
     IReadOnlyCollection<string> Tags,
+    DateOnly? PlannedFor,
+    DateTimeOffset? ScheduledAt,
     int Version,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt)
@@ -28,6 +30,8 @@ public sealed record ItemResult(
             item.Collection,
             item.Priority,
             item.Tags,
+            item.PlannedFor,
+            item.ScheduledAt,
             item.Version,
             item.CreatedAt,
             item.UpdatedAt);

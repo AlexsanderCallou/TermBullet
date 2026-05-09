@@ -54,6 +54,24 @@ public sealed class SafeJsonFileStoreTests
     }
 
     [Fact]
+    public async Task ReadOrRecoverAsync_recovers_from_backup_when_main_file_cannot_be_read()
+    {
+        var dataRoot = CreateTempDirectory();
+        var filePath = Path.Combine(dataRoot, "data", "2026", "data_04_2026.json");
+        var backupPath = Path.Combine(dataRoot, "data", "2026", "data_04_2026.backup.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        await File.WriteAllTextAsync(filePath, """{"version":1}""");
+        await File.WriteAllTextAsync(backupPath, """{"ok":true}""");
+        using var lockedFile = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None);
+        var store = new SafeJsonFileStore();
+
+        var recovered = await store.ReadOrRecoverAsync(filePath, backupPath);
+
+        Assert.Equal("""{"ok":true}""", recovered);
+        await lockedFile.DisposeAsync();
+    }
+
+    [Fact]
     public async Task ReadOrRecoverAsync_throws_when_main_file_is_corrupted_and_backup_is_missing()
     {
         var dataRoot = CreateTempDirectory();

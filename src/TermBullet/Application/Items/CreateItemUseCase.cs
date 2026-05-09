@@ -43,12 +43,26 @@ public sealed class CreateItemUseCase(
             request.Description,
             request.Priority,
             request.Tags,
-            request.DueAt,
-            request.ScheduledAt,
-            request.EstimateMinutes);
+            ResolvePlannedFor(request, now),
+            request.ScheduledAt);
 
         await itemRepository.AddAsync(item, cancellationToken);
 
         return CreateItemResult.From(item);
+    }
+
+    private static DateOnly? ResolvePlannedFor(CreateItemRequest request, DateTimeOffset now)
+    {
+        if (request.Type != ItemType.Task)
+        {
+            return null;
+        }
+
+        if (request.Collection == ItemCollection.Backlog)
+        {
+            return request.PlannedFor;
+        }
+
+        return request.PlannedFor ?? DateOnly.FromDateTime(now.UtcDateTime);
     }
 }

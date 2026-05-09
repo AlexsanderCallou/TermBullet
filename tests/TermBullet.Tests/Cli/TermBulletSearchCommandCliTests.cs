@@ -92,6 +92,8 @@ public sealed class TermBulletSearchCommandCliTests
             ItemCollection.Today,
             Priority.None,
             [tag],
+            null,
+            null,
             1,
             Now,
             Now);

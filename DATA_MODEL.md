@@ -119,13 +119,12 @@ Required persisted fields:
 - `created_at`
 - `updated_at`
 
-`planned_for` is required for tasks. Notes and events may store it as `null`.
+`planned_for` is required for active tasks. Backlog tasks may store it as
+`null`. Notes and events may store it as `null`.
 
 Optional fields:
 
-- `due_at`
 - `scheduled_at`
-- `estimate_minutes`
 - `completed_at`
 - `cancelled_at`
 - `migrated_at`
@@ -177,9 +176,7 @@ Default priority is `none`.
       "planned_for": "2026-04-22",
       "priority": "high",
       "tags": ["jwt", "auth"],
-      "due_at": null,
       "scheduled_at": null,
-      "estimate_minutes": null,
       "version": 1,
       "created_at": "2026-04-22T08:14:00Z",
       "updated_at": "2026-04-22T08:14:00Z",
@@ -228,6 +225,7 @@ Rules:
 - tasks created from Today use today's date as `planned_for`;
 - future dates are only set when the user intentionally plans a task for the
   future;
+- Backlog tasks keep `planned_for` as `null`;
 - an open task with `planned_for` before today and no terminal action is moved
   to `forgotten`;
 - `forgotten` tasks wait for explicit user action.

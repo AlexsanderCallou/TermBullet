@@ -165,6 +165,8 @@ public sealed class MainDashboardViewModelTests
             Collection: ItemCollection.Today,
             Priority: priority,
             Tags: [],
+            PlannedFor: null,
+            ScheduledAt: null,
             Version: 1,
             CreatedAt: DateTimeOffset.UtcNow,
             UpdatedAt: DateTimeOffset.UtcNow);

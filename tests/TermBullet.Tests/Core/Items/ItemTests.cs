@@ -36,12 +36,11 @@ public sealed class ItemTests
         Assert.Equal(ItemCollection.Today, item.Collection);
         Assert.Equal(Priority.None, item.Priority);
         Assert.Equal(["auth", "cli"], item.Tags);
+        Assert.Equal(itemType == ItemType.Task ? DateOnly.FromDateTime(CreatedAt.UtcDateTime) : null, item.PlannedFor);
         Assert.Equal(1, item.Version);
         Assert.Equal(CreatedAt, item.CreatedAt);
         Assert.Equal(CreatedAt, item.UpdatedAt);
-        Assert.Null(item.DueAt);
         Assert.Null(item.ScheduledAt);
-        Assert.Null(item.EstimateMinutes);
         Assert.Null(item.CompletedAt);
         Assert.Null(item.CancelledAt);
         Assert.Null(item.MigratedAt);
@@ -116,6 +115,14 @@ public sealed class ItemTests
             () => CreateTask(collection: (ItemCollection)99));
 
         Assert.Equal("collection", exception.ParamName);
+    }
+
+    [Fact]
+    public void Create_keeps_backlog_tasks_without_planned_for()
+    {
+        var item = CreateTask(collection: ItemCollection.Backlog);
+
+        Assert.Null(item.PlannedFor);
     }
 
     [Fact]

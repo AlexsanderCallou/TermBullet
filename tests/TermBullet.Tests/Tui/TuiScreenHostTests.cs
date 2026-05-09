@@ -37,4 +37,26 @@ public sealed class TuiScreenHostTests
 
         Assert.Equal([" "], rows);
     }
+
+    [Fact]
+    public void TryHandleEnter_invokes_action_for_enter_key()
+    {
+        var invoked = false;
+
+        var handled = TuiScreenUtilities.TryHandleEnter(Key.Enter, () => invoked = true);
+
+        Assert.True(handled);
+        Assert.True(invoked);
+    }
+
+    [Fact]
+    public void TryHandleEnter_ignores_non_enter_key()
+    {
+        var invoked = false;
+
+        var handled = TuiScreenUtilities.TryHandleEnter(Key.Tab, () => invoked = true);
+
+        Assert.False(handled);
+        Assert.False(invoked);
+    }
 }

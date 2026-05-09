@@ -256,9 +256,8 @@ public sealed class JsonDataTransferServiceTests
                     "collection": "today",
                     "priority": "none",
                     "tags": ["auth"],
-                    "due_at": null,
+                    "planned_for": "2026-04-23",
                     "scheduled_at": null,
-                    "estimate_minutes": null,
                     "version": 1,
                     "created_at": "2026-04-23T10:30:00Z",
                     "updated_at": "2026-04-23T10:30:00Z",
@@ -322,6 +321,8 @@ public sealed class JsonDataTransferServiceTests
                     "collection": "today",
                     "priority": "none",
                     "tags": [],
+                    "planned_for": "2026-04-23",
+                    "scheduled_at": null,
                     "version": 1,
                     "created_at": "2026-04-23T10:30:00Z",
                     "updated_at": "2026-04-23T10:30:00Z"
@@ -336,6 +337,8 @@ public sealed class JsonDataTransferServiceTests
                     "collection": "today",
                     "priority": "none",
                     "tags": [],
+                    "planned_for": "2026-04-23",
+                    "scheduled_at": null,
                     "version": 1,
                     "created_at": "2026-04-23T10:31:00Z",
                     "updated_at": "2026-04-23T10:31:00Z"

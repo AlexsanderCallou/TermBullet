@@ -5,5 +5,8 @@ public enum TuiScreen
     MainDashboard,
     Search,
     ItemDetail,
-    MigrateItem
+    MigrateItem,
+    Week,
+    Backlog,
+    Forgotten
 }

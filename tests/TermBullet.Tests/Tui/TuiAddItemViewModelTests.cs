@@ -14,13 +14,15 @@ public sealed class TuiAddItemViewModelTests
     }
 
     [Fact]
-    public void ForMainDashboard_ProvidesTaskNoteAndEventExamples()
+    public void ForType_ProvidesTypeSpecificExamples()
     {
-        var viewModel = TuiAddItemViewModel.ForMainDashboard();
+        var task = TuiAddItemViewModel.ForType(ItemType.Task);
+        var note = TuiAddItemViewModel.ForType(ItemType.Note);
+        var eventVm = TuiAddItemViewModel.ForType(ItemType.Event);
 
-        Assert.Contains(viewModel.Examples, line => line.Contains("- Review pull request", StringComparison.Ordinal));
-        Assert.Contains(viewModel.Examples, line => line.Contains(". Investigate stacktrace", StringComparison.Ordinal));
-        Assert.Contains(viewModel.Examples, line => line.Contains("o Team sync at 16:00", StringComparison.Ordinal));
+        Assert.Contains(task.Examples, line => line.Contains("review pull request", StringComparison.Ordinal));
+        Assert.Contains(note.Examples, line => line.Contains("investigate stacktrace", StringComparison.Ordinal));
+        Assert.Contains(eventVm.Examples, line => line.Contains("team sync", StringComparison.Ordinal));
     }
 
     [Fact]

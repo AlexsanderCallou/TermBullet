@@ -153,8 +153,9 @@ public sealed class JsonFileItemRepositoryTests
         var repository = CreateRepository(context);
         var item = CreateItem(
             id: Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
-            publicRef: "t-0426-1",
-            collection: ItemCollection.Today);
+            publicRef: "n-0426-1",
+            collection: ItemCollection.Today,
+            itemType: ItemType.Note);
 
         await repository.AddAsync(item);
 
@@ -163,12 +164,10 @@ public sealed class JsonFileItemRepositoryTests
         var stored = Assert.Single(doc.RootElement.GetProperty("items").EnumerateArray());
         Assert.True(stored.TryGetProperty("description", out var description));
         Assert.Equal(JsonValueKind.Null, description.ValueKind);
-        Assert.True(stored.TryGetProperty("due_at", out var dueAt));
-        Assert.Equal(JsonValueKind.Null, dueAt.ValueKind);
+        Assert.True(stored.TryGetProperty("planned_for", out var plannedFor));
+        Assert.Equal(JsonValueKind.Null, plannedFor.ValueKind);
         Assert.True(stored.TryGetProperty("scheduled_at", out var scheduledAt));
         Assert.Equal(JsonValueKind.Null, scheduledAt.ValueKind);
-        Assert.True(stored.TryGetProperty("estimate_minutes", out var estimateMinutes));
-        Assert.Equal(JsonValueKind.Null, estimateMinutes.ValueKind);
         Assert.True(stored.TryGetProperty("completed_at", out var completedAt));
         Assert.Equal(JsonValueKind.Null, completedAt.ValueKind);
         Assert.True(stored.TryGetProperty("cancelled_at", out var cancelledAt));
@@ -278,9 +277,8 @@ public sealed class JsonFileItemRepositoryTests
             3,
             CreatedAt,
             ChangedAt,
-            dueAt: new DateTimeOffset(2026, 5, 3, 9, 0, 0, TimeSpan.Zero),
+            plannedFor: new DateOnly(2026, 5, 1),
             scheduledAt: new DateTimeOffset(2026, 5, 2, 14, 0, 0, TimeSpan.Zero),
-            estimateMinutes: 45,
             migratedAt: migrationInfo.MigratedAt,
             migration: migrationInfo);
 
@@ -289,9 +287,8 @@ public sealed class JsonFileItemRepositoryTests
         var found = await repository.FindByPublicRefAsync("t-0426-1");
         Assert.NotNull(found);
         Assert.Equal(item.Description, found.Description);
-        Assert.Equal(item.DueAt, found.DueAt);
+        Assert.Equal(item.PlannedFor, found.PlannedFor);
         Assert.Equal(item.ScheduledAt, found.ScheduledAt);
-        Assert.Equal(item.EstimateMinutes, found.EstimateMinutes);
         Assert.Equal(item.MigratedAt, found.MigratedAt);
         Assert.NotNull(found.Migration);
         Assert.Equal("2026-04", found.Migration!.FromPeriod);
@@ -302,9 +299,8 @@ public sealed class JsonFileItemRepositoryTests
         using var doc = JsonDocument.Parse(json);
         var stored = Assert.Single(doc.RootElement.GetProperty("items").EnumerateArray());
         Assert.Equal("keep tests green", stored.GetProperty("description").GetString());
-        Assert.Equal(new DateTimeOffset(2026, 5, 3, 9, 0, 0, TimeSpan.Zero), stored.GetProperty("due_at").GetDateTimeOffset());
+        Assert.Equal("2026-05-01", stored.GetProperty("planned_for").GetString());
         Assert.Equal(new DateTimeOffset(2026, 5, 2, 14, 0, 0, TimeSpan.Zero), stored.GetProperty("scheduled_at").GetDateTimeOffset());
-        Assert.Equal(45, stored.GetProperty("estimate_minutes").GetInt32());
         Assert.Equal(migrationInfo.MigratedAt, stored.GetProperty("migrated_at").GetDateTimeOffset());
         var migration = stored.GetProperty("migration");
         Assert.Equal("2026-04", migration.GetProperty("from_period").GetString());
@@ -435,12 +431,16 @@ public sealed class JsonFileItemRepositoryTests
     private static readonly DateTimeOffset CreatedAt = new(2026, 4, 23, 10, 30, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset ChangedAt = new(2026, 4, 23, 12, 0, 0, TimeSpan.Zero);
 
-    private static Item CreateItem(Guid id, string publicRef, ItemCollection collection)
+    private static Item CreateItem(
+        Guid id,
+        string publicRef,
+        ItemCollection collection,
+        ItemType itemType = ItemType.Task)
     {
         return Item.Create(
             id,
             PublicRef.Parse(publicRef),
-            ItemType.Task,
+            itemType,
             "Fix authentication flow",
             collection,
             CreatedAt,

@@ -18,7 +18,7 @@ public sealed class MigrateItemViewModel
             $"content: {item.Content}",
             $"status: {item.Status}",
             $"collection: {item.Collection}",
-            "planned_for: -",
+            $"planned_for: {(item.PlannedFor is null ? "-" : item.PlannedFor.Value.ToString("yyyy-MM-dd"))}",
             $"priority: {item.Priority}",
             $"tags: {(item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "-")}"
         ];

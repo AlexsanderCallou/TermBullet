@@ -15,10 +15,9 @@ public sealed class Item
         ItemCollection collection,
         Priority priority,
         IReadOnlyCollection<string> tags,
+        DateOnly? plannedFor,
         DateTimeOffset createdAt,
-        DateTimeOffset? dueAt,
-        DateTimeOffset? scheduledAt,
-        int? estimateMinutes)
+        DateTimeOffset? scheduledAt)
     {
         Id = id;
         PublicRef = publicRef;
@@ -29,12 +28,11 @@ public sealed class Item
         Collection = collection;
         Priority = priority;
         _tags = [.. tags];
+        PlannedFor = plannedFor;
         Version = 1;
         CreatedAt = createdAt;
         UpdatedAt = createdAt;
-        DueAt = dueAt;
         ScheduledAt = scheduledAt;
-        EstimateMinutes = estimateMinutes;
     }
 
     private Item(
@@ -50,9 +48,8 @@ public sealed class Item
         int version,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
-        DateTimeOffset? dueAt,
+        DateOnly? plannedFor,
         DateTimeOffset? scheduledAt,
-        int? estimateMinutes,
         DateTimeOffset? completedAt,
         DateTimeOffset? cancelledAt,
         DateTimeOffset? migratedAt,
@@ -67,12 +64,11 @@ public sealed class Item
         Collection = collection;
         Priority = priority;
         _tags = [.. tags];
+        PlannedFor = plannedFor;
         Version = version;
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
-        DueAt = dueAt;
         ScheduledAt = scheduledAt;
-        EstimateMinutes = estimateMinutes;
         CompletedAt = completedAt;
         CancelledAt = cancelledAt;
         MigratedAt = migratedAt;
@@ -97,17 +93,15 @@ public sealed class Item
 
     public IReadOnlyList<string> Tags => _tags.AsReadOnly();
 
+    public DateOnly? PlannedFor { get; private set; }
+
     public int Version { get; private set; }
 
     public DateTimeOffset CreatedAt { get; }
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
-    public DateTimeOffset? DueAt { get; private set; }
-
     public DateTimeOffset? ScheduledAt { get; private set; }
-
-    public int? EstimateMinutes { get; private set; }
 
     public DateTimeOffset? CompletedAt { get; private set; }
 
@@ -127,9 +121,8 @@ public sealed class Item
         string? description = null,
         Priority priority = Priority.None,
         IEnumerable<string>? tags = null,
-        DateTimeOffset? dueAt = null,
-        DateTimeOffset? scheduledAt = null,
-        int? estimateMinutes = null)
+        DateOnly? plannedFor = null,
+        DateTimeOffset? scheduledAt = null)
     {
         if (id == Guid.Empty)
         {
@@ -150,9 +143,10 @@ public sealed class Item
         EnsureDefined(collection, nameof(collection));
         EnsureDefined(priority, nameof(priority));
 
-        if (estimateMinutes is < 0)
+        var normalizedPlannedFor = plannedFor;
+        if (type == ItemType.Task && normalizedPlannedFor is null && collection != ItemCollection.Backlog)
         {
-            throw new ArgumentOutOfRangeException(nameof(estimateMinutes), "Estimate minutes must not be negative.");
+            normalizedPlannedFor = DateOnly.FromDateTime(createdAt.UtcDateTime);
         }
 
         return new Item(
@@ -164,10 +158,9 @@ public sealed class Item
             collection,
             priority,
             NormalizeTags(tags),
+            normalizedPlannedFor,
             createdAt,
-            dueAt,
-            scheduledAt,
-            estimateMinutes);
+            scheduledAt);
     }
 
     public static Item Restore(
@@ -183,9 +176,8 @@ public sealed class Item
         int version,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
-        DateTimeOffset? dueAt = null,
+        DateOnly? plannedFor = null,
         DateTimeOffset? scheduledAt = null,
-        int? estimateMinutes = null,
         DateTimeOffset? completedAt = null,
         DateTimeOffset? cancelledAt = null,
         DateTimeOffset? migratedAt = null,
@@ -217,11 +209,6 @@ public sealed class Item
             throw new ArgumentOutOfRangeException(nameof(updatedAt), "UpdatedAt cannot be before CreatedAt.");
         }
 
-        if (estimateMinutes is < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(estimateMinutes), "Estimate minutes must not be negative.");
-        }
-
         return new Item(
             id,
             publicRef,
@@ -235,9 +222,8 @@ public sealed class Item
             version,
             createdAt,
             updatedAt,
-            dueAt,
+            plannedFor,
             scheduledAt,
-            estimateMinutes,
             completedAt,
             cancelledAt,
             migratedAt,
