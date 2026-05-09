@@ -1,27 +1,25 @@
-# TermBullet - Data Model
+# TermBullet Data Model
 
-This document defines the initial V1 data model for TermBullet.
+V1 uses monthly local JSON files as the operational data store. PostgreSQL is
+reserved for the optional V4 sync/cloud backend and must not be required for
+local usage.
 
-V1 uses local monthly JSON files as the operational data store. PostgreSQL is reserved for the future V4 sync/cloud backend and must not be required for local usage.
+## Principles
 
-## Data Principles
-
-- Local JSON files are the operational source of truth in V1.
-- The app is designed for one active machine at a time in V1.
-- Every item has a stable internal ID and a human-facing public ref.
-- Public refs are persisted and never reused.
-- Timestamps are stored in UTC.
-- JSON files should be optimized for human readability.
-- Writes must be safe: write to a temporary file and then replace atomically.
-- Each monthly file keeps one backup file.
-- Corrupted monthly JSON files should be recovered from the latest backup when possible.
-- The model must prepare for future file-level sync without implementing multi-machine sync in V1.
+- Local JSON files are the source of truth in V1.
+- V1 assumes one active machine at a time.
+- Every item has an internal ID and a human-facing public ref.
+- Public refs are persisted and never reused in the same period.
+- Timestamps are UTC ISO-8601 text.
+- JSON should remain human-readable.
+- Writes use temp file plus atomic replacement.
+- Each monthly file keeps one backup.
+- Corrupted monthly files should recover from backup when possible.
+- The model prepares for future whole-file sync.
 
 ## File Layout
 
-Data files are separated by year.
-
-Required path pattern:
+Data files:
 
 ```text
 data/<year>/data_<month>_<year>.json
@@ -31,55 +29,28 @@ Example:
 
 ```text
 data/2026/data_04_2026.json
-data/2026/data_05_2026.json
 ```
 
-Only this file naming pattern is supported.
-
-Monthly backup file pattern:
+Backup files:
 
 ```text
 data/<year>/data_<month>_<year>.backup.json
 ```
 
-Example:
-
-```text
-data/2026/data_04_2026.backup.json
-```
-
 Only one backup per monthly file is kept.
 
-## Local Index
-
-The app should maintain a local JSON index for faster lookup.
-
-Recommended path:
+The local index is derived data and can be rebuilt:
 
 ```text
 data/index.json
 ```
 
-The index is derived data and can be rebuilt from monthly files.
+The index may include ID, public ref, type, status, collection, priority, tags,
+content summary, source file, and timestamps.
 
-The index may include:
+## Item Concepts
 
-- item ID;
-- public ref;
-- type;
-- status;
-- collection;
-- priority;
-- tags;
-- content summary;
-- source file;
-- created/updated timestamps.
-
-Simple views should use the current monthly file. More complex searches may read all monthly files when the index is insufficient.
-
-## Main Concepts
-
-TermBullet starts with three item types:
+Types:
 
 - `task`
 - `note`
@@ -88,37 +59,29 @@ TermBullet starts with three item types:
 Minimum V1 collections:
 
 - `today`
-- `week`
 - `backlog`
+- `forgotten`
 
 Additional collections may exist for product flow:
 
 - `monthly`
 - `archived`
 
-Review, Search, and Config are screens or features, not item collections.
+Week, Review, and Search are screens/features, not item collections. Week is a
+view derived from task `planned_for` dates. `forgotten` is a real collection
+because it stores unresolved open tasks that need user review.
 
-## Internal ID
+## Identity
 
-Each persisted entity must have an internal global ID.
+Internal ID:
 
-Recommended V1 format:
-
-```text
-UUID string
-```
-
-Rules:
-
+- UUID string;
 - generated once;
 - immutable;
-- used as the real identity;
-- used for import/export and future sync;
-- preserved when an item is migrated between monthly files.
+- real identity for persistence, import/export, and future sync;
+- preserved on the source item when migrated.
 
-## Public Ref
-
-Public ref format:
+Public ref:
 
 ```text
 <type>-<MMYY>-<sequence>
@@ -126,93 +89,72 @@ Public ref format:
 
 Prefixes:
 
-- `t` = task
-- `n` = note
-- `e` = event
-
-Examples for April 2026:
-
-```text
-t-0426-1
-n-0426-1
-e-0426-1
-```
+- `t` task
+- `n` note
+- `e` event
 
 Rules:
 
 - sequence is independent by type and month/year;
 - sequence is controlled inside the monthly file;
-- public ref must be persisted;
-- public ref must never be reused inside the same month/year;
-- public ref is not the real identity;
-- migrated items preserve their original public ref.
+- public ref is persisted and not reused;
+- migrated source items preserve the original public ref;
+- migrated destination items receive a new public ref and record the source ref.
 
-The `MMYY` segment avoids collisions across years while keeping refs short.
+## Item Fields
 
-## Item Status
+Required persisted fields:
 
-Initial status values:
-
-```text
-open
-in_progress
-done
-cancelled
-migrated
-```
-
-Rules:
-
-- new tasks and notes usually start as `open`;
-- events may start as `open`;
-- `done` records completion;
-- `cancelled` records intentional cancellation;
-- `migrated` records movement to another monthly file or planning period.
-
-## Priority
-
-Initial priority values:
-
-```text
-none
-low
-medium
-high
-```
-
-Default:
-
-```text
-none
-```
-
-## Timestamps and Version
-
-Store timestamps as UTC ISO-8601 text:
-
-```text
-2026-04-22T12:34:56Z
-```
-
-Required per item:
-
+- `id`
+- `public_ref`
+- `type`
+- `content`
+- `description`
+- `status`
+- `collection`
+- `planned_for`
+- `priority`
+- `tags`
+- `version`
 - `created_at`
 - `updated_at`
-- `version`
 
-Optional per item:
+`planned_for` is required for tasks. Notes and events may store it as `null`.
+
+Optional fields:
 
 - `due_at`
 - `scheduled_at`
+- `estimate_minutes`
 - `completed_at`
-- `cancelled_at`
+- `canceled_at`
 - `migrated_at`
+- `migration`
+- `migrated_from_id`
+- `migrated_from_ref`
+- `migrated_to_id`
+- `migrated_to_ref`
 
-The `version` field is incremented on item changes and prepares V4 merge behavior.
+Status values:
 
-## Monthly JSON Structure
+- `open`
+- `done`
+- `canceled`
+- `migrated`
 
-Recommended structure:
+`migrated` means the task was intentionally moved out of its previous planned
+placement. The destination remains executable as an `open` task.
+
+Priority values:
+
+- `none`
+- `low`
+- `medium`
+- `high`
+
+Default priority is `none`.
+
+## Monthly JSON Shape
 
 ```json
 {
@@ -232,6 +174,7 @@ Recommended structure:
       "description": null,
       "status": "open",
       "collection": "today",
+      "planned_for": "2026-04-22",
       "priority": "high",
       "tags": ["jwt", "auth"],
       "due_at": null,
@@ -241,137 +184,135 @@ Recommended structure:
       "created_at": "2026-04-22T08:14:00Z",
       "updated_at": "2026-04-22T08:14:00Z",
       "completed_at": null,
-      "cancelled_at": null,
+      "canceled_at": null,
       "migrated_at": null,
       "migration": null
     }
   ],
-  "history": [
-    {
-      "id": "7d5b9856-045f-43ef-a646-4ee9c86fe2d8",
-      "item_id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
-      "public_ref": "t-0426-1",
-      "event_type": "created",
-      "occurred_at": "2026-04-22T08:14:00Z",
-      "data": {
-        "content": "fix jwt authentication"
-      }
-    }
-  ],
-  "settings": {}
+  "history": []
 }
 ```
 
-No per-file schema version is required in V1. The project assumes a single schema.
+No per-file schema version is required in V1. Monthly JSON files do not store
+user-editable product options.
 
 ## History
 
-History is stored in a root-level `history` array inside the monthly JSON file.
+History is stored in root-level `history`.
 
-Only important events are stored:
+Important event types:
 
 - `created`
 - `edited`
 - `done`
-- `cancelled`
+- `canceled`
 - `migrated`
+- `forgotten`
 - `deleted`
 
 Delete behavior:
 
-- remove the item physically from the `items` array;
-- append a `deleted` event to `history`;
-- include a snapshot of the deleted item in the history event data.
+- physically remove the item from active `items`;
+- append a `deleted` history event;
+- include a snapshot of the deleted item.
 
-History cleanup:
+History cleanup removes history entries, not active items, and must create a
+backup before writing.
 
-- users may clear history through a command;
-- cleanup removes history entries, not active items;
-- cleanup must create a backup before writing.
+## Task Planning and Forgotten Review
 
-## Migration Between Months
-
-Open tasks from the previous month should be migrated automatically on the first day of the next month.
+Tasks have a `planned_for` date.
 
 Rules:
 
-- the active item moves to the destination monthly file;
-- the original public ref is preserved;
-- the original internal ID is preserved;
-- the source monthly file keeps a history event indicating migration;
-- the destination monthly file stores the active item;
-- the source item record should not remain active in `items`;
-- migration details are represented in the `migration` field and/or root-level history.
+- tasks created from Today use today's date as `planned_for`;
+- future dates are only set when the user intentionally plans a task for the
+  future;
+- an open task with `planned_for` before today and no terminal action is moved
+  to `forgotten`;
+- `forgotten` tasks wait for explicit user action.
 
-Recommended migration object on the active item:
+At startup or at the beginning of the day, the application should check open
+tasks planned before today. If a task was not done, canceled, or migrated on its
+planned day, it becomes forgotten.
+
+Recommended forgotten history event:
 
 ```json
 {
-  "from_period": "2026-04",
-  "to_period": "2026-05",
-  "migrated_at": "2026-05-01T00:05:00Z",
-  "reason": "automatic_month_rollover"
+  "type": "forgotten",
+  "item_id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
+  "from_collection": "today",
+  "to_collection": "forgotten",
+  "planned_for": "2026-04-22",
+  "created_at": "2026-04-23T00:05:00Z"
 }
 ```
 
-## AI Context Preparation
+## Manual Migration
 
-Future AI features must not send all JSON files by default.
+Manual migration is an intentional user action for tasks. It must always declare
+the destination:
 
-The app should assemble a filtered context including only relevant data, such as:
+- specific date;
+- Backlog.
 
-- current month;
-- selected item;
-- related tags;
-- recent history;
-- relevant backlog items.
+Rules:
 
-If possible, sensitive or private fields should be excluded from AI context unless explicitly included by the user.
+- migrating to a date marks the source task as `migrated` and creates a new
+  `open` task with the destination planned date;
+- migrating to Backlog marks the source task as `migrated` and creates a new
+  `open` task in Backlog without active day planning;
+- the destination task receives a new internal ID and public ref;
+- the destination task records `migrated_from_id` and `migrated_from_ref`;
+- the source task records `migrated_to_id` and `migrated_to_ref`;
+- migration history records the relationship between source and destination;
+- migration details are represented in `migration` and/or history.
 
-## Import and Export Contract
+Recommended migration object:
 
-Monthly JSON files are already portable, but export/import commands still exist for controlled backup and migration flows.
-
-Exported data must preserve:
-
-- internal IDs;
-- public refs;
-- item type;
-- content and description;
-- status;
-- collection;
-- priority;
-- tags;
-- timestamps;
-- version;
-- migration metadata;
-- important history.
-
-Import must handle:
-
-- valid monthly JSON files;
-- malformed JSON;
-- duplicate public refs inside a period;
-- duplicate internal IDs;
-- missing required fields;
-- corrupted file with available backup.
-
-## Sync Preparation
-
-V1 does not implement multi-machine sync.
-
-V1 rule:
-
-```text
-Use one active machine at a time.
+```json
+{
+  "from_collection": "today",
+  "from_planned_for": "2026-04-22",
+  "from_id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
+  "from_ref": "t-0426-1",
+  "to_collection": "today",
+  "to_planned_for": "2026-04-23",
+  "to_id": "a0f13256-499f-47bc-a623-6fa8f4df36f8",
+  "to_ref": "t-0426-4",
+  "migrated_at": "2026-04-22T20:15:00Z",
+  "reason": "manual_date"
+}
 ```
 
-Future V4 sync/cloud will synchronize whole JSON files.
+## Export, Import, AI, and Sync
 
-Conflict rule planned for V4:
+Export/import must preserve IDs, refs, type, content, description, status,
+collection, planned dates, priority, tags, timestamps, version, migration
+metadata, and important history.
 
-```text
-Latest update wins.
-```
+Import is intended for restoring or moving TermBullet JSON files into a new
+installation. It must only run when the local data directory has no existing
+monthly JSON files. If local monthly JSON files already exist, import must fail
+before writing anything.
 
-PostgreSQL remains part of V4 as the cloud/backend database, but the server stores the same JSON file content rather than transforming it into a different entity model.
+Import behavior:
+
+- validate the provided data first;
+- reject malformed JSON;
+- reject duplicate public refs inside a period;
+- reject duplicate internal IDs;
+- reject missing required fields;
+- reject import into a non-empty local data set;
+- write the imported monthly files as the new local data set.
+
+Import does not merge, skip conflicting records, or overwrite an existing active
+local data set. Users who want to replace an installation must clear or move the
+existing local data directory first.
+
+Future AI context must be filtered. Do not send all JSON files by default.
+
+V4 sync/cloud synchronizes whole monthly JSON files. Planned simple conflict
+rule: latest update wins. PostgreSQL stores the same JSON file content and does
+not replace the local operational store.

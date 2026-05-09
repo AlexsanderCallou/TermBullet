@@ -1,90 +1,57 @@
 # Contributing to TermBullet
 
-Thank you for considering a contribution to TermBullet.
+TermBullet is an English-first open source project for a global audience.
 
-TermBullet is an English-first open source project for a global audience. This document defines contribution expectations for code, tests, documentation, issues, and pull requests.
+Study context: TermBullet is part of the author's study on using AI to support
+software coding and project delivery. It is recommended for personal use,
+experimentation, and learning only.
 
-Study context: TermBullet is part of the author's ongoing study on using AI to support software coding and project delivery.
+Use `Development` as the base branch unless maintainers say otherwise.
 
-Usage recommendation: personal use, experimentation, and learning only. Professional or production-critical usage is not recommended at this stage.
-
-## Project Status
-
-TermBullet is currently in early design and V1 planning.
-
-Official repository:
-
-```text
-https://github.com/AlexsanderCallou/TermBullet
-```
-
-Use `Development` as the base branch for work unless maintainers say otherwise.
-
-Before contributing, read:
+## Read First
 
 - [README.md](README.md)
-- [product-spec.md](product-spec.md)
-- [ADR.md](ADR.md)
-- [AGENTS.md](AGENTS.md)
+- [PRODUCT.md](PRODUCT.md)
+- [CLI.md](CLI.md) when changing commands
+- [screens.md](screens.md) when changing the TUI
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [DATA_MODEL.md](DATA_MODEL.md)
-- [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)
+- [ADR.md](ADR.md)
+- [BACKLOG.md](BACKLOG.md)
 
 ## Language
 
-Use English for:
-
-- issues;
-- pull requests;
-- documentation;
-- code comments;
-- CLI help text;
-- TUI labels;
-- error messages;
-- commit messages.
+Use English for issues, pull requests, documentation, comments, CLI help, TUI
+labels, error messages, examples, and commit messages.
 
 ## Development Method
 
 TermBullet follows TDD.
 
-Before writing production code:
+Before production code:
 
-1. Write unit tests first.
+1. Write unit tests first where practical.
 2. Cover valid data and successful paths.
 3. Cover invalid, missing, malformed, or conflicting data.
 4. Confirm tests fail for the expected reason when practical.
-5. Implement the smallest production change that makes tests pass.
-6. Run all relevant tests.
-
-A contribution is not complete until all relevant tests pass.
+5. Implement the smallest production change.
+6. Run relevant tests.
 
 ## Local Setup
-
-Expected setup after the solution is created:
 
 ```bash
 dotnet restore
 dotnet build
 dotnet test
-```
-
-Run the app locally:
-
-```bash
 dotnet run --project src/TermBullet -- [command] [arguments] [options]
 ```
 
-Example:
-
-```bash
-dotnet run --project src/TermBullet -- add "fix jwt authentication"
-```
+Run the relevant subset before opening a pull request, and run all three
+verification commands for code-affecting changes when practical.
 
 ## Architecture Expectations
 
-TermBullet uses a modular monolith.
-
-Production code lives in one .NET project and is separated internally by folders and namespaces:
+TermBullet uses a modular monolith:
 
 - `Core`
 - `Application`
@@ -95,14 +62,13 @@ Production code lives in one .NET project and is separated internally by folders
 
 Respect dependency direction:
 
-- Core depends on nothing internal.
+- Core depends on no internal outer module.
 - Application depends on Core.
 - Infrastructure implements Application contracts.
-- CLI calls Application use cases.
-- TUI calls Application use cases.
+- CLI and TUI call Application use cases.
 - Bootstrap wires modules together.
 
-Do not put business rules in CLI handlers, TUI screens, or JSON file repositories.
+Do not put business rules in CLI handlers, TUI screens, or JSON repositories.
 
 ## Commit Style
 
@@ -118,46 +84,21 @@ Examples:
 feat(cli): add item creation command
 fix(core): reject empty item content
 test(application): cover migrate item failures
-docs: add data model draft
+docs: update data model
 refactor(infrastructure): isolate json file writer
 ```
 
-Common types:
-
-- `feat`
-- `fix`
-- `test`
-- `docs`
-- `refactor`
-- `chore`
-- `build`
-- `ci`
-
-## Branch Naming
-
-Use short descriptive branch names:
-
-```text
-feat/cli-add-command
-fix/public-ref-sequence
-docs/data-model
-test/application-use-cases
-```
-
-Open pull requests against `Development`.
+Common types: `feat`, `fix`, `test`, `docs`, `refactor`, `chore`, `build`,
+`ci`.
 
 ## Pull Request Checklist
 
-Before opening a pull request, verify:
-
-- tests were written before production implementation;
-- valid and invalid test cases are covered;
-- `dotnet restore` passes;
-- `dotnet build` passes;
-- `dotnet test` passes;
+- tests were written first where practical;
+- valid and invalid cases are covered;
+- `dotnet restore`, `dotnet build`, and `dotnet test` pass;
 - CLI help/output was checked when CLI behavior changed;
 - TUI navigation/rendering was checked when TUI behavior changed;
-- JSON file persistence, backup, and recovery were checked when persistence changed;
+- persistence backup/recovery was checked when persistence changed;
 - docs were updated when behavior or architecture changed;
 - ADR was added or updated for major decisions;
 - V1 scope was respected.
@@ -169,61 +110,31 @@ Good issues include:
 - clear problem statement;
 - expected behavior;
 - actual behavior if applicable;
-- reproduction steps if applicable;
+- reproduction steps;
 - relevant command or screen;
-- whether the issue affects Core, Application, Infrastructure, CLI, TUI, or docs.
-
-## Documentation Changes
-
-Update documentation when changing:
-
-- commands;
-- options;
-- output format;
-- TUI behavior;
-- architecture;
-- data model;
-- development process;
-- dependencies.
-
-Use:
-
-- `README.md` for high-level project information;
-- `product-spec.md` for product behavior;
-- `ADR.md` for architecture decisions;
-- `ARCHITECTURE.md` for technical structure;
-- `DATA_MODEL.md` for persistence structure;
-- `DEVELOPMENT_PLAN.md` for V1 implementation order;
-- `AGENTS.md` for AI agent development rules.
+- affected area: Core, Application, Infrastructure, CLI, TUI, docs.
 
 ## Dependency Policy
 
-Before adding a dependency, confirm that it:
+Before adding a dependency, confirm it:
 
 - fits the official .NET 8 / C# stack;
 - is necessary;
 - is suitable for open source usage;
-- does not break offline/local-first behavior;
+- preserves offline/local-first behavior;
 - does not duplicate standard .NET capabilities without a strong reason.
 
 Major dependencies require an ADR.
 
 ## Scope Policy
 
-V1 is offline and local-first.
-
-Do not add these unless explicitly requested:
-
-- AI execution;
-- Google Calendar integration;
-- machine sync;
-- cloud accounts;
-- PostgreSQL runtime dependency for local usage.
+V1 is offline and local-first. Do not add AI execution, Google Calendar, machine
+sync, cloud accounts, or PostgreSQL runtime dependency unless explicitly
+requested.
 
 Future-facing interfaces are acceptable when they keep V1 simple.
 
 ## Legal
 
-Legal policy and trademark usage are centralized in [TRADEMARKS.md](TRADEMARKS.md).
-
-The project license is Apache License 2.0 in [LICENSE](LICENSE).
+Legal policy and trademark usage are in [TRADEMARKS.md](TRADEMARKS.md). The
+project license is Apache License 2.0 in [LICENSE](LICENSE).
