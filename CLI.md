@@ -124,8 +124,8 @@ termbullet migrate t-0426-1 --backlog
 - `--date <yyyy-mm-dd>` migrates the task to a specific planned date.
 - `--backlog` migrates the task to Backlog.
 
-Open tasks that were planned for previous days and were not done, canceled, or
-migrated are shown in `forgotten` for manual review.
+Open tasks that were planned for previous days and were not done, cancelled, or
+marked migrate are shown in `forgotten` for manual review.
 
 ### Movement
 

@@ -106,7 +106,7 @@ public sealed class TermBulletMutationCommandsCliTests
 
         Assert.Equal(0, exitCode);
         var item = Assert.Single(repository.Items);
-        Assert.Equal(ItemStatus.Migrated, item.Status);
+        Assert.Equal(ItemStatus.Migrate, item.Status);
     }
 
     [Fact]

@@ -15,7 +15,7 @@ public sealed class MigrateItemUseCase(
             publicRef,
             cancellationToken);
 
-        item.MarkMigrated(clock.UtcNow);
+        item.MarkMigrate(clock.UtcNow);
 
         await itemRepository.UpdateAsync(item, cancellationToken);
 

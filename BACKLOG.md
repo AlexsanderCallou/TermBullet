@@ -27,6 +27,10 @@ Complete:
 - repository/schema conformance for optional fields;
 - TUI MVP with Main Dashboard, Search, Add Item, contextual help, focus updates,
   search state, add flow, and dashboard lifecycle shortcuts;
+- initial TUI Item Detail screen with available item fields;
+- initial TUI Migrate Item flow with basic item data and destination preview;
+- official task status model aligned to `open`, `done`, `cancelled`, and
+  `migrate`;
 - manual TUI smoke validation;
 - baseline documentation.
 
@@ -75,12 +79,12 @@ The active TUI MVP is intentionally limited to:
 
 - Main Dashboard;
 - Search;
+- Item Detail;
+- Migrate Item;
 - Add Item auxiliary flow.
 
 Deferred post-MVP screens:
 
-- Item Detail;
-- Migrate Item;
 - Daily Focus;
 - Weekly Planning;
 - Backlog Triage;
@@ -91,16 +95,13 @@ The current TUI visual reference is [screens.md](screens.md).
 
 ## Milestone 7 Remaining
 
-- [ ] Replace old task status model with `open`, `done`, `canceled`, and
-      `migrated`
 - [ ] Add task `planned_for` persistence, indexing, export, and import support
 - [ ] Add `forgotten` collection and startup/day-begin review for stale open
       tasks
 - [ ] Refactor `week` from persisted collection to date-derived view
 - [ ] Refactor manual migration to require `--date <yyyy-mm-dd>` or `--backlog`
 - [ ] Add CLI/TUI coverage for the `forgotten` review flow
-- [ ] Add TUI Item Detail screen with full item fields and related history
-- [ ] Add TUI Migrate Item flow with basic item data and destination choice
+- [ ] Expose per-item JSON history through Application contracts for Item Detail
 - [ ] Import/export validation
 - [ ] JSON file backup/recovery validation
 - [ ] Cross-platform smoke testing where practical
@@ -121,6 +122,10 @@ Already done for Milestone 7:
 - [x] Run CLI smoke tests
 - [x] Run TUI smoke tests
 - [x] Ensure README and docs reflect actual behavior
+- [x] Add initial TUI Item Detail screen
+- [x] Add initial TUI Migrate Item flow
+- [x] Replace old task status model with `open`, `done`, `cancelled`, and
+      `migrate`
 
 ## Manual TUI Smoke Checklist
 

@@ -79,7 +79,7 @@ Internal ID:
 - generated once;
 - immutable;
 - real identity for persistence, import/export, and future sync;
-- preserved on the source item when migrated.
+- preserved on the source item after migration.
 
 Public ref:
 
@@ -98,8 +98,8 @@ Rules:
 - sequence is independent by type and month/year;
 - sequence is controlled inside the monthly file;
 - public ref is persisted and not reused;
-- migrated source items preserve the original public ref;
-- migrated destination items receive a new public ref and record the source ref.
+- migration source items preserve the original public ref;
+- migration destination items receive a new public ref and record the source ref.
 
 ## Item Fields
 
@@ -127,7 +127,7 @@ Optional fields:
 - `scheduled_at`
 - `estimate_minutes`
 - `completed_at`
-- `canceled_at`
+- `cancelled_at`
 - `migrated_at`
 - `migration`
 - `migrated_from_id`
@@ -139,10 +139,10 @@ Status values:
 
 - `open`
 - `done`
-- `canceled`
-- `migrated`
+- `cancelled`
+- `migrate`
 
-`migrated` means the task was intentionally moved out of its previous planned
+`migrate` means the task was intentionally moved out of its previous planned
 placement. The destination remains executable as an `open` task.
 
 Priority values:
@@ -184,7 +184,7 @@ Default priority is `none`.
       "created_at": "2026-04-22T08:14:00Z",
       "updated_at": "2026-04-22T08:14:00Z",
       "completed_at": null,
-      "canceled_at": null,
+      "cancelled_at": null,
       "migrated_at": null,
       "migration": null
     }
@@ -205,8 +205,8 @@ Important event types:
 - `created`
 - `edited`
 - `done`
-- `canceled`
-- `migrated`
+- `cancelled`
+- `migrate`
 - `forgotten`
 - `deleted`
 
@@ -233,8 +233,8 @@ Rules:
 - `forgotten` tasks wait for explicit user action.
 
 At startup or at the beginning of the day, the application should check open
-tasks planned before today. If a task was not done, canceled, or migrated on its
-planned day, it becomes forgotten.
+tasks planned before today. If a task was not done, cancelled, or marked
+migrate on its planned day, it becomes forgotten.
 
 Recommended forgotten history event:
 
@@ -259,9 +259,9 @@ the destination:
 
 Rules:
 
-- migrating to a date marks the source task as `migrated` and creates a new
+- migrating to a date marks the source task as `migrate` and creates a new
   `open` task with the destination planned date;
-- migrating to Backlog marks the source task as `migrated` and creates a new
+- migrating to Backlog marks the source task as `migrate` and creates a new
   `open` task in Backlog without active day planning;
 - the destination task receives a new internal ID and public ref;
 - the destination task records `migrated_from_id` and `migrated_from_ref`;

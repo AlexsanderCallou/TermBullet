@@ -9,7 +9,8 @@ It provides two first-class interfaces over the same Application use cases:
 - **CLI:** fast capture, lookup, and item manipulation from the shell.
 
 > Status: experimental MVP. CLI and local JSON persistence are the most complete
-> areas. The active TUI MVP is limited to Main Dashboard, Search, and Add Item.
+> areas. The active TUI MVP includes Main Dashboard, Search, Item Detail,
+> Migrate Item, and Add Item.
 
 ## Repository
 

@@ -108,9 +108,9 @@ Week is not a persisted collection. It is a planning view derived from task
 
 Tasks and Events remain distinct; a task must not automatically become an event.
 
-Official task statuses are `open`, `done`, `canceled`, and `migrated`.
-`migrated` represents an intentional move out of a previous planned placement.
-The source item remains stored as migrated, and the destination is a new open
+Official task statuses are `open`, `done`, `cancelled`, and `migrate`.
+`migrate` represents an intentional move out of a previous planned placement.
+The source item remains stored with migrate status, and the destination is a new open
 task that records the source item.
 
 Tasks created for Today are planned for Today by default. Future planned dates

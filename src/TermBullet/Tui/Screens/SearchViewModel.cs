@@ -42,29 +42,5 @@ public sealed class SearchViewModel
             _selectedItemIndex--;
     }
 
-    private static ItemDisplayRow MapToRow(ItemResult item) =>
-        new()
-        {
-            PublicRef = item.PublicRef,
-            Symbol = item.Type switch
-            {
-                ItemType.Note => "(.)",
-                ItemType.Event => "(o)",
-                _ => item.Status switch
-                {
-                    ItemStatus.Open => "[ ]",
-                    ItemStatus.InProgress => "[~]",
-                    ItemStatus.Done => "[x]",
-                    ItemStatus.Cancelled => "[-]",
-                    ItemStatus.Migrated => "[>]",
-                    _ => "[ ]"
-                }
-            },
-            Type = item.Type.ToString().ToLowerInvariant(),
-            Status = item.Status.ToString().ToLowerInvariant(),
-            Content = item.Content,
-            Priority = item.Priority.ToString().ToLowerInvariant(),
-            Collection = item.Collection.ToString().ToLowerInvariant(),
-            Tags = [.. item.Tags]
-        };
+    private static ItemDisplayRow MapToRow(ItemResult item) => ItemDisplayRow.From(item);
 }

@@ -10,17 +10,19 @@ Source checked:
 - `src/TermBullet/Tui/TermBulletTuiApp.cs`
 - `src/TermBullet/Tui/Screens/SearchScreen.cs`
 - `src/TermBullet/Tui/Screens/AddItemScreen.cs`
+- `src/TermBullet/Tui/Screens/ItemDetailScreen.cs`
+- `src/TermBullet/Tui/Screens/MigrateItemScreen.cs`
 
 Current implemented screens:
 
 - Main Dashboard
 - Search
 - Add Item auxiliary flow
+- Item Detail
+- Migrate Item
 
 Planned but not currently implemented as TUI screens:
 
-- Item Detail
-- Migrate Item
 - Daily Focus
 - Weekly Planning
 - Backlog Triage
@@ -189,7 +191,7 @@ Notes:
 
 ## Screen 04 - Item Detail
 
-Status: planned.
+Status: implemented initial version.
 
 Role: full read view for one selected item. This screen opens from Main
 Dashboard, Search, Forgotten Review, Backlog Triage, and any future list where
@@ -224,7 +226,7 @@ Target ASCII layout:
 | created: 2026-05-09T08:14:00Z   | from: -                                               |
 | updated: 2026-05-09T10:31:00Z   | to: -                                                 |
 | completed: -                    | migrated_at: -                                        |
-| canceled: -                     |                                                       |
+| cancelled: -                    |                                                       |
 |-------------------------------------------------------------------------------------------|
 | Content                                                                                   |
 | fix auth flow                                                                             |
@@ -242,7 +244,7 @@ Target ASCII layout:
 +-------------------------------------------------------------------------------------------+
 ```
 
-Migrated item example:
+Migration destination item example:
 
 ```text
 + TermBullet - Item t-0526-4 --------------------------------------------------------------+
@@ -252,7 +254,7 @@ Migrated item example:
 | ref: t-0526-4                   | migrated_from_ref: t-0526-1                           |
 | id: a0f13256-499f-47bc-a623...  | migrated_from_id: 0f3a9d94-4df0-47f7-95c1...          |
 | type: task                      | migrated_at: 2026-05-09T20:15:00Z                    |
-| status: open                    | source status: migrated                               |
+| status: open                    | source status: migrate                                |
 | collection: today               |                                                       |
 | planned_for: 2026-05-12         |                                                       |
 |-------------------------------------------------------------------------------------------|
@@ -260,7 +262,7 @@ Migrated item example:
 | fix auth flow                                                                             |
 |-------------------------------------------------------------------------------------------|
 | History                                                                                   |
-| 2026-05-09T20:15:00Z  migrated_from  created from t-0526-1 for 2026-05-12                |
+| 2026-05-09T20:15:00Z  migrate_from   created from t-0526-1 for 2026-05-12                |
 +-------------------------------------------------------------------------------------------+
 | e edit  x done  z cancel  > migrate  d delete  ? help  Esc back  q quit                  |
 +-------------------------------------------------------------------------------------------+
@@ -268,10 +270,11 @@ Migrated item example:
 
 Notes:
 
-- The Item Detail screen must show every persisted field that exists for the
-  selected item, including null/empty values where useful for debugging.
-- The history section should include root-level history entries related to the
-  item, including create, edit, done, canceled, migrated, forgotten, deleted
+- The initial implementation shows all item fields currently exposed to the TUI.
+- The history section currently explains that per-item history is not loaded by
+  the existing Application contracts.
+- The final implementation should include root-level history entries related to
+  the item, including create, edit, done, cancelled, migrate, forgotten, deleted
   snapshots when applicable, and history cleanup metadata when relevant.
 - Migration relationships must be visible in both directions:
   `migrated_from_*` on the destination item and `migrated_to_*` on the source
@@ -283,7 +286,7 @@ Notes:
 
 ## Flow 05 - Migrate Item
 
-Status: planned.
+Status: implemented initial version.
 
 Role: focused confirmation flow for migrating one task. It should stay simple:
 show the basic item data, ask for one destination, and confirm or cancel.
@@ -321,7 +324,7 @@ Target ASCII layout:
 | ( ) Backlog                                                                               |
 |                                                                                           |
 | Result                                                                                    |
-| original: t-0526-1 -> migrated                                                           |
+| original: t-0526-1 -> migrate                                                            |
 | new task:  open at 2026-05-12                                                             |
 +-------------------------------------------------------------------------------------------+
 | Enter migrate  Tab focus  Space toggle  Esc cancel  ? help                               |
@@ -345,7 +348,7 @@ Backlog destination example:
 | (x) Backlog                                                                               |
 |                                                                                           |
 | Result                                                                                    |
-| original: t-0526-1 -> migrated                                                           |
+| original: t-0526-1 -> migrate                                                            |
 | new task:  open in backlog                                                                |
 +-------------------------------------------------------------------------------------------+
 | Enter migrate  Tab focus  Space toggle  Esc cancel  ? help                               |
@@ -359,14 +362,14 @@ Notes:
 - Date migration requires a valid `yyyy-mm-dd` date.
 - Backlog migration must not require a date.
 - The flow should not expose the full history; that belongs to Item Detail.
-- On confirmation, the original task remains stored with status `migrated`, and
+- On confirmation, the original task remains stored with status `migrate`, and
   the destination is a new `open` task linked by migration fields.
 
 ## Implementation Gap Notes
 
-The product spec describes a broader V1 TUI with Item Detail, Migrate Item,
-Daily Focus, Weekly Planning, Backlog Triage, Forgotten Review, Review, and
-Search. The active codebase currently contains only `MainDashboard` and `Search`
-in `TuiScreen`, plus the Add Item auxiliary flow. This file documents the
-current implemented state so the next design pass can adjust the intended
-screens before implementation.
+The product spec describes a broader V1 TUI with Daily Focus, Weekly Planning,
+Backlog Triage, Forgotten Review, Review, and Search. The active codebase
+currently contains `MainDashboard`, `Search`, `ItemDetail`, and `MigrateItem` in
+`TuiScreen`, plus the Add Item auxiliary flow. This file documents the current
+implemented state so the next design pass can adjust the intended screens before
+implementation.

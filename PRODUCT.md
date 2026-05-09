@@ -74,10 +74,10 @@ Official task statuses in V1:
 
 - `open`
 - `done`
-- `canceled`
-- `migrated`
+- `cancelled`
+- `migrate`
 
-`migrated` means the task was intentionally moved out of its previous planned
+`migrate` means the task was intentionally moved out of its previous planned
 placement. The destination remains executable as an open task.
 
 Tasks created for today are planned for today by default. A task should only get
@@ -85,7 +85,7 @@ a future planned date when the user intentionally creates or moves it to that
 date.
 
 `forgotten` is the review area for open tasks that were planned for a previous
-day and were not done, canceled, or migrated. At the beginning of a day, the
+day and were not done, cancelled, or marked migrate. At the beginning of a day, the
 application should check yesterday and earlier planned dates and move unresolved
 open tasks into `forgotten` so the user can decide what to do with them.
 
@@ -94,8 +94,8 @@ Manual migration must always declare the destination:
 - migrate to a specific date;
 - migrate to Backlog.
 
-When a task is migrated, the original item stays in the JSON with status
-`migrated`. A new open task is created at the destination and records which item
+When a task is moved by migration, the original item stays in the JSON with status
+`migrate`. A new open task is created at the destination and records which item
 it came from.
 
 ## Public Refs
@@ -126,8 +126,8 @@ Rules:
 
 - sequence is independent by type and month/year;
 - public refs are persisted and never reused inside the same period;
-- migrated source items preserve their public ref;
-- new migrated destination items get their own public ref and record the source
+- migration source items preserve their public ref;
+- new migration destination items get their own public ref and record the source
   ref;
 - internal ID remains the real identity for persistence, import/export, and
   future sync.
@@ -140,12 +140,12 @@ The TUI is documented in [screens.md](screens.md). The active MVP scope is:
 
 - Main Dashboard;
 - Search / Command Palette;
+- Item Detail;
+- Migrate Item;
 - Add Item as an auxiliary keyboard-only flow.
 
 Deferred TUI screens:
 
-- Item Detail;
-- Migrate Item;
 - Daily Focus;
 - Weekly Planning;
 - Backlog Triage;

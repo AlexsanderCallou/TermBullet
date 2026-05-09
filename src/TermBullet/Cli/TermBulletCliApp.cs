@@ -630,7 +630,7 @@ public sealed class TermBulletCliApp(
             Description = "Migration destination"
         };
 
-        var command = new Command("migrate", "Mark an item as migrated")
+        var command = new Command("migrate", "Mark an item with migrate status")
         {
             publicRefArgument,
             toOption
@@ -1249,10 +1249,9 @@ public sealed class TermBulletCliApp(
         return value.Trim().ToLowerInvariant() switch
         {
             "open" => ItemStatus.Open,
-            "in_progress" => ItemStatus.InProgress,
             "done" => ItemStatus.Done,
             "cancelled" => ItemStatus.Cancelled,
-            "migrated" => ItemStatus.Migrated,
+            "migrate" => ItemStatus.Migrate,
             _ => throw new ArgumentException($"Unsupported status: {value}.")
         };
     }

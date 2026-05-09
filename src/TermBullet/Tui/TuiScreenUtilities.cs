@@ -17,7 +17,19 @@ public static class TuiScreenUtilities
 
     public static void RefreshListView(ListView listView, IReadOnlyList<string> items)
     {
-        listView.SetSource(items.ToList());
+        listView.SetSource(SanitizeListItems(items));
+    }
+
+    public static List<string> SanitizeListItems(IReadOnlyList<string> items)
+    {
+        if (items.Count == 0)
+        {
+            return [" "];
+        }
+
+        return items
+            .Select(item => string.IsNullOrWhiteSpace(item) ? " " : item)
+            .ToList();
     }
 
     public static void UpdatePanelTitles(

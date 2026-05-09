@@ -24,6 +24,20 @@ public static class TuiContextHelp
                 "Tab / Shift+Tab: move panel focus",
                 "Esc: return to previous screen"
             ],
+            TuiScreen.ItemDetail =>
+            [
+                "Tab / Shift+Tab: move panel focus",
+                ">: open migration flow",
+                "History: review loaded item history when available",
+                "Esc: return to previous screen"
+            ],
+            TuiScreen.MigrateItem =>
+            [
+                "Space: toggle destination",
+                "Enter: confirm migration",
+                "Esc: cancel migration",
+                "Destination: choose Date or Backlog"
+            ],
             _ => ["No contextual help available."]
         };
 
