@@ -31,4 +31,22 @@ public sealed class TuiContextHelpTests
         Assert.Contains(lines, line => line.Contains("execute search", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(lines, line => line.Contains("return to previous screen", StringComparison.OrdinalIgnoreCase));
     }
+
+    [Fact]
+    public void ItemDetail_help_contains_history_and_back_actions()
+    {
+        var lines = TuiContextHelp.GetLines(TuiScreen.ItemDetail);
+
+        Assert.Contains(lines, line => line.Contains("history", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(lines, line => line.Contains("Esc", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void MigrateItem_help_contains_destination_and_confirm_actions()
+    {
+        var lines = TuiContextHelp.GetLines(TuiScreen.MigrateItem);
+
+        Assert.Contains(lines, line => line.Contains("destination", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(lines, line => line.Contains("confirm", StringComparison.OrdinalIgnoreCase));
+    }
 }

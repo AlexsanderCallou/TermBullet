@@ -11,7 +11,8 @@ public static class SearchScreen
         TuiNavigationState navigation,
         Action onBack,
         Action onQuit,
-        Func<string, Task> onSearch)
+        Func<string, Task> onSearch,
+        Action<ItemDisplayRow?> onOpenSelected)
     {
         var topBar = new Label(" TermBullet \u2500 Search \u2500 data:local \u2500 ai:off \u2500 sync:idle \u2500 mode:search")
         {
@@ -46,7 +47,7 @@ public static class SearchScreen
         var resultRows = viewModel.Results.Count > 0
             ? viewModel.Results.Select(r => $"{r.Symbol} {r.PublicRef} {r.Content}").ToArray()
             : new[] { "(type a query and press Enter)" };
-        var resultsList = new ListView(resultRows)
+        var resultsList = new ListView(TuiScreenUtilities.SanitizeListItems(resultRows))
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
         };
@@ -61,7 +62,7 @@ public static class SearchScreen
         var previewLines = selected is not null
             ? new[] { $"ref: {selected.PublicRef}", $"collection: {selected.Collection}", $"priority: {selected.Priority}" }
             : new[] { "(nothing selected)" };
-        var previewList = new ListView(previewLines)
+        var previewList = new ListView(TuiScreenUtilities.SanitizeListItems(previewLines))
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
         };
@@ -115,6 +116,10 @@ public static class SearchScreen
                     break;
                 case Key.Esc:
                     onBack();
+                    args.Handled = true;
+                    break;
+                case Key.Enter:
+                    onOpenSelected(viewModel.SelectedResult);
                     args.Handled = true;
                     break;
             }

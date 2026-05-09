@@ -1,8 +1,6 @@
-# TermBullet - Agent Development Guide
+# TermBullet - Agent Guide
 
-This file provides operating instructions for AI coding agents and automation tools working on TermBullet.
-
-The goal is to keep development aligned with the product vision, architecture decisions, and open source direction already documented in this repository.
+This file defines how AI coding agents should work in TermBullet.
 
 Official repository:
 
@@ -10,35 +8,31 @@ Official repository:
 https://github.com/AlexsanderCallou/TermBullet
 ```
 
-The current base branch for development is:
+Default development branch:
 
 ```text
 Development
 ```
 
-## Source of Truth
+## Read Order
 
-Before making implementation decisions, agents must read and follow:
+Before implementation decisions, read the documents relevant to the task:
 
-1. [README.md](README.md) for project overview and scope.
-2. [product-spec.md](product-spec.md) for product requirements, command tree, and TUI behavior.
-3. [ADR.md](ADR.md) for accepted architecture and technology decisions.
-4. This file for agent-specific development rules.
+1. [ADR.md](ADR.md) for accepted long-term decisions.
+2. [PRODUCT.md](PRODUCT.md) for product scope and behavior.
+3. [ARCHITECTURE.md](ARCHITECTURE.md) for module boundaries.
+4. [DATA_MODEL.md](DATA_MODEL.md) for persistence and JSON contracts.
+5. [CLI.md](CLI.md) for CLI changes.
+6. [screens.md](screens.md) for TUI changes.
+7. [BACKLOG.md](BACKLOG.md) for execution order, current status, and remaining
+   work.
 
-If these documents conflict, follow this priority:
+If documents conflict, follow the same priority order. Add or update an ADR for
+new long-term architecture, dependency, storage, or workflow decisions.
 
-1. ADRs for accepted architecture and technology decisions.
-2. Product spec for product behavior and UX.
-3. README for summary-level project direction.
-4. AGENTS.md for workflow and contribution rules.
+## Language
 
-When a change requires a new long-term decision, update or add an ADR instead of burying the decision only in code.
-
-## Project Language
-
-TermBullet is an English-first open source project.
-
-Agents must write in English for:
+TermBullet is English-first. Use English for:
 
 - documentation;
 - code comments;
@@ -47,108 +41,56 @@ Agents must write in English for:
 - TUI labels;
 - error messages;
 - examples;
-- commit messages when commits are requested.
+- commit messages.
 
-Conversation with maintainers may happen in another language, but project artifacts must remain English-first.
+Maintainer conversation may happen in another language, but project artifacts
+must remain English-first.
 
-## Official Technology Stack
+## Stack and Scope
 
-The accepted stack is:
+Accepted stack:
 
-- **.NET 8 / C#** as the main platform and implementation language.
-- **Terminal.Gui** for the TUI.
-- **System.CommandLine** for the CLI.
-- **Monthly JSON files** as the local offline data store in V1.
-- **Local JSON index** for faster lookup and search.
-- **PostgreSQL** as the future backend database for sync/cloud in V4, storing the same JSON files.
+- .NET 8 / C#;
+- Terminal.Gui for TUI;
+- System.CommandLine for CLI;
+- monthly JSON files for V1 local storage;
+- local JSON index;
+- PostgreSQL only for future optional V4 sync/cloud backend.
 
-Do not replace or bypass this stack without creating an ADR and getting explicit maintainer approval.
+V1 is local-first and offline. It includes tasks, notes, events, Today, Backlog,
+Forgotten, Week as a planning view, CLI, TUI MVP, monthly JSON persistence,
+search, editing, migration, movement, data path discovery, export, and import.
 
-## Product Boundaries
-
-### V1 Scope
-
-V1 is local-first and offline.
-
-V1 includes:
-
-- tasks, notes, and events;
-- Today, Week, and Backlog;
-- CLI;
-- TUI;
-- local monthly JSON persistence;
-- search;
-- basic editing;
-- migration and movement of items;
-- local configuration;
-- monthly JSON file storage;
-- local JSON search index;
-- basic export and import.
-
-V1 does not include:
-
-- AI execution;
-- Google Calendar integration;
-- machine sync;
-- cloud accounts;
-- PostgreSQL runtime dependency for local usage.
-
-Future-facing seams are allowed, but agents must not implement V2/V3/V4 behavior unless explicitly requested.
+V1 excludes AI execution, Google Calendar, machine sync, cloud accounts, and a
+PostgreSQL runtime dependency.
 
 ## Architecture Rules
 
-TermBullet follows a modular monolith architecture.
+TermBullet is a modular monolith. Production code lives in one project under:
 
-Production code should live in one .NET project and be separated by folders, namespaces, contracts, and tests:
+- `Bootstrap`
+- `Core`
+- `Application`
+- `Infrastructure`
+- `Cli`
+- `Tui`
 
-- **Core**
-  - entities;
-  - value objects;
-  - business rules;
-  - state transitions;
-  - identification policies.
+Dependency rules:
 
-- **Application**
-  - use cases;
-  - orchestration;
-  - input/output contracts;
-  - ports for persistence and integrations.
+- Core depends on no internal outer module.
+- Application depends on Core, not Infrastructure, CLI, or TUI.
+- Infrastructure implements Application contracts.
+- CLI and TUI call Application use cases.
+- Bootstrap wires everything together.
 
-- **Infrastructure**
-- monthly JSON file persistence;
-- backup/recovery services;
-- local JSON index;
-  - export/import implementations;
-  - future AI, calendar, sync, and PostgreSQL adapters.
+Do not put business rules in CLI handlers, TUI screens, or JSON repositories.
 
-- **CLI**
-  - System.CommandLine commands;
-  - command handlers;
-  - text/JSON output formatting.
+## Identity Rules
 
-- **TUI**
-  - Terminal.Gui screens;
-  - panels/windows;
-  - keyboard navigation;
-  - focus and selection behavior.
+Every relevant item has:
 
-- **Bootstrap**
-  - application startup;
-  - dependency registration;
-  - CLI/TUI dispatch.
-
-Core must not depend on CLI, TUI, Infrastructure, Terminal.Gui, System.CommandLine, JSON file storage, or PostgreSQL.
-
-CLI and TUI must call Application use cases. They must not duplicate business rules.
-
-Infrastructure implements contracts defined by Application or Core-facing abstractions. It must not leak storage-specific behavior into product rules.
-
-## Entity Identification Rules
-
-Every relevant item must have:
-
-- an internal global ID;
-- a persisted public ref.
+- internal global ID;
+- persisted public ref.
 
 Public ref format:
 
@@ -156,11 +98,7 @@ Public ref format:
 <type>-<MMYY>-<sequence>
 ```
 
-Prefixes:
-
-- `t` = task;
-- `n` = note;
-- `e` = event.
+Prefixes: `t` task, `n` note, `e` event.
 
 Examples:
 
@@ -170,78 +108,63 @@ n-0426-1
 e-0426-1
 ```
 
-The public ref is for humans. The internal ID is the real identity for persistence, import/export, and future sync.
-
-Do not use only numeric IDs as the user-facing identifier.
+The public ref is for humans. The internal ID is the real identity for
+persistence, import/export, and future sync.
 
 ## CLI Rules
 
-The CLI command tree is defined in [product-spec.md](product-spec.md).
+- Use System.CommandLine.
+- Follow [CLI.md](CLI.md).
+- Keep help/output English-first.
+- Use Application use cases.
+- Verify parsing and help output when CLI behavior changes.
 
-Agents must:
-
-- implement commands with System.CommandLine;
-- keep command names and options aligned with the official command tree;
-- keep help output clear and English-first;
-- design output to support future `--json`;
-- keep behavior consistent with equivalent TUI actions;
-- call Application use cases instead of implementing logic in command handlers.
-
-When no command is provided, the app should open the TUI.
+When no command is provided, the app opens the TUI.
 
 ## TUI Rules
 
-The TUI is a first-class interface, not an afterthought.
+- Use Terminal.Gui.
+- Follow [screens.md](screens.md) for concrete layouts.
+- Keep keyboard navigation central.
+- Maintain visible focus and footer shortcuts.
+- Avoid mouse-dependent flows.
+- Keep layout dense but legible.
+- Use Application use cases.
 
-Agents must:
-
-- use Terminal.Gui;
-- follow the screen and panel model in the product spec;
-- keep keyboard navigation central;
-- maintain clear active focus;
-- support dense but legible layouts;
-- keep shortcuts visible in footers;
-- avoid mouse-dependent flows;
-- call Application use cases instead of implementing business logic inside screens.
-
-The main TUI direction is a personal cockpit for planning and execution, visually inspired by LazyDocker/LazyGit and dense like btop.
+The TUI direction is a personal cockpit for planning and execution, visually
+inspired by LazyDocker/LazyGit and dense like btop.
 
 ## Persistence Rules
 
-Monthly JSON files are the V1 local operational store.
+Monthly JSON files are the V1 operational store.
 
-Agents must:
+Agents must preserve:
 
-- preserve local-first behavior;
-- keep local files usable offline;
-- store internal IDs and public refs;
-- store consistent creation/update timestamps;
-- store item versions;
-- use safe writes with temporary files and atomic replacement;
-- keep one backup per monthly file;
-- recover corrupted monthly files from backup when possible;
-- keep future file-level sync possible.
+- offline local-first behavior;
+- internal IDs and public refs;
+- consistent timestamps;
+- item versions;
+- safe writes with temp file and atomic replacement;
+- one backup per monthly file;
+- backup recovery when possible;
+- future whole-file sync compatibility.
 
-Do not make PostgreSQL required for V1 local usage.
+See [DATA_MODEL.md](DATA_MODEL.md).
 
-PostgreSQL is reserved for the optional V4 sync/cloud backend and should store the same JSON file content.
+## TDD and Verification
 
-## Testing and Verification
+TermBullet follows TDD.
 
-TermBullet follows a TDD workflow.
-
-Before starting any production implementation, agents must:
+Before production implementation:
 
 1. Write unit tests first.
-2. Cover successful paths with valid mocked data.
-3. Cover failure paths with invalid, missing, malformed, or conflicting mocked data.
-4. Run the tests and confirm they fail for the expected reason before implementing behavior when practical.
-5. Implement the smallest production change that satisfies the tests.
-6. Run the full relevant test suite again.
+2. Cover successful paths with valid mocked/controlled data.
+3. Cover invalid, missing, malformed, or conflicting data.
+4. Confirm tests fail for the expected reason when practical.
+5. Implement the smallest production change.
+6. Run relevant tests again.
 
-Work is not considered complete until all relevant tests pass successfully.
-
-When code exists, agents should prefer these verification steps:
+Preferred verification:
 
 ```bash
 dotnet restore
@@ -249,69 +172,47 @@ dotnet build
 dotnet test
 ```
 
-If the solution structure defines more specific commands, follow the repository scripts or documentation.
+Local run command:
 
-For changes affecting CLI behavior, verify command parsing and help output.
+```bash
+dotnet run --project src/TermBullet -- [command] [arguments] [options]
+```
 
-For changes affecting TUI behavior, verify keyboard navigation, focus behavior, and rendering where possible.
+For CLI changes, verify parsing and help. For TUI changes, verify navigation,
+focus, and rendering where practical. For persistence changes, verify read/write,
+backup/recovery, and import/export compatibility.
 
-For persistence changes, verify backup/recovery, read/write flows, and import/export compatibility.
-
-If tests cannot be run, agents must explicitly report why and describe the remaining risk.
+If tests cannot be run, report why and state the remaining risk.
 
 ## Documentation Rules
 
-Agents must update documentation when behavior, architecture, or public commands change.
+Update documentation when behavior, commands, architecture, data model, or
+workflow changes.
 
-Use:
+- Product scope: [PRODUCT.md](PRODUCT.md)
+- CLI: [CLI.md](CLI.md)
+- TUI: [screens.md](screens.md)
+- Architecture: [ARCHITECTURE.md](ARCHITECTURE.md) and [ADR.md](ADR.md)
+- Data model: [DATA_MODEL.md](DATA_MODEL.md)
+- Plan/backlog: [BACKLOG.md](BACKLOG.md)
+- Agent rules: this file
 
-- `README.md` for user-facing project summary.
-- `product-spec.md` for product requirements, command tree, and TUI behavior.
-- `ADR.md` for accepted architectural or technology decisions.
-- `AGENTS.md` for agent workflow and implementation guardrails.
-- `ARCHITECTURE.md` for concrete modular monolith structure.
-- `DATA_MODEL.md` for monthly JSON files, entities, history, and sync preparation.
-- `DEVELOPMENT_PLAN.md` for V1 implementation order.
-- `CONTRIBUTING.md` for open source contribution rules.
+## File and Git Safety
 
-Do not introduce major architecture, dependency, storage, or workflow changes without updating ADRs.
-
-## Dependency Rules
-
-Use dependencies conservatively.
-
-Before adding a dependency, verify that it:
-
-- fits the official stack;
-- solves a real project need;
-- does not duplicate built-in .NET capabilities unnecessarily;
-- is suitable for an open source project;
-- does not compromise local-first usage.
-
-Major dependencies should be documented in an ADR.
-
-## Git and File Safety
-
-Agents must not revert user changes unless explicitly asked.
-
-Before editing existing files, inspect their current content.
-
-Keep changes scoped to the requested task.
-
-Use `Development` as the default base branch unless the maintainer explicitly asks for another branch.
-
-Do not perform destructive git operations such as hard resets, forced checkouts, or branch rewrites unless explicitly requested by the maintainer.
+- Do not revert user changes unless explicitly asked.
+- Inspect existing files before editing.
+- Keep changes scoped.
+- Use `Development` as the default base branch.
+- Do not run destructive git operations unless explicitly requested.
 
 ## Decision Checklist
 
-Before implementing a feature, agents should confirm:
+Before implementing, confirm:
 
 1. Is it in V1 scope?
 2. Does it preserve local-first behavior?
-3. Does it keep CLI and TUI on the same Application use cases?
-4. Does it preserve internal ID and public ref rules?
-5. Does it fit the official .NET 8 / C# stack?
-6. Does it need a new ADR?
-7. Does documentation need to be updated?
-
-If the answer to any of these is unclear, prefer a small, explicit implementation that follows the current ADRs and product spec.
+3. Do CLI/TUI use Application use cases?
+4. Does it preserve public ref and internal ID rules?
+5. Does it fit the accepted stack?
+6. Does it need an ADR?
+7. Does documentation need an update?

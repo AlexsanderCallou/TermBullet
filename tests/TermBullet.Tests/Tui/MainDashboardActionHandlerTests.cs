@@ -60,7 +60,7 @@ public sealed class MainDashboardActionHandlerTests
     }
 
     [Fact]
-    public async Task HandleMigrateAsync_marks_item_as_migrated()
+    public async Task HandleMigrateAsync_marks_item_as_migrate()
     {
         var repo = new FakeItemRepository();
         repo.Add(MakeItem("t-0426-1"));
@@ -69,7 +69,7 @@ public sealed class MainDashboardActionHandlerTests
         var result = await handler.HandleMigrateAsync("t-0426-1");
 
         Assert.True(result.Success);
-        Assert.Equal(ItemStatus.Migrated, repo.GetByRef("t-0426-1")!.Status);
+        Assert.Equal(ItemStatus.Migrate, repo.GetByRef("t-0426-1")!.Status);
     }
 
     private static MainDashboardActionHandler CreateHandler(FakeItemRepository repo)

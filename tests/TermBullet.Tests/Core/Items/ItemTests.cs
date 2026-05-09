@@ -128,19 +128,6 @@ public sealed class ItemTests
     }
 
     [Fact]
-    public void Mark_in_progress_sets_status_and_increments_version()
-    {
-        var item = CreateTask();
-
-        item.MarkInProgress(ChangedAt);
-
-        Assert.Equal(ItemStatus.InProgress, item.Status);
-        Assert.Equal(2, item.Version);
-        Assert.Equal(ChangedAt, item.UpdatedAt);
-        Assert.Null(item.CompletedAt);
-    }
-
-    [Fact]
     public void Mark_done_sets_completion_timestamp_and_increments_version()
     {
         var item = CreateTask();
@@ -171,13 +158,13 @@ public sealed class ItemTests
     }
 
     [Fact]
-    public void Mark_migrated_sets_migration_timestamp_and_increments_version()
+    public void Mark_migrate_sets_migration_timestamp_and_increments_version()
     {
         var item = CreateTask();
 
-        item.MarkMigrated(ChangedAt);
+        item.MarkMigrate(ChangedAt);
 
-        Assert.Equal(ItemStatus.Migrated, item.Status);
+        Assert.Equal(ItemStatus.Migrate, item.Status);
         Assert.Equal(2, item.Version);
         Assert.Equal(ChangedAt, item.UpdatedAt);
         Assert.Equal(ChangedAt, item.MigratedAt);
@@ -215,14 +202,14 @@ public sealed class ItemTests
     [Theory]
     [InlineData(ItemStatus.Done)]
     [InlineData(ItemStatus.Cancelled)]
-    [InlineData(ItemStatus.Migrated)]
+    [InlineData(ItemStatus.Migrate)]
     public void Terminal_statuses_reject_further_status_changes(ItemStatus terminalStatus)
     {
         var item = CreateTask();
         MoveToTerminalStatus(item, terminalStatus);
 
         var exception = Assert.Throws<InvalidOperationException>(
-            () => item.MarkInProgress(ChangedAt.AddMinutes(5)));
+            () => item.SetPriority(Priority.High, ChangedAt.AddMinutes(5)));
 
         Assert.Contains("terminal", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -300,8 +287,8 @@ public sealed class ItemTests
             case ItemStatus.Cancelled:
                 item.Cancel(ChangedAt);
                 break;
-            case ItemStatus.Migrated:
-                item.MarkMigrated(ChangedAt);
+            case ItemStatus.Migrate:
+                item.MarkMigrate(ChangedAt);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(status), status, "Status is not terminal.");

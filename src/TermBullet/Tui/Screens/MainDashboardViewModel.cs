@@ -98,32 +98,5 @@ public sealed class MainDashboardViewModel
         }
     }
 
-    private static ItemDisplayRow MapToRow(ItemResult item) =>
-        new()
-        {
-            PublicRef = item.PublicRef,
-            Symbol = ResolveSymbol(item.Type, item.Status),
-            Type = item.Type.ToString().ToLowerInvariant(),
-            Status = item.Status.ToString().ToLowerInvariant(),
-            Content = item.Content,
-            Priority = item.Priority.ToString().ToLowerInvariant(),
-            Collection = item.Collection.ToString().ToLowerInvariant(),
-            Tags = [.. item.Tags]
-        };
-
-    private static string ResolveSymbol(ItemType type, ItemStatus status) =>
-        type switch
-        {
-            ItemType.Note => "(.)",
-            ItemType.Event => "(o)",
-            _ => status switch
-            {
-                ItemStatus.Open => "[ ]",
-                ItemStatus.InProgress => "[~]",
-                ItemStatus.Done => "[x]",
-                ItemStatus.Cancelled => "[-]",
-                ItemStatus.Migrated => "[>]",
-                _ => "[ ]"
-            }
-        };
+    private static ItemDisplayRow MapToRow(ItemResult item) => ItemDisplayRow.From(item);
 }

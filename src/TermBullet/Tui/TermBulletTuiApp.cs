@@ -32,9 +32,10 @@ public sealed class TermBulletTuiApp(
             startupAction);
         var snapshot = await snapshotLoader.LoadAsync(cancellationToken);
         var searchVm = new SearchViewModel();
-        var navigation = new TuiNavigationState(panelCount: 6);
+        var navigation = new TuiNavigationState(panelCount: 5);
         var auxiliaryFlow = TuiAuxiliaryFlow.None;
-        string? selectedPublicRef = null;
+        ItemDisplayRow? selectedItem = null;
+        MigrateItemViewModel? migrateItemVm = null;
         string? addError = null;
 
         MainDashboardActionHandler? actionHandler = null;
@@ -76,6 +77,23 @@ public sealed class TermBulletTuiApp(
                 addError = null;
                 auxiliaryFlow = TuiAuxiliaryFlow.AddItem;
                 ScheduleRender();
+            }
+
+            void OpenItemDetail(ItemDisplayRow? item)
+            {
+                if (item is null) return;
+                selectedItem = item;
+                NavigateTo(TuiScreen.ItemDetail, GetPanelCount(TuiScreen.ItemDetail));
+            }
+
+            void OpenMigrateItem(ItemDisplayRow? item)
+            {
+                if (item is null) return;
+                selectedItem = item;
+                migrateItemVm = MigrateItemViewModel.ForDate(
+                    item,
+                    DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
+                NavigateTo(TuiScreen.MigrateItem, GetPanelCount(TuiScreen.MigrateItem));
             }
 
             void Quit() => TGui.RequestStop();
@@ -138,22 +156,27 @@ public sealed class TermBulletTuiApp(
                     return true;
                 }
 
-                if (selectedPublicRef is not null
+                if (selectedItem is not null
                     && actionHandler is not null
                     && TuiItemActionShortcutMapper.TryMap(keyEvent.Key, out var action))
                 {
+                    if (action == TuiItemActionShortcut.Migrate)
+                    {
+                        OpenMigrateItem(selectedItem);
+                        return true;
+                    }
+
                     Func<string, CancellationToken, Task<ActionResult>>? handler = action switch
                     {
                         TuiItemActionShortcut.Done => actionHandler.HandleDoneAsync,
                         TuiItemActionShortcut.Cancel => actionHandler.HandleCancelAsync,
-                        TuiItemActionShortcut.Migrate => actionHandler.HandleMigrateAsync,
                         TuiItemActionShortcut.Delete => actionHandler.HandleDeleteAsync,
                         _ => null
                     };
 
                     if (handler is not null)
                     {
-                        DispatchAction(selectedPublicRef, handler, RefreshAndRender, cancellationToken);
+                        DispatchAction(selectedItem.PublicRef, handler, RefreshAndRender, cancellationToken);
                         return true;
                     }
                 }
@@ -243,7 +266,44 @@ public sealed class TermBulletTuiApp(
                                     searchVm.SetResults(results);
                                     ScheduleRender();
                                 });
-                            });
+                            },
+                            OpenItemDetail);
+                        break;
+
+                    case TuiScreen.ItemDetail when selectedItem is not null:
+                        ItemDetailScreen.Build(
+                            root,
+                            ItemDetailViewModel.FromRow(selectedItem),
+                            navigation,
+                            NavigateBack,
+                            () => OpenMigrateItem(selectedItem),
+                            Quit);
+                        break;
+
+                    case TuiScreen.MigrateItem when selectedItem is not null && migrateItemVm is not null:
+                        MigrateItemScreen.Build(
+                            root,
+                            migrateItemVm,
+                            navigation,
+                            updated =>
+                            {
+                                migrateItemVm = updated;
+                                ScheduleRender();
+                            },
+                            () =>
+                            {
+                                if (actionHandler is null) return;
+                                DispatchAction(
+                                    selectedItem.PublicRef,
+                                    actionHandler.HandleMigrateAsync,
+                                    () =>
+                                    {
+                                        RefreshAndRender();
+                                        NavigateBack();
+                                    },
+                                    cancellationToken);
+                            },
+                            NavigateBack);
                         break;
 
                     default:
@@ -253,8 +313,10 @@ public sealed class TermBulletTuiApp(
                             navigation,
                             actionHandler,
                             createItemUseCase,
-                            publicRef => selectedPublicRef = publicRef,
+                            item => selectedItem = item,
                             screen => NavigateTo(screen, GetPanelCount(screen)),
+                            OpenItemDetail,
+                            OpenMigrateItem,
                             OpenAddItem,
                             RefreshAndRender,
                             Quit,
@@ -279,8 +341,10 @@ public sealed class TermBulletTuiApp(
         TuiNavigationState navigation,
         MainDashboardActionHandler? actionHandler,
         CreateItemUseCase? createItemUseCase,
-        Action<string?> onSelectedPublicRefChanged,
+        Action<ItemDisplayRow?> onSelectedItemChanged,
         Action<TuiScreen> onNavigate,
+        Action<ItemDisplayRow?> onOpenDetail,
+        Action<ItemDisplayRow?> onOpenMigrate,
         Action onAdd,
         Action onRefresh,
         Action onQuit,
@@ -292,31 +356,31 @@ public sealed class TermBulletTuiApp(
             X = 0, Y = 0, Width = Dim.Fill()
         };
 
-        var footer = new Label(" / filter  c add  e edit  x done  z cancel  > migrate  d delete  Enter zoom  Tab focus  ? help  q quit")
+        var footer = new Label(" / filter  c add  e edit  x done  z cancel  > migrate  d delete  Enter open  Tab focus  ? help  q quit")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
 
         var upperHeight = Dim.Percent(55);
-        var collectionsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, "Collections", navigation, 0))
+        var menuPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, "Menu", navigation, 0))
         {
             X = 0, Y = 1, Width = Dim.Percent(20), Height = upperHeight
         };
-        var collectionEntries = new[] { "> Dashboard", "  Search" };
-        var collectionsList = new ListView(collectionEntries)
+        var menuEntries = new[] { "> Dashboard", "  Search", "  Planning", "  Calendar" };
+        var menuList = new ListView(TuiScreenUtilities.SanitizeListItems(menuEntries))
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
         };
-        collectionsPanel.Add(collectionsList);
+        menuPanel.Add(menuList);
 
         var dayItemsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(2, "Day Items", navigation, 1))
         {
-            X = Pos.Right(collectionsPanel), Y = 1, Width = Dim.Percent(50), Height = upperHeight
+            X = Pos.Right(menuPanel), Y = 1, Width = Dim.Percent(50), Height = upperHeight
         };
-        var dayItemsList = new ListView(
+        var dayItemsList = new ListView(TuiScreenUtilities.SanitizeListItems(
             viewModel.DayItems.Count > 0
                 ? viewModel.DayItems.Select(r => $"{r.Symbol} {r.PublicRef} {r.Content}").ToArray()
-                : ["(no items)"])
+                : ["(no items)"]))
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
         };
@@ -326,69 +390,54 @@ public sealed class TermBulletTuiApp(
         }
         dayItemsPanel.Add(dayItemsList);
 
-        var previewPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Preview / AI", navigation, 2))
+        var detailsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Details", navigation, 2))
         {
             X = Pos.Right(dayItemsPanel), Y = 1, Width = Dim.Fill(), Height = upperHeight
         };
-        var previewList = new ListView(BuildPreviewLines(viewModel.SelectedDayItem))
+        var detailsList = new ListView(TuiScreenUtilities.SanitizeListItems(BuildPreviewLines(viewModel.SelectedDayItem)))
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
         };
-        previewPanel.Add(previewList);
+        detailsPanel.Add(detailsList);
 
-        var projectsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(4, "Projects / Tags", navigation, 3))
+        var contextPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(4, "Context", navigation, 3))
         {
-            X = 0, Y = Pos.Bottom(collectionsPanel), Width = Dim.Percent(20), Height = Dim.Fill(1)
+            X = 0, Y = Pos.Bottom(menuPanel), Width = Dim.Percent(20), Height = Dim.Fill(1)
         };
-        var projectsList = new ListView(
-            viewModel.ProjectOrTagRows.Count > 0
-                ? viewModel.ProjectOrTagRows.Select(tag => $"> {tag}").ToArray()
-                : ["(no tags yet)"])
+        var contextRows = BuildContextLines(viewModel);
+        var contextList = new ListView(TuiScreenUtilities.SanitizeListItems(contextRows))
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
         };
-        projectsPanel.Add(projectsList);
+        contextPanel.Add(contextList);
 
-        var filteredBacklogPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(5, "Filtered Backlog", navigation, 4))
+        var contentPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(5, "Content", navigation, 4))
         {
-            X = Pos.Right(projectsPanel), Y = Pos.Bottom(dayItemsPanel), Width = Dim.Percent(50), Height = Dim.Fill(1)
+            X = Pos.Right(contextPanel), Y = Pos.Bottom(dayItemsPanel), Width = Dim.Fill(), Height = Dim.Fill(1)
         };
-        var filteredBacklogList = new ListView(
-            viewModel.FilteredBacklogItems.Count > 0
-                ? viewModel.FilteredBacklogItems.Select(r => $"{r.Symbol} {r.PublicRef} {r.Content}").ToArray()
-                : ["(no related backlog)"])
+        var contentList = new ListView(TuiScreenUtilities.SanitizeListItems(BuildContentLines(viewModel.SelectedDayItem)))
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
         };
-        filteredBacklogPanel.Add(filteredBacklogList);
-
-        var suggestedPlanPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(6, "Suggested Plan", navigation, 5))
-        {
-            X = Pos.Right(filteredBacklogPanel), Y = Pos.Bottom(previewPanel), Width = Dim.Fill(), Height = Dim.Fill(1)
-        };
-        var suggestedPlanList = new ListView(viewModel.SuggestedPlanLines.ToArray())
-        {
-            X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
-        };
-        suggestedPlanPanel.Add(suggestedPlanList);
+        contentPanel.Add(contentList);
 
         var panels = new[]
         {
-            collectionsPanel, dayItemsPanel, previewPanel, projectsPanel, filteredBacklogPanel, suggestedPlanPanel
+            menuPanel, dayItemsPanel, detailsPanel, contextPanel, contentPanel
         };
         var panelTitles = new[]
         {
-            "Collections", "Day Items", "Preview / AI", "Projects / Tags", "Filtered Backlog", "Suggested Plan"
+            "Menu", "Day Items", "Details", "Context", "Content"
         };
         var focusTargets = new View[]
         {
-            collectionsList, dayItemsList, previewList, projectsList, filteredBacklogList, suggestedPlanList
+            menuList, dayItemsList, detailsList, contextList, contentList
         };
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-        onSelectedPublicRefChanged(viewModel.SelectedDayItem?.PublicRef);
+        onSelectedItemChanged(viewModel.SelectedDayItem);
 
-        root.Add(topBar, collectionsPanel, dayItemsPanel, previewPanel, projectsPanel, filteredBacklogPanel, suggestedPlanPanel, footer);
+        root.Add(topBar, menuPanel, dayItemsPanel, detailsPanel, contextPanel, contentPanel, footer);
 
         dayItemsList.SelectedItemChanged += _ =>
         {
@@ -400,14 +449,9 @@ public sealed class TermBulletTuiApp(
             else if (diff < 0)
                 for (var i = 0; i < -diff; i++) viewModel.SelectPreviousDayItem();
 
-            TuiScreenUtilities.RefreshListView(previewList, BuildPreviewLines(viewModel.SelectedDayItem));
-            TuiScreenUtilities.RefreshListView(
-                filteredBacklogList,
-                viewModel.FilteredBacklogItems.Count > 0
-                    ? viewModel.FilteredBacklogItems.Select(r => $"{r.Symbol} {r.PublicRef} {r.Content}").ToArray()
-                    : ["(no related backlog)"]);
-            TuiScreenUtilities.RefreshListView(suggestedPlanList, viewModel.SuggestedPlanLines.ToArray());
-            onSelectedPublicRefChanged(viewModel.SelectedDayItem?.PublicRef);
+            TuiScreenUtilities.RefreshListView(detailsList, BuildPreviewLines(viewModel.SelectedDayItem));
+            TuiScreenUtilities.RefreshListView(contentList, BuildContentLines(viewModel.SelectedDayItem));
+            onSelectedItemChanged(viewModel.SelectedDayItem);
         };
 
         root.KeyPress += args =>
@@ -438,7 +482,14 @@ public sealed class TermBulletTuiApp(
                     args.Handled = true;
                     break;
                 case Key.Enter:
-                    NavigateFromCollections(collectionsList.SelectedItem, onNavigate);
+                    if (navigation.FocusedPanelIndex == 0)
+                    {
+                        NavigateFromMenu(menuList.SelectedItem, onNavigate);
+                    }
+                    else
+                    {
+                        onOpenDetail(viewModel.SelectedDayItem);
+                    }
                     args.Handled = true;
                     break;
                 case Key x when x == (Key)'/' :
@@ -454,7 +505,7 @@ public sealed class TermBulletTuiApp(
                     args.Handled = true;
                     break;
                 case Key y when y == (Key)'>' && actionHandler is not null:
-                    DispatchAction(viewModel.SelectedDayItem?.PublicRef, actionHandler.HandleMigrateAsync, onRefresh, cancellationToken);
+                    onOpenMigrate(viewModel.SelectedDayItem);
                     args.Handled = true;
                     break;
                 case Key z when z == (Key)'d' && actionHandler is not null:
@@ -465,7 +516,7 @@ public sealed class TermBulletTuiApp(
         };
     }
 
-    private static void NavigateFromCollections(int selectedIndex, Action<TuiScreen> onNavigate)
+    private static void NavigateFromMenu(int selectedIndex, Action<TuiScreen> onNavigate)
     {
         var screen = selectedIndex switch
         {
@@ -483,7 +534,9 @@ public sealed class TermBulletTuiApp(
         screen switch
         {
             TuiScreen.Search => 2,
-            _ => 6
+            TuiScreen.ItemDetail => 5,
+            TuiScreen.MigrateItem => 3,
+            _ => 5
         };
 
     private static void DispatchAction(
@@ -504,7 +557,7 @@ public sealed class TermBulletTuiApp(
         item is not null
             ?
             [
-                item.PublicRef,
+                $"ref: {item.PublicRef}",
                 $"type: {item.Type}",
                 $"status: {item.Status}",
                 $"priority: {item.Priority}",
@@ -512,4 +565,44 @@ public sealed class TermBulletTuiApp(
                 $"tags: {(item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "(none)")}"
             ]
             : ["(nothing selected)"];
+
+    private static string[] BuildContextLines(MainDashboardViewModel viewModel)
+    {
+        var lines = new List<string>
+        {
+            "collections",
+            $"> today      {viewModel.DayItems.Count}",
+            "  week view  -",
+            $"  backlog    {viewModel.BacklogItems.Count}",
+            "  forgotten  -",
+            "tags"
+        };
+
+        if (viewModel.ProjectOrTagRows.Count == 0)
+        {
+            lines.Add("> (none)");
+        }
+        else
+        {
+            lines.Add($"> {string.Join("  ", viewModel.ProjectOrTagRows)}");
+        }
+
+        return [.. lines];
+    }
+
+    private static string[] BuildContentLines(ItemDisplayRow? item)
+    {
+        if (item is null)
+        {
+            return ["(nothing selected)"];
+        }
+
+        return
+        [
+            item.Content,
+            " ",
+            "Description:",
+            string.IsNullOrWhiteSpace(item.Description) ? "-" : item.Description
+        ];
+    }
 }

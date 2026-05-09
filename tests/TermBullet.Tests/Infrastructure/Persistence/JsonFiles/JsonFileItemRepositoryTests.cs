@@ -361,7 +361,7 @@ public sealed class JsonFileItemRepositoryTests
         Assert.Empty(previousDoc.RootElement.GetProperty("items").EnumerateArray());
         var previousHistory = previousDoc.RootElement.GetProperty("history").EnumerateArray().ToArray();
         Assert.Single(previousHistory);
-        Assert.Equal("migrated", previousHistory[0].GetProperty("event_type").GetString());
+        Assert.Equal("migrate", previousHistory[0].GetProperty("event_type").GetString());
 
         Assert.True(File.Exists(context.MonthlyFilePath));
         var currentJson = await File.ReadAllTextAsync(context.MonthlyFilePath);

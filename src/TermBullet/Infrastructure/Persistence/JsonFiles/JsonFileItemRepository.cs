@@ -225,7 +225,7 @@ public sealed class JsonFileItemRepository(
                     destinationDocument,
                     migratedItem.Id,
                     migratedItem.PublicRef,
-                    "migrated",
+                    "migrate",
                     new
                     {
                         from_period = previousPeriod,
@@ -239,7 +239,7 @@ public sealed class JsonFileItemRepository(
                 sourceDocument,
                 sourceItem.Id,
                 sourceItem.PublicRef,
-                "migrated",
+                "migrate",
                 new
                 {
                     from_period = previousPeriod,
@@ -356,7 +356,7 @@ public sealed class JsonFileItemRepository(
             {
                 "done" => "done",
                 "cancelled" => "cancelled",
-                "migrated" => "migrated",
+                "migrate" => "migrate",
                 _ => "edited"
             };
         }
@@ -448,7 +448,7 @@ public sealed class JsonFileItemRepository(
 
     private static bool IsAutomaticRolloverCandidate(StorageItem item) =>
         string.Equals(item.Type, "task", StringComparison.Ordinal)
-        && item.Status is "open" or "in_progress";
+        && item.Status is "open";
 
     private static StorageItem CreateRolloverDestinationItem(
         StorageItem sourceItem,
@@ -508,10 +508,9 @@ public sealed class JsonFileItemRepository(
         status switch
         {
             ItemStatus.Open => "open",
-            ItemStatus.InProgress => "in_progress",
             ItemStatus.Done => "done",
             ItemStatus.Cancelled => "cancelled",
-            ItemStatus.Migrated => "migrated",
+            ItemStatus.Migrate => "migrate",
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unsupported item status.")
         };
 
@@ -519,10 +518,10 @@ public sealed class JsonFileItemRepository(
         value switch
         {
             "open" => ItemStatus.Open,
-            "in_progress" => ItemStatus.InProgress,
             "done" => ItemStatus.Done,
             "cancelled" => ItemStatus.Cancelled,
-            "migrated" => ItemStatus.Migrated,
+            "migrate" => ItemStatus.Migrate,
+            "migrated" => ItemStatus.Migrate,
             _ => throw new InvalidDataException($"Unsupported item status value: {value}.")
         };
 

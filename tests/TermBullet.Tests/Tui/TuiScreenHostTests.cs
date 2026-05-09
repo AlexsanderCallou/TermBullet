@@ -21,4 +21,20 @@ public sealed class TuiScreenHostTests
         Assert.Contains(second, top.Subviews);
         Assert.Single(top.Subviews);
     }
+
+    [Fact]
+    public void SanitizeListItems_replaces_empty_rows_with_safe_space()
+    {
+        var rows = TuiScreenUtilities.SanitizeListItems(["alpha", string.Empty, "   "]);
+
+        Assert.Equal(["alpha", " ", " "], rows);
+    }
+
+    [Fact]
+    public void SanitizeListItems_returns_safe_placeholder_for_empty_source()
+    {
+        var rows = TuiScreenUtilities.SanitizeListItems([]);
+
+        Assert.Equal([" "], rows);
+    }
 }

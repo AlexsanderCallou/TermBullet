@@ -11,14 +11,14 @@ public sealed class MigrateItemUseCaseTests
     private static readonly DateTimeOffset ChangedAt = new(2026, 5, 1, 0, 5, 0, TimeSpan.Zero);
 
     [Fact]
-    public async Task Execute_sets_migrated_status_and_persists_item()
+    public async Task Execute_sets_migrate_status_and_persists_item()
     {
         var repository = new FakeItemRepository(CreateTask());
         var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt));
 
         var result = await useCase.ExecuteAsync("t-0426-1");
 
-        Assert.Equal(ItemStatus.Migrated, result.Status);
+        Assert.Equal(ItemStatus.Migrate, result.Status);
         Assert.Equal(2, result.Version);
         Assert.Equal(ChangedAt, result.UpdatedAt);
 

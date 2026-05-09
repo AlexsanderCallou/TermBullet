@@ -244,13 +244,6 @@ public sealed class Item
             migration);
     }
 
-    public void MarkInProgress(DateTimeOffset changedAt)
-    {
-        EnsureActive();
-        Status = ItemStatus.InProgress;
-        Touch(changedAt);
-    }
-
     public void MarkDone(DateTimeOffset changedAt)
     {
         EnsureActive();
@@ -267,10 +260,10 @@ public sealed class Item
         Touch(changedAt);
     }
 
-    public void MarkMigrated(DateTimeOffset changedAt)
+    public void MarkMigrate(DateTimeOffset changedAt)
     {
         EnsureActive();
-        Status = ItemStatus.Migrated;
+        Status = ItemStatus.Migrate;
         MigratedAt = changedAt;
         Touch(changedAt);
     }
@@ -389,7 +382,7 @@ public sealed class Item
 
     private void EnsureActive()
     {
-        if (Status is ItemStatus.Done or ItemStatus.Cancelled or ItemStatus.Migrated)
+        if (Status is ItemStatus.Done or ItemStatus.Cancelled or ItemStatus.Migrate)
         {
             throw new InvalidOperationException($"Item '{PublicRef}' is in a terminal status and cannot be changed.");
         }

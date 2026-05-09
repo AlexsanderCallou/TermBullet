@@ -14,6 +14,18 @@ public sealed class TuiScreenNavigationTests
         Assert.Equal(TuiScreen.Search, state.CurrentScreen);
     }
 
+    [Theory]
+    [InlineData(TuiScreen.ItemDetail, 5)]
+    [InlineData(TuiScreen.MigrateItem, 3)]
+    public void NavigateTo_planned_screens_changes_screen(TuiScreen screen, int panelCount)
+    {
+        var state = new TuiNavigationState();
+
+        state.NavigateTo(screen, panelCount);
+
+        Assert.Equal(screen, state.CurrentScreen);
+    }
+
     [Fact]
     public void NavigateTo_resets_panel_focus_to_zero()
     {
