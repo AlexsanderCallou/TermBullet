@@ -41,6 +41,20 @@ Planned but not currently implemented as TUI screens:
 - Review
 - Sync / Cloud
 
+## Layout Convention
+
+Full-screen layouts must use the Main Dashboard top bar pattern:
+
+```text
++ TermBullet - <Screen Title> ------------------------------------------------------------+
+```
+
+The top bar identifies only the product and current screen. Runtime state such
+as storage mode, AI status, sync status, or internal mode must stay out of the
+top bar unless a future screen explicitly needs that state in its own content
+area. Auxiliary modal flows, such as Add Type Picker and Quick Task, keep their
+compact modal title bars.
+
 ## Screen 01 - Main Dashboard
 
 Status: implemented.
@@ -127,10 +141,10 @@ Navigation:
 - `?` opens contextual help.
 - `q` quits.
 
-Current ASCII layout:
+Target ASCII layout:
 
 ```text
-+ TermBullet - Search - data:local - ai:off - sync:idle - mode:search ----------------------+
++ TermBullet - Search -------------------------------------------------------------------+
 | query: jwt                                                                               |
 |-------------------------------------------------------------------------------------------|
 | 1 Results                                    | 2 Preview                                  |
@@ -407,6 +421,204 @@ Notes:
 - When focus is inside the multiline description, `Enter` keeps its text-editing
   behavior.
 
+## Flow 04 - Edit Item
+
+Status: planned.
+
+Role: edit an existing task, note, or event without changing its identity.
+
+Entry points:
+
+- `e` on the selected item from Main Dashboard.
+- `e` on the selected item from Today, Week, Month, Backlog, Forgotten, Notes,
+  Calendar, or Search.
+- `e` from Item Detail.
+
+Shared rules:
+
+- Editing never changes `id`, `public_ref`, `type`, `created_at`, or current
+  terminal timestamps.
+- `Save` updates `updated_at`, increments `version`, persists the changed
+  fields, and appends an `edited` history event.
+- `Cancel` or `Esc` returns to the previous screen without saving changes.
+- `Enter` activates the focused control.
+- `Enter` must not save unless the focused control is `Save`.
+- When focus is inside a multiline text field, `Enter` keeps its text-editing
+  behavior.
+- Validation errors appear inline above the footer and keep the user on the
+  edit screen.
+
+### Flow 04A - Edit Task
+
+Role: edit executable work while keeping task-specific planning fields visible.
+
+Navigation:
+
+- `Tab` and `Shift+Tab` move between fields, choices, Save, and Cancel.
+- `CursorUp` and `CursorDown` change the active collection or priority choice.
+- `Space` cycles the active collection or priority choice.
+- Number keys may move directly between panels/field groups.
+
+Fields:
+
+- `Content` required.
+- `Description` optional multiline context.
+- `Collection` required: `Today`, `Week`, `Month`, or `Backlog`.
+- `Priority` required: `None`, `Low`, `Medium`, or `High`.
+- `Tags` optional comma-separated labels.
+
+Request mapping:
+
+- `type`: unchanged, must remain `task`
+- `content`: edited text
+- `description`: edited multiline text or `null`
+- `collection`: selected collection
+- `priority`: selected priority
+- `tags`: normalized labels
+- `scheduled_at`: must remain `null`
+
+ASCII layout:
+
+```text
++ TermBullet - Edit Task t-0526-1 -------------------------------------+
+| 1 Content                                                            |
+| fix auth flow                                                        |
+|                                                                      |
+| 2 Description                                                        |
+| reproduce login failure                                              |
+| check token audience                                                 |
+|                                                                      |
+| 3 Collection                                                         |
+| > Today                                                              |
+|   Week                                                               |
+|   Month                                                              |
+|   Backlog                                                            |
+|                                                                      |
+| 4 Priority                                                           |
+| > None   Low   Medium   High                                         |
+|                                                                      |
+| 5 Tags                                                               |
+| auth, cli                                                            |
+|                                                                      |
+| [ Save ]  [ Cancel ]                                                 |
++----------------------------------------------------------------------+
+| Status: task | ref: t-0526-1 | today | priority: high                |
+| Enter activate  Tab/1-5 focus  Arrows move  Space cycle  Esc cancel  |
++----------------------------------------------------------------------+
+```
+
+Notes:
+
+- Changing `Collection` from this screen is a normal edit, not the `migrate`
+  flow. The `migrate` flow remains the deliberate Bullet Journal action for
+  moving a task between collections.
+- Notes and events must not expose priority controls.
+
+### Flow 04B - Edit Note
+
+Role: edit reference material or context that is not executable work.
+
+Navigation:
+
+- `Tab` and `Shift+Tab` move between fields, Save, and Cancel.
+- Number keys may move directly between field groups.
+
+Fields:
+
+- `Title` or short `Content` required.
+- `Description` optional multiline body.
+- `Tags` optional comma-separated labels.
+
+Request mapping:
+
+- `type`: unchanged, must remain `note`
+- `content`: edited title/content
+- `description`: edited multiline text or `null`
+- `collection`: unchanged
+- `priority`: must remain `none`
+- `scheduled_at`: must remain `null`
+
+ASCII layout:
+
+```text
++ TermBullet - Edit Note n-0526-1 -------------------------------------+
+| 1 Title                                                              |
+| investigate stacktrace                                               |
+|                                                                      |
+| 2 Description                                                        |
+| error happens when token audience is empty                           |
+| include terminal log and repro steps                                 |
+|                                                                      |
+| 3 Tags                                                               |
+| auth, incident                                                       |
+|                                                                      |
+| [ Save ]  [ Cancel ]                                                 |
++----------------------------------------------------------------------+
+| Status: note | ref: n-0526-1 | tags: auth, incident                  |
+| Enter activate  Tab/1-3 focus  Esc cancel  ? help                    |
++----------------------------------------------------------------------+
+```
+
+Notes:
+
+- Note editing must not expose collection, priority, or scheduled date as
+  primary planning fields.
+
+### Flow 04C - Edit Event
+
+Role: edit a scheduled appointment or time marker.
+
+Navigation:
+
+- `Tab` and `Shift+Tab` move between fields, Save, and Cancel.
+- Number keys may move directly between field groups.
+
+Fields:
+
+- `Title` or short `Content` required.
+- `Scheduled for` required. Initial implementation may use `yyyy-mm-dd`; later
+  versions can add time input when the TUI model supports it cleanly.
+- `Description` optional multiline context.
+- `Tags` optional comma-separated labels.
+
+Request mapping:
+
+- `type`: unchanged, must remain `event`
+- `content`: edited title/content
+- `description`: edited multiline text or `null`
+- `collection`: unchanged
+- `priority`: must remain `none`
+- `scheduled_at`: selected scheduled date/time
+
+ASCII layout:
+
+```text
++ TermBullet - Edit Event e-0526-1 ------------------------------------+
+| 1 Title                                                              |
+| dentist appointment                                                  |
+|                                                                      |
+| 2 Scheduled for                                                      |
+| 2026-05-12                                                           |
+|                                                                      |
+| 3 Description                                                        |
+| bring insurance card                                                 |
+|                                                                      |
+| 4 Tags                                                               |
+| health                                                               |
+|                                                                      |
+| [ Save ]  [ Cancel ]                                                 |
++----------------------------------------------------------------------+
+| Status: event | ref: e-0526-1 | scheduled_at: 2026-05-12             |
+| Enter activate  Tab/1-4 focus  Esc cancel  ? help                    |
++----------------------------------------------------------------------+
+```
+
+Notes:
+
+- Event editing must require `scheduled_at`.
+- Event editing must not expose task collection or priority as primary
+  planning fields.
+
 ## Screen 04 - Item Detail
 
 Status: implemented.
@@ -443,7 +655,7 @@ Target ASCII layout:
 | version: 3                      | Migration                                             |
 | created: 2026-05-09T08:14:00Z   | from: -                                               |
 | updated: 2026-05-09T10:31:00Z   | to: -                                                 |
-| completed: -                    | migrated_at: -                                        |
+| completed: -                    | same item, same ref                                   |
 | cancelled: -                    |                                                       |
 |-------------------------------------------------------------------------------------------|
 | Content                                                                                   |
@@ -462,29 +674,6 @@ Target ASCII layout:
 +-------------------------------------------------------------------------------------------+
 ```
 
-Migration destination item example:
-
-```text
-+ TermBullet - Item t-0526-4 --------------------------------------------------------------+
-| Fix auth flow                                                        task / open          |
-|-------------------------------------------------------------------------------------------|
-| Identity                         | Migration                                             |
-| ref: t-0526-4                   | migrated_from_ref: t-0526-1                           |
-| id: a0f13256-499f-47bc-a623...  | migrated_from_id: 0f3a9d94-4df0-47f7-95c1...          |
-| type: task                      | migrated_at: 2026-05-09T20:15:00Z                    |
-| status: open                    | source status: migrate                                |
-| collection: week                |                                                       |
-|-------------------------------------------------------------------------------------------|
-| Content                                                                                   |
-| fix auth flow                                                                             |
-|-------------------------------------------------------------------------------------------|
-| History                                                                                   |
-| 2026-05-09T20:15:00Z  migrate_from   created from t-0526-1 into week                     |
-+-------------------------------------------------------------------------------------------+
-| e edit  x done  z cancel  > migrate  d delete  ? help  Esc back  q quit                  |
-+-------------------------------------------------------------------------------------------+
-```
-
 Notes:
 
 - The initial implementation shows all item fields currently exposed to the TUI.
@@ -493,9 +682,8 @@ Notes:
 - The final implementation should include root-level history entries related to
   the item, including create, edit, done, cancelled, migrate, forgotten, deleted
   snapshots when applicable, and history cleanup metadata when relevant.
-- Migration relationships must be visible in both directions:
-  `migrated_from_*` on the destination item and `migrated_to_*` on the source
-  item.
+- Migration is an in-place collection change. It does not create a destination
+  item and does not show source/destination relationship fields.
 - Long internal IDs may be truncated visually, but the full value should be
   copyable or visible through a focused row in the final implementation.
 - For notes and events, task-only fields may be shown as `-` or omitted only if
@@ -577,17 +765,17 @@ Target ASCII layout:
 | 1 Week                                          | 2 Preview                           |
 | > [ ] t-0526-4 Fix auth flow                   | ref: t-0526-4                      |
 |   [ ] t-0526-5 Write tests                     | type: task                         |
-|   [ ] t-0526-7 Review import                   | status: open                       |
+|   [ ] t-0526-7 Review parser                   | status: open                       |
 |                                                 | collection: week                   |
 |-------------------------------------------------+------------------------------------|
 | 3 Actions                                                                              |
-| > move selected task                                                                   |
+| > migrate selected task                                                                |
 |   open detail                                                                          |
 |   mark done                                                                            |
 |   cancel                                                                               |
 |   delete                                                                               |
 +-----------------------------------------------------------------------------------------+
-| Enter open  > move task  x done  z cancel  d delete  Tab focus  ? help  Esc back        |
+| Enter open  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back          |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -595,8 +783,7 @@ Notes:
 
 - Only tasks in the `week` collection appear here.
 - Events do not appear here; they belong to Calendar through `scheduled_at`.
-- Moving a task uses migration to create a new task in the destination
-  collection and mark the source as `migrate`.
+- Migrating a task changes the same item's collection and keeps the same ref.
 
 ## Screen 06B - Month View
 
@@ -648,9 +835,9 @@ Target ASCII layout:
 |                                                  | tags: infra, tui                    |
 |--------------------------------------------------+-------------------------------------|
 | 3 Actions                                                                              |
-| > move to today                                                                         |
-|   move to week                                                                          |
-|   move to month                                                                         |
+| > migrate to today                                                                      |
+|   migrate to week                                                                       |
+|   migrate to month                                                                      |
 |   open detail                                                                          |
 |   delete                                                                                |
 +-----------------------------------------------------------------------------------------+
@@ -661,7 +848,8 @@ Target ASCII layout:
 Notes:
 
 - Notes may live in Backlog because they are not planned work.
-- The primary action is moving a task from Backlog into Today, Week, or Month.
+- The primary action is migrating a task from Backlog into Today, Week, or
+  Month.
 - Event rows should not normally appear here because events require
   `scheduled_at`.
 
@@ -670,7 +858,7 @@ Notes:
 Status: implemented.
 
 Role: review view for open tasks from previous monthly files that were not
-completed, cancelled, or migrated.
+completed or cancelled.
 
 Entry points:
 
@@ -701,10 +889,10 @@ Target ASCII layout:
 |                                                  | tags: tests                         |
 |--------------------------------------------------+-------------------------------------|
 | 3 Resolution                                                                           |
-| > move to today                                                                        |
-|   move to week                                                                         |
-|   move to month                                                                        |
-|   move to backlog                                                                      |
+| > migrate to today                                                                     |
+|   migrate to week                                                                      |
+|   migrate to month                                                                     |
+|   migrate to backlog                                                                   |
 |   mark done                                                                            |
 |   cancel                                                                               |
 +-----------------------------------------------------------------------------------------+
@@ -715,8 +903,8 @@ Target ASCII layout:
 Notes:
 
 - Forgotten is a derived review list, not a persisted collection.
-- A task is forgotten when `status: open`, it belongs to a previous monthly
-  file, and the task is not already migrated.
+- A task is forgotten when `status: open` and it belongs to a previous monthly
+  file.
 - Forgotten may read all monthly files so old unresolved tasks remain visible
   without being automatically moved during month rollover.
 - Notes do not appear here because Forgotten is task-first for V1.
@@ -752,7 +940,7 @@ Target ASCII layout:
 | > (.) n-0526-1 Capture edge case               | ref: n-0526-1                       |
 |   (.) n-0526-2 OAuth notes                     | type: note                          |
 |   (.) n-0526-3 Terminal.Gui research           | status: open                        |
-|   (.) n-0526-4 Import caveats                  | collection: backlog                 |
+|   (.) n-0526-4 Storage caveats                 | collection: backlog                 |
 |                                                  | scheduled_at: -                     |
 |                                                  | tags: auth, tui                     |
 |--------------------------------------------------+-------------------------------------|
@@ -823,7 +1011,7 @@ Target ASCII layout:
 | 4 Actions                                                                              |
 | > open detail   cancel   delete                                                        |
 +-----------------------------------------------------------------------------------------+
-| Arrows day  [/] month  Enter open  z cancel  d delete  Esc back                         |
+| Arrows day  [/] month  Enter open  z cancel  d delete  Tab focus  ? help  Esc back      |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -861,7 +1049,6 @@ Navigation:
 - `Tab` and `Shift+Tab` move focus between Tags, Preview, and Actions.
 - `c` opens the Create Tag flow.
 - `Enter` opens the selected tag preview.
-- `d` deletes or removes the selected tag according to the final business rule.
 - `Esc` returns to the dashboard.
 - `?` opens contextual help.
 
@@ -873,17 +1060,17 @@ Target ASCII layout:
 | > auth                                6 items | name: auth                           |
 |   cli                                 4 items | usage: 6 items                       |
 |   tui                                 3 items | active tasks: 3                      |
-|   import                              2 items | notes: 2                             |
+|   storage                             2 items | notes: 2                             |
 |   backup                              1 item  | events: 1                            |
 |                                                 | last used: 2026-05-09                |
 |                                                 |                                      |
 |-------------------------------------------------+--------------------------------------|
 | 3 Actions                                                                              |
 | > create tag                                                                           |
-|   rename selected                                                                      |
-|   remove selected from all items                                                       |
+|   preview selected                                                                     |
+|   remove selected from all items: future rule                                          |
 +-----------------------------------------------------------------------------------------+
-| c create  Enter preview  d delete  Tab focus  ? help  Esc back  q quit                 |
+| c create  Enter preview  Tab focus  ? help  Esc back  q quit                           |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -894,8 +1081,9 @@ Notes:
   and optional descriptions. There is no separate `project` field.
 - The dashboard Context panel should show the most relevant active tags based on
   item usage.
-- Deleting a tag needs a clear business rule before implementation: block
-  deletion while referenced, or remove it from all items after confirmation.
+- Removing a tag needs a clear business rule before implementation: block
+  removal while referenced, or remove it from all items after confirmation.
+  Until then, the TUI must not advertise `d delete` for tags.
 
 ## Flow 12 - Create Tag
 
@@ -989,8 +1177,8 @@ Target ASCII layout:
 | ( ) Backlog                                                                               |
 |                                                                                           |
 | Result                                                                                    |
-| original: t-0526-1 -> migrate                                                            |
-| new task:  open in today                                                                  |
+| t-0526-1: today -> today                                                                 |
+| same task, same ref                                                                       |
 |                                                                                           |
 | [ Save ]  [ Cancel ]                                                                      |
 +-------------------------------------------------------------------------------------------+
@@ -1015,8 +1203,8 @@ Backlog destination example:
 | (x) Backlog                                                                               |
 |                                                                                           |
 | Result                                                                                    |
-| original: t-0526-1 -> migrate                                                            |
-| new task:  open in backlog                                                                |
+| t-0526-1: today -> backlog                                                               |
+| same task, same ref                                                                       |
 |                                                                                           |
 | [ Save ]  [ Cancel ]                                                                      |
 +-------------------------------------------------------------------------------------------+
@@ -1031,8 +1219,8 @@ Notes:
   Backlog.
 - Migration must not require or edit a task date.
 - The flow should not expose the full history; that belongs to Item Detail.
-- On confirmation, the original task remains stored with status `migrate`, and
-  the destination is a new `open` task linked by migration fields.
+- On confirmation, the same task remains `open`, keeps the same `id` and
+  `public_ref`, and changes only its `collection` plus `updated_at`.
 - `Enter` must not confirm migration unless the focused control is `Save`.
 
 ## Implementation Gap Notes

@@ -12,6 +12,7 @@ public static class ItemListScreen
         IReadOnlyList<string> actions,
         Action<ItemDisplayRow?> onSelectedItemChanged,
         Action<ItemDisplayRow?> onOpenDetail,
+        Action<ItemDisplayRow?> onOpenEdit,
         Action<ItemDisplayRow?> onOpenMigrate,
         Action<ItemDisplayRow?> onMarkDone,
         Action<ItemDisplayRow?> onCancelItem,
@@ -133,6 +134,9 @@ public static class ItemListScreen
                     return true;
                 case Key.Enter when includeEnter:
                     onOpenDetail(selectedItem);
+                    return true;
+                case Key e when e == (Key)'e':
+                    onOpenEdit(selectedItem);
                     return true;
                 case Key y when y == (Key)'>':
                     onOpenMigrate(selectedItem);

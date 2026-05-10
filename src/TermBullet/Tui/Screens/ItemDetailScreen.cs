@@ -10,10 +10,11 @@ public static class ItemDetailScreen
         ItemDetailViewModel viewModel,
         TuiNavigationState navigation,
         Action onBack,
+        Action onEdit,
         Action onMigrate,
         Action onQuit)
     {
-        var topBar = new Label($" TermBullet \u2500 Item {viewModel.PublicRef}")
+        var topBar = new Label($" TermBullet - Item {viewModel.PublicRef}")
         {
             X = 0, Y = 0, Width = Dim.Fill()
         };
@@ -87,6 +88,9 @@ public static class ItemDetailScreen
                     return true;
                 case Key.q:
                     onQuit();
+                    return true;
+                case Key e when e == (Key)'e':
+                    onEdit();
                     return true;
                 case Key x when x == (Key)'>':
                     onMigrate();

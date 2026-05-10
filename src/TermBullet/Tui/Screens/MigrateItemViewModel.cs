@@ -27,8 +27,8 @@ public sealed class MigrateItemViewModel
         ];
         ResultLines =
         [
-            $"original: {item.PublicRef} -> migrate",
-            $"new task: open in {FormatCollection(destinationCollection)}"
+            $"{item.PublicRef}: {item.Collection} -> {FormatCollection(destinationCollection)}",
+            "same task, same ref"
         ];
     }
 

@@ -81,17 +81,16 @@ Official task statuses in V1:
 - `open`
 - `done`
 - `cancelled`
-- `migrate`
 
-`migrate` means the task was intentionally moved out of its previous planned
-placement. The destination remains executable as an open task.
+`migrate` is an action, not a status. It moves the same open task to another
+collection while preserving the internal ID and public ref.
 
 Tasks are planned by collection, not by date. Task creation chooses `today`,
 `week`, `month`, or `backlog`. Dates belong only to events through
 `scheduled_at`.
 
 Forgotten is the review area for open tasks from previous monthly files that
-were not done, cancelled, or marked migrate. It is derived from item state and
+were not done or cancelled. It is derived from item state and
 public-ref/monthly-file history, not a persisted item collection.
 
 Operational views stay focused on the active period: Today, Week, Month, and Calendar
@@ -106,9 +105,9 @@ Manual migration must always declare the destination:
 - `month`;
 - `backlog`.
 
-When a task is moved by migration, the original item stays in the JSON with status
-`migrate`. A new open task is created at the destination and records which item
-it came from.
+When a task is migrated, the same item changes `collection`, remains `open`,
+and keeps the same internal ID and public ref. History records only the
+collection change.
 
 ## Public Refs
 
@@ -138,9 +137,7 @@ Rules:
 
 - sequence is independent by type and month/year;
 - public refs are persisted and never reused inside the same period;
-- migration source items preserve their public ref;
-- new migration destination items get their own public ref and record the source
-  ref;
+- migrated items preserve their public ref;
 - internal ID remains the real identity for persistence and future sync.
 
 ## Interfaces

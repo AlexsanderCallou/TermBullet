@@ -42,7 +42,6 @@ public sealed class ItemTests
         Assert.Null(item.ScheduledAt);
         Assert.Null(item.CompletedAt);
         Assert.Null(item.CancelledAt);
-        Assert.Null(item.MigratedAt);
     }
 
     [Theory]
@@ -143,7 +142,6 @@ public sealed class ItemTests
         Assert.Equal(ChangedAt, item.UpdatedAt);
         Assert.Equal(ChangedAt, item.CompletedAt);
         Assert.Null(item.CancelledAt);
-        Assert.Null(item.MigratedAt);
     }
 
     [Fact]
@@ -158,55 +156,11 @@ public sealed class ItemTests
         Assert.Equal(ChangedAt, item.UpdatedAt);
         Assert.Equal(ChangedAt, item.CancelledAt);
         Assert.Null(item.CompletedAt);
-        Assert.Null(item.MigratedAt);
-    }
-
-    [Fact]
-    public void Mark_migrate_sets_migration_timestamp_and_increments_version()
-    {
-        var item = CreateTask();
-
-        item.MarkMigrate(ChangedAt);
-
-        Assert.Equal(ItemStatus.Migrate, item.Status);
-        Assert.Equal(2, item.Version);
-        Assert.Equal(ChangedAt, item.UpdatedAt);
-        Assert.Equal(ChangedAt, item.MigratedAt);
-        Assert.Null(item.CompletedAt);
-        Assert.Null(item.CancelledAt);
-    }
-
-    [Fact]
-    public void Restore_accepts_migration_metadata()
-    {
-        var migration = new MigrationInfo("2026-04", "2026-05", ChangedAt, "automatic_month_rollover");
-
-        var item = Item.Restore(
-            ItemId,
-            PublicRef.Parse("t-0426-1"),
-            ItemType.Task,
-            "Fix authentication flow",
-            null,
-            ItemStatus.Open,
-            ItemCollection.Today,
-            Priority.None,
-            ["auth"],
-            2,
-            CreatedAt,
-            ChangedAt,
-            migratedAt: ChangedAt,
-            migration: migration);
-
-        Assert.NotNull(item.Migration);
-        Assert.Equal("2026-04", item.Migration!.FromPeriod);
-        Assert.Equal("2026-05", item.Migration.ToPeriod);
-        Assert.Equal("automatic_month_rollover", item.Migration.Reason);
     }
 
     [Theory]
     [InlineData(ItemStatus.Done)]
     [InlineData(ItemStatus.Cancelled)]
-    [InlineData(ItemStatus.Migrate)]
     public void Terminal_statuses_reject_further_status_changes(ItemStatus terminalStatus)
     {
         var item = CreateTask();
@@ -271,6 +225,23 @@ public sealed class ItemTests
     }
 
     [Fact]
+    public void Move_to_collection_rejects_non_task_items()
+    {
+        var item = Item.Create(
+            ItemId,
+            PublicRef.Parse("n-0426-1"),
+            ItemType.Note,
+            "Investigate stacktrace",
+            ItemCollection.Backlog,
+            CreatedAt);
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => item.MoveTo(ItemCollection.Today, ChangedAt));
+
+        Assert.Contains("Only tasks can be migrated", exception.Message);
+    }
+
+    [Fact]
     public void Move_to_collection_rejects_invalid_collection()
     {
         var item = CreateTask();
@@ -307,9 +278,6 @@ public sealed class ItemTests
                 break;
             case ItemStatus.Cancelled:
                 item.Cancel(ChangedAt);
-                break;
-            case ItemStatus.Migrate:
-                item.MarkMigrate(ChangedAt);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(status), status, "Status is not terminal.");

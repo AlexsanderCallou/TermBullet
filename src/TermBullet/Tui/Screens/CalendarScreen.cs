@@ -10,6 +10,7 @@ public static class CalendarScreen
         IReadOnlyCollection<ItemDisplayRow> rows,
         Action<ItemDisplayRow?> onSelectedItemChanged,
         Action<ItemDisplayRow?> onOpenDetail,
+        Action<ItemDisplayRow?> onOpenEdit,
         Action<ItemDisplayRow?> onOpenMigrate,
         Action<ItemDisplayRow?> onMarkDone,
         Action<ItemDisplayRow?> onCancelItem,
@@ -30,7 +31,10 @@ public static class CalendarScreen
             Y = 0,
             Width = Dim.Fill()
         };
-        var footer = new Label(" Arrows day  [/] month  Enter open  > migrate  x done  z cancel  d delete  Tab/1-4 focus  Esc back  q quit")
+        _ = onOpenMigrate;
+        _ = onMarkDone;
+
+        var footer = new Label(" Arrows day  [/] month  Enter open  e edit  z cancel  d delete  Tab/1-4 focus  ? help  Esc back  q quit")
         {
             X = 0,
             Y = Pos.AnchorEnd(1),
@@ -93,7 +97,7 @@ public static class CalendarScreen
             Height = 7
         };
         var actionsList = new ListView(TuiScreenUtilities.SanitizeListItems(
-            ["> open detail", "  migrate task", "  mark done", "  cancel", "  delete"]))
+            ["> open detail", "  cancel", "  delete"]))
         {
             X = 0,
             Y = 0,
@@ -185,11 +189,8 @@ public static class CalendarScreen
                 case Key.Enter when includeEnter:
                     onOpenDetail(selectedItem);
                     return true;
-                case Key migrate when migrate == (Key)'>':
-                    onOpenMigrate(selectedItem);
-                    return true;
-                case Key done when done == (Key)'x':
-                    onMarkDone(selectedItem);
+                case Key edit when edit == (Key)'e':
+                    onOpenEdit(selectedItem);
                     return true;
                 case Key cancel when cancel == (Key)'z':
                     onCancelItem(selectedItem);

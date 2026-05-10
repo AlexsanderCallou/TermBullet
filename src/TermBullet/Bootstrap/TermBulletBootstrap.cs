@@ -67,6 +67,7 @@ public static class TermBulletBootstrap
             new ListTagsUseCase(tagCatalogRepository),
             new CreateTagUseCase(tagCatalogRepository, clock),
             new CreateItemUseCase(itemRepository, clock, new GuidIdGenerator()),
+            new EditItemUseCase(itemRepository, clock),
             new MarkDoneItemUseCase(itemRepository, clock),
             new CancelItemUseCase(itemRepository, clock),
             new MigrateItemUseCase(itemRepository, clock),

@@ -92,7 +92,7 @@ Internal ID:
 - generated once;
 - immutable;
 - real identity for persistence and future sync;
-- preserved on the source item after migration.
+- preserved when the item is migrated between collections.
 
 Public ref:
 
@@ -111,8 +111,7 @@ Rules:
 - sequence is independent by type and month/year;
 - sequence is controlled inside the monthly file;
 - public ref is persisted and not reused;
-- migration source items preserve the original public ref;
-- migration destination items receive a new public ref and record the source ref.
+- migrated items preserve the original public ref.
 
 ## Item Fields
 
@@ -139,22 +138,14 @@ Optional fields:
 - `scheduled_at`
 - `completed_at`
 - `cancelled_at`
-- `migrated_at`
-- `migration`
-- `migrated_from_id`
-- `migrated_from_ref`
-- `migrated_to_id`
-- `migrated_to_ref`
 
 Status values:
 
 - `open`
 - `done`
 - `cancelled`
-- `migrate`
 
-`migrate` means the task was intentionally moved out of its previous planned
-placement. The destination remains executable as an `open` task.
+`migrate` is an action, not a status. It changes an open task's `collection`.
 
 Priority is task metadata. Notes and events store `none` and do not expose
 priority in creation flows.
@@ -222,9 +213,7 @@ Tag catalog shape:
       "created_at": "2026-04-22T08:14:00Z",
       "updated_at": "2026-04-22T08:14:00Z",
       "completed_at": null,
-      "cancelled_at": null,
-      "migrated_at": null,
-      "migration": null
+      "cancelled_at": null
     }
   ],
   "history": []
@@ -299,26 +288,18 @@ the destination collection: `today`, `week`, `month`, or `backlog`.
 
 Rules:
 
-- migrating marks the source task as `migrate` and creates a new `open` task in
-  the destination collection;
-- the destination task receives a new internal ID and public ref;
-- the destination task records `migrated_from_id` and `migrated_from_ref`;
-- the source task records `migrated_to_id` and `migrated_to_ref`;
-- migration history records the relationship between source and destination;
-- migration details are represented in `migration` and/or history.
+- migrating changes the same task's `collection`;
+- the task keeps the same internal ID and public ref;
+- the task remains `open`;
+- migration history records the collection change only.
 
-Recommended migration object:
+Recommended migration history data:
 
 ```json
 {
+  "public_ref": "t-0426-1",
   "from_collection": "today",
-  "from_id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
-  "from_ref": "t-0426-1",
-  "to_collection": "week",
-  "to_id": "a0f13256-499f-47bc-a623-6fa8f4df36f8",
-  "to_ref": "t-0426-4",
-  "migrated_at": "2026-04-22T20:15:00Z",
-  "reason": "manual_collection"
+  "to_collection": "week"
 }
 ```
 

@@ -21,9 +21,7 @@ public sealed class Item
         DateTimeOffset updatedAt,
         DateTimeOffset? scheduledAt,
         DateTimeOffset? completedAt,
-        DateTimeOffset? cancelledAt,
-        DateTimeOffset? migratedAt,
-        MigrationInfo? migration)
+        DateTimeOffset? cancelledAt)
     {
         Id = id;
         PublicRef = publicRef;
@@ -40,8 +38,6 @@ public sealed class Item
         ScheduledAt = scheduledAt;
         CompletedAt = completedAt;
         CancelledAt = cancelledAt;
-        MigratedAt = migratedAt;
-        Migration = migration;
     }
 
     public Guid Id { get; }
@@ -73,10 +69,6 @@ public sealed class Item
     public DateTimeOffset? CompletedAt { get; private set; }
 
     public DateTimeOffset? CancelledAt { get; private set; }
-
-    public DateTimeOffset? MigratedAt { get; private set; }
-
-    public MigrationInfo? Migration { get; private set; }
 
     public static Item Create(
         Guid id,
@@ -124,9 +116,7 @@ public sealed class Item
             updatedAt: createdAt,
             scheduledAt,
             completedAt: null,
-            cancelledAt: null,
-            migratedAt: null,
-            migration: null);
+            cancelledAt: null);
     }
 
     public static Item Restore(
@@ -144,9 +134,7 @@ public sealed class Item
         DateTimeOffset updatedAt,
         DateTimeOffset? scheduledAt = null,
         DateTimeOffset? completedAt = null,
-        DateTimeOffset? cancelledAt = null,
-        DateTimeOffset? migratedAt = null,
-        MigrationInfo? migration = null)
+        DateTimeOffset? cancelledAt = null)
     {
         if (id == Guid.Empty)
         {
@@ -189,9 +177,7 @@ public sealed class Item
             updatedAt,
             scheduledAt,
             completedAt,
-            cancelledAt,
-            migratedAt,
-            migration);
+            cancelledAt);
     }
 
     public void MarkDone(DateTimeOffset changedAt)
@@ -207,22 +193,6 @@ public sealed class Item
         EnsureActive();
         Status = ItemStatus.Cancelled;
         CancelledAt = changedAt;
-        Touch(changedAt);
-    }
-
-    public void MarkMigrate(DateTimeOffset changedAt)
-    {
-        EnsureActive();
-        Status = ItemStatus.Migrate;
-        MigratedAt = changedAt;
-        Touch(changedAt);
-    }
-
-    public void ApplyMigrationInfo(MigrationInfo migration, DateTimeOffset changedAt)
-    {
-        ArgumentNullException.ThrowIfNull(migration);
-        Migration = migration;
-        MigratedAt = migration.MigratedAt;
         Touch(changedAt);
     }
 
@@ -242,16 +212,64 @@ public sealed class Item
     public void MoveTo(ItemCollection collection, DateTimeOffset changedAt)
     {
         EnsureActive();
+        if (Type != ItemType.Task)
+        {
+            throw new InvalidOperationException("Only tasks can be migrated.");
+        }
+
         EnsureDefined(collection, nameof(collection));
         Collection = collection;
         Touch(changedAt);
     }
 
-    public void Edit(string content, DateTimeOffset changedAt, string? description = null)
+    public void Edit(
+        string content,
+        DateTimeOffset changedAt,
+        string? description = null,
+        ItemCollection? collection = null,
+        Priority? priority = null,
+        IEnumerable<string>? tags = null,
+        DateTimeOffset? scheduledAt = null)
     {
         EnsureActive();
         Content = NormalizeRequiredText(content, nameof(content));
         Description = NormalizeOptionalText(description);
+        if (Type == ItemType.Task)
+        {
+            if (collection is not null)
+            {
+                EnsureDefined(collection.Value, nameof(collection));
+                Collection = collection.Value;
+            }
+
+            if (priority is not null)
+            {
+                EnsureDefined(priority.Value, nameof(priority));
+                Priority = priority.Value;
+            }
+
+            ScheduledAt = null;
+        }
+        else if (Type == ItemType.Event)
+        {
+            Priority = Priority.None;
+            if (scheduledAt is not null)
+            {
+                ScheduledAt = scheduledAt;
+            }
+        }
+        else
+        {
+            Priority = Priority.None;
+            ScheduledAt = null;
+        }
+
+        if (tags is not null)
+        {
+            _tags.Clear();
+            _tags.AddRange(NormalizeTags(tags));
+        }
+
         Touch(changedAt);
     }
 
@@ -337,7 +355,7 @@ public sealed class Item
 
     private void EnsureActive()
     {
-        if (Status is ItemStatus.Done or ItemStatus.Cancelled or ItemStatus.Migrate)
+        if (Status is ItemStatus.Done or ItemStatus.Cancelled)
         {
             throw new InvalidOperationException($"Item '{PublicRef}' is in a terminal status and cannot be changed.");
         }

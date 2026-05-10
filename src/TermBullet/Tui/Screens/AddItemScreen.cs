@@ -89,6 +89,7 @@ public static class AddItemScreen
             X = 1,
             Y = 1,
             Width = Dim.Fill(2),
+            Height = 4,
             Visible = isTask
         };
         var scheduledLabel = new Label("Scheduled for:")
@@ -126,6 +127,7 @@ public static class AddItemScreen
             X = 1,
             Y = 1,
             Width = Dim.Fill(2),
+            Height = 4,
             Visible = isTask
         };
         priorityPanel.Add(priorityGroup);
@@ -134,7 +136,7 @@ public static class AddItemScreen
         {
             X = 0,
             Y = isTask ? Pos.Bottom(priorityPanel) : isEvent ? Pos.Bottom(planningPanel) : Pos.Bottom(contentPanel),
-            Width = Dim.Percent(58),
+            Width = Dim.Fill(),
             Height = 9
         };
         var descriptionLabel = new Label("Description:")
@@ -161,15 +163,6 @@ public static class AddItemScreen
             Width = Dim.Fill(2)
         };
         detailsPanel.Add(descriptionLabel, descriptionField, tagsLabel, tagsField);
-
-        var examplesPanel = new FrameView("Examples")
-        {
-            X = Pos.Right(detailsPanel),
-            Y = detailsPanel.Y,
-            Width = Dim.Fill(),
-            Height = 9
-        };
-        AddExampleLines(examplesPanel, viewModel.Examples);
 
         var statusLabel = new Label(viewModel.Error is null ? "Status: ready to add" : $"Status: {viewModel.Error}")
         {
@@ -199,7 +192,7 @@ public static class AddItemScreen
             root.Add(priorityPanel);
         }
 
-        root.Add(detailsPanel, examplesPanel, statusLabel, saveButton, cancelButton, footer);
+        root.Add(detailsPanel, statusLabel, saveButton, cancelButton, footer);
 
         void SetTiming(AddItemTimingChoice timing)
         {
@@ -476,23 +469,4 @@ public static class AddItemScreen
         UpdateStatus();
     }
 
-    private static void AddExampleLines(FrameView panel, IReadOnlyList<string> examples)
-    {
-        var header = new Label("Examples:")
-        {
-            X = 1,
-            Y = 1
-        };
-        panel.Add(header);
-
-        for (var index = 0; index < examples.Count; index++)
-        {
-            panel.Add(new Label($"  {examples[index]}")
-            {
-                X = 1,
-                Y = index + 2,
-                Width = Dim.Fill(2)
-            });
-        }
-    }
 }

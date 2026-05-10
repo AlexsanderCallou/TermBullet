@@ -127,8 +127,8 @@ termbullet migrate t-0426-1 --collection backlog
 - `--collection month`
 - `--collection backlog`
 
-Open tasks from previous monthly files that were not done, cancelled, or marked
-migrate are shown in the TUI Forgotten review for manual action.
+Open tasks from previous monthly files that were not done or cancelled are
+shown in the TUI Forgotten review for manual action.
 
 ### Movement
 

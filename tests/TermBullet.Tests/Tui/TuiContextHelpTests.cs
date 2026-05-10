@@ -64,7 +64,7 @@ public sealed class TuiContextHelpTests
     }
 
     [Theory]
-    [InlineData(TuiScreen.Week, "weekday")]
+    [InlineData(TuiScreen.Week, "collection")]
     [InlineData(TuiScreen.Backlog, "Backlog")]
     [InlineData(TuiScreen.Forgotten, "forgotten")]
     [InlineData(TuiScreen.Notes, "Notes")]

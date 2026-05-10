@@ -36,6 +36,50 @@ public sealed class MutateItemUseCaseTests
     }
 
     [Fact]
+    public async Task Edit_updates_task_collection_priority_and_tags()
+    {
+        var repository = new FakeItemRepository(CreateTask(["auth"]));
+        var useCase = new EditItemUseCase(repository, new FixedClock(ChangedAt));
+
+        var result = await useCase.ExecuteAsync(new EditItemRequest
+        {
+            PublicRef = "t-0426-1",
+            Content = "Fix auth refresh flow",
+            Collection = ItemCollection.Week,
+            Priority = Priority.High,
+            Tags = ["auth", "cli"]
+        });
+
+        Assert.Equal(ItemCollection.Week, result.Collection);
+        Assert.Equal(Priority.High, result.Priority);
+        Assert.Equal(["auth", "cli"], result.Tags);
+        Assert.Null(result.ScheduledAt);
+        Assert.Equal(2, result.Version);
+    }
+
+    [Fact]
+    public async Task Edit_updates_event_scheduled_at_and_keeps_priority_none()
+    {
+        var repository = new FakeItemRepository(CreateEvent());
+        var useCase = new EditItemUseCase(repository, new FixedClock(ChangedAt));
+        var scheduledAt = new DateTimeOffset(2026, 5, 12, 0, 0, 0, TimeSpan.Zero);
+
+        var result = await useCase.ExecuteAsync(new EditItemRequest
+        {
+            PublicRef = "e-0426-1",
+            Content = "Dentist appointment",
+            Priority = Priority.High,
+            ScheduledAt = scheduledAt,
+            Tags = ["health"]
+        });
+
+        Assert.Equal(ItemType.Event, result.Type);
+        Assert.Equal(scheduledAt, result.ScheduledAt);
+        Assert.Equal(Priority.None, result.Priority);
+        Assert.Equal(["health"], result.Tags);
+    }
+
+    [Fact]
     public async Task Mark_done_sets_done_status_and_persists_item()
     {
         var repository = new FakeItemRepository(CreateTask());
@@ -287,6 +331,18 @@ public sealed class MutateItemUseCaseTests
             "Investigate stacktrace",
             ItemCollection.Backlog,
             CreatedAt);
+    }
+
+    private static Item CreateEvent()
+    {
+        return Item.Create(
+            Guid.Parse("2a773f84-b430-49c0-bad1-56772e008bd3"),
+            PublicRef.Parse("e-0426-1"),
+            ItemType.Event,
+            "Dentist",
+            ItemCollection.Week,
+            CreatedAt,
+            scheduledAt: new DateTimeOffset(2026, 4, 24, 0, 0, 0, TimeSpan.Zero));
     }
 
     private sealed class FakeItemRepository(Item? item) : IItemRepository

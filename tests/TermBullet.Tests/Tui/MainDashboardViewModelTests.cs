@@ -138,7 +138,6 @@ public sealed class MainDashboardViewModelTests
     [InlineData(ItemType.Task, ItemStatus.Open, "[ ]")]
     [InlineData(ItemType.Task, ItemStatus.Done, "[x]")]
     [InlineData(ItemType.Task, ItemStatus.Cancelled, "[-]")]
-    [InlineData(ItemType.Task, ItemStatus.Migrate, "[>]")]
     [InlineData(ItemType.Note, ItemStatus.Open, "(.)")]
     [InlineData(ItemType.Event, ItemStatus.Open, "(o)")]
     public void Symbol_reflects_type_and_status(ItemType type, ItemStatus status, string expectedSymbol)

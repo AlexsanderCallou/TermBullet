@@ -39,7 +39,7 @@ public static class TuiContextHelp
                 "Enter: activate focused control",
                 "Save: confirm migration",
                 "Cancel / Esc: cancel migration",
-                "Destination: choose Date or Backlog"
+                "Destination: choose Today, Week, Month, or Backlog"
             ],
             TuiScreen.Planning =>
             [
@@ -50,7 +50,8 @@ public static class TuiContextHelp
             ],
             TuiScreen.Week =>
             [
-                "Tab / Shift+Tab or 1-9: move between weekday panels and preview",
+                "Tab / Shift+Tab or 1-9: move between Week, Preview, and Actions",
+                "Week is a task collection, not a dated schedule",
                 "Enter: open selected item detail",
                 ">: migrate selected task",
                 "x / z / d: mark done, cancel, or delete selected item",
@@ -60,7 +61,7 @@ public static class TuiContextHelp
             [
                 "Tab / Shift+Tab or 1-9: move between Backlog, Preview, and Actions",
                 "Enter: open selected item detail",
-                ">: plan selected task",
+                ">: migrate selected task",
                 "x / z / d: mark done, cancel, or delete selected item",
                 "Esc: return to previous screen"
             ],
@@ -85,7 +86,7 @@ public static class TuiContextHelp
                 "Arrows: move selected day",
                 "[ / ]: move month",
                 "Enter: open selected dated item detail",
-                "x / z / d: mark done, cancel, or delete selected item",
+                "z / d: cancel or delete selected event",
                 "Esc: return to previous screen"
             ],
             TuiScreen.Tags =>

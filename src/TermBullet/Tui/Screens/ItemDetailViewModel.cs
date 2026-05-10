@@ -63,11 +63,8 @@ public sealed class ItemDetailViewModel
             ],
             BuildContentLines(item),
             [
-                "migrated_from_ref: -",
-                "migrated_from_id: -",
-                "migrated_to_ref: -",
-                "migrated_to_id: -",
-                "migrated_at: -"
+                "migrate changes this task's collection in place",
+                "id and public ref stay the same"
             ],
             [
                 "history not loaded by the current Application contracts",

@@ -61,7 +61,7 @@ public sealed class MainDashboardActionHandlerTests
     }
 
     [Fact]
-    public async Task HandleMigrateAsync_marks_item_as_migrate()
+    public async Task HandleMigrateAsync_moves_item_to_today()
     {
         var repo = new FakeItemRepository();
         repo.Add(MakeItem("t-0426-1"));
@@ -70,7 +70,9 @@ public sealed class MainDashboardActionHandlerTests
         var result = await handler.HandleMigrateAsync("t-0426-1");
 
         Assert.True(result.Success);
-        Assert.Equal(ItemStatus.Migrate, repo.GetByRef("t-0426-1")!.Status);
+        var item = repo.GetByRef("t-0426-1")!;
+        Assert.Equal(ItemStatus.Open, item.Status);
+        Assert.Equal(ItemCollection.Today, item.Collection);
     }
 
     private static MainDashboardActionHandler CreateHandler(FakeItemRepository repo)

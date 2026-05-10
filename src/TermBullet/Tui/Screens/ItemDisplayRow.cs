@@ -49,7 +49,6 @@ public sealed class ItemDisplayRow
                 ItemStatus.Open => "[ ]",
                 ItemStatus.Done => "[x]",
                 ItemStatus.Cancelled => "[-]",
-                ItemStatus.Migrate => "[>]",
                 _ => "[ ]"
             }
         };

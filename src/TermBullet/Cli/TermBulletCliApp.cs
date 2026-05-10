@@ -1147,7 +1147,6 @@ public sealed class TermBulletCliApp(
             "week" => ItemCollection.Week,
             "month" => ItemCollection.Month,
             "backlog" => ItemCollection.Backlog,
-            "monthly" => ItemCollection.Month,
             _ => throw new ArgumentException($"Unsupported collection: {value}.")
         };
     }
@@ -1164,7 +1163,6 @@ public sealed class TermBulletCliApp(
             "open" => ItemStatus.Open,
             "done" => ItemStatus.Done,
             "cancelled" => ItemStatus.Cancelled,
-            "migrate" => ItemStatus.Migrate,
             _ => throw new ArgumentException($"Unsupported status: {value}.")
         };
     }

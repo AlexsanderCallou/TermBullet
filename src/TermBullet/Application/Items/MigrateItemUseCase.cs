@@ -1,15 +1,12 @@
 using TermBullet.Services.Clock;
-using TermBullet.Services.Ids;
 using TermBullet.Repositories.Interfaces;
 using TermBullet.Domain.Items;
-using TermBullet.Domain.Refs;
 
 namespace TermBullet.Application.Items;
 
 public sealed class MigrateItemUseCase(
     IItemRepository itemRepository,
-    IClock clock,
-    IIdGenerator? idGenerator = null)
+    IClock clock)
 {
     public async Task<ItemResult> ExecuteAsync(
         string publicRef,
@@ -42,37 +39,8 @@ public sealed class MigrateItemUseCase(
 
         var now = clock.UtcNow;
         var destinationCollection = ResolveDestinationCollection(request);
-        var currentSequence = await itemRepository.GetCurrentPublicRefSequenceAsync(
-            ItemType.Task,
-            now.Month,
-            now.Year,
-            cancellationToken);
-        var destinationRef = PublicRefGenerator.Next(
-            ItemType.Task,
-            now.Month,
-            now.Year,
-            currentSequence);
-
-        if (await itemRepository.PublicRefExistsAsync(destinationRef.Value, cancellationToken))
-        {
-            throw new DuplicatePublicRefException(destinationRef.Value);
-        }
-
-        item.MarkMigrate(now);
-
-        var migratedItem = Item.Create(
-            idGenerator?.NewId() ?? Guid.NewGuid(),
-            destinationRef,
-            ItemType.Task,
-            item.Content,
-            destinationCollection,
-            now,
-            item.Description,
-            item.Priority,
-            item.Tags);
-
+        item.MoveTo(destinationCollection, now);
         await itemRepository.UpdateAsync(item, cancellationToken);
-        await itemRepository.AddAsync(migratedItem, cancellationToken);
 
         return ItemResult.From(item);
     }

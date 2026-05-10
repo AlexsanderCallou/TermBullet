@@ -98,7 +98,7 @@ public sealed class TermBulletMutationCommandsCliTests
     }
 
     [Fact]
-    public async Task InvokeAsync_runs_migrate_to_week_and_creates_destination_task()
+    public async Task InvokeAsync_runs_migrate_to_week_and_moves_same_task()
     {
         var repository = CreateSeededRepository();
         var app = CreateApp(repository);
@@ -106,16 +106,14 @@ public sealed class TermBulletMutationCommandsCliTests
         var exitCode = await app.App.InvokeAsync(["migrate", "t-0426-1", "--collection", "week"]);
 
         Assert.Equal(0, exitCode);
-        Assert.Equal(2, repository.Items.Count);
-        var sourceItem = repository.Items.Single(item => item.PublicRef.Value == "t-0426-1");
-        var migratedItem = repository.Items.Single(item => item.PublicRef.Value == "t-0426-2");
-        Assert.Equal(ItemStatus.Migrate, sourceItem.Status);
-        Assert.Equal(ItemStatus.Open, migratedItem.Status);
-        Assert.Equal(ItemCollection.Week, migratedItem.Collection);
+        var item = Assert.Single(repository.Items);
+        Assert.Equal("t-0426-1", item.PublicRef.Value);
+        Assert.Equal(ItemStatus.Open, item.Status);
+        Assert.Equal(ItemCollection.Week, item.Collection);
     }
 
     [Fact]
-    public async Task InvokeAsync_runs_migrate_to_backlog_and_creates_destination_task()
+    public async Task InvokeAsync_runs_migrate_to_backlog_and_moves_same_task()
     {
         var repository = CreateSeededRepository();
         var app = CreateApp(repository);
@@ -123,10 +121,10 @@ public sealed class TermBulletMutationCommandsCliTests
         var exitCode = await app.App.InvokeAsync(["migrate", "t-0426-1", "--collection", "backlog"]);
 
         Assert.Equal(0, exitCode);
-        var sourceItem = repository.Items.Single(item => item.PublicRef.Value == "t-0426-1");
-        var migratedItem = repository.Items.Single(item => item.PublicRef.Value == "t-0426-2");
-        Assert.Equal(ItemStatus.Migrate, sourceItem.Status);
-        Assert.Equal(ItemCollection.Backlog, migratedItem.Collection);
+        var item = Assert.Single(repository.Items);
+        Assert.Equal("t-0426-1", item.PublicRef.Value);
+        Assert.Equal(ItemStatus.Open, item.Status);
+        Assert.Equal(ItemCollection.Backlog, item.Collection);
     }
 
     [Fact]

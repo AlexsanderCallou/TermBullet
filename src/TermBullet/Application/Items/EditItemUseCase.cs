@@ -18,7 +18,14 @@ public sealed class EditItemUseCase(
             request.PublicRef,
             cancellationToken);
 
-        item.Edit(request.Content, clock.UtcNow, request.Description);
+        item.Edit(
+            request.Content,
+            clock.UtcNow,
+            request.Description,
+            request.Collection,
+            request.Priority,
+            request.Tags,
+            request.ScheduledAt);
 
         await itemRepository.UpdateAsync(item, cancellationToken);
 

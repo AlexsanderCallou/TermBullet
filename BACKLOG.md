@@ -22,7 +22,7 @@ Complete:
 - data path use case;
 - CLI command flows for item lifecycle, collections, search, path, and history
   clear;
-- migration metadata persistence;
+- simplified in-place migration between collections;
 - repository/schema conformance for optional fields;
 - TUI MVP with Main Dashboard, Search, Add Item, Notes, Calendar, Tags,
   contextual help, focus updates, search state, add flow, and dashboard
@@ -33,8 +33,7 @@ Complete:
 - TUI Week, Backlog, and Forgotten review views;
 - task, note, and event specific Add Item flows;
 - quick task capture for today's tasks;
-- official task status model aligned to `open`, `done`, `cancelled`, and
-  `migrate`;
+- official task status model aligned to `open`, `done`, and `cancelled`;
 - manual TUI smoke validation;
 - baseline documentation.
 
@@ -68,7 +67,7 @@ Milestone responsibilities:
 - **2 Application:** item lifecycle, collections, search, and data path use
   cases.
 - **3 Repositories:** monthly JSON files, safe writes, backup/recovery, local
-  index, data path reporting, migration metadata.
+  index, data path reporting, and in-place migration history.
 - **4 CLI:** official command tree from [CLI.md](CLI.md).
 - **5 Data/path:** path and history clear.
 - **6 TUI MVP:** Main Dashboard, Search, Add Item, Item Detail, Migrate Item,
@@ -128,11 +127,12 @@ Already done for Milestone 7:
 - [x] Ensure README and docs reflect actual behavior
 - [x] Add initial TUI Item Detail screen
 - [x] Add initial TUI Migrate Item flow
-- [x] Replace old task status model with `open`, `done`, `cancelled`, and
-      `migrate`
+- [x] Replace old task status model with `open`, `done`, and `cancelled`
 - [x] Remove task planning dates and use task collections for Today, Week,
       Month, and Backlog
 - [x] Refactor manual migration to require `--collection <today|week|month|backlog>`
+- [x] Refactor migrate to move the same task between collections without
+      duplicating items
 - [x] Add TUI coverage for the Forgotten review flow
 
 ## Manual TUI Smoke Checklist

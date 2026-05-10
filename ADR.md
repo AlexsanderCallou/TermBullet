@@ -114,10 +114,9 @@ Tasks and Events remain distinct; a task must not automatically become an event.
 Priority is task metadata in V1. Notes and events do not expose priority and
 are stored with `none`.
 
-Official task statuses are `open`, `done`, `cancelled`, and `migrate`.
-`migrate` represents an intentional move out of a previous collection placement.
-The source item remains stored with migrate status, and the destination is a new open
-task that records the source item.
+Official task statuses are `open`, `done`, and `cancelled`.
+`migrate` is an intentional action that moves the same task to another
+collection. It is not a status. The task keeps its internal ID and public ref.
 
 Tasks are planned by collection. Quick Task creates a task in Today, and normal
 task creation chooses Today, Week, Month, or Backlog. Dates belong to events,
