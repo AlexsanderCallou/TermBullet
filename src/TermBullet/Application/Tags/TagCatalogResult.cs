@@ -1,4 +1,4 @@
-using TermBullet.Core.Tags;
+using TermBullet.Domain.Tags;
 
 namespace TermBullet.Application.Tags;
 

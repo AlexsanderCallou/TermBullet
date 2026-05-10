@@ -9,7 +9,7 @@ Complete:
 
 - repository scaffold;
 - smoke test setup;
-- Core domain model;
+- Domain model;
 - public refs and generation;
 - Application item lifecycle use cases;
 - monthly JSON path resolver;
@@ -19,7 +19,7 @@ Complete:
 - local JSON index rebuild and automatic update after writes;
 - local data path reporting;
 - delete and clear-history use cases;
-- export/import use cases and infrastructure;
+- export/import use cases and services;
 - data path use case;
 - CLI command flows for item lifecycle, collections, search, path, export,
   import, and history clear;
@@ -55,9 +55,9 @@ and import.
 | Milestone | Status |
 | --- | --- |
 | 0 - Repository Scaffold | Complete |
-| 1 - Core Domain | Complete |
+| 1 - Domain | Complete |
 | 2 - Application Use Cases | Complete |
-| 3 - JSON File Infrastructure | Complete |
+| 3 - JSON Repositories | Complete |
 | 4 - CLI MVP | Complete |
 | 5 - Export, Import, Data Path | Complete |
 | 6 - TUI MVP | Complete |
@@ -66,10 +66,10 @@ and import.
 Milestone responsibilities:
 
 - **0 Scaffold:** solution, projects, smoke test, build/test pipeline.
-- **1 Core:** item model, status/priority/collection rules, public refs.
+- **1 Domain:** item model, status/priority/collection rules, public refs.
 - **2 Application:** item lifecycle, collections, search, data path, export/import
   use cases.
-- **3 Infrastructure:** monthly JSON files, safe writes, backup/recovery, local
+- **3 Repositories:** monthly JSON files, safe writes, backup/recovery, local
   index, data path reporting, migration metadata.
 - **4 CLI:** official command tree from [CLI.md](CLI.md).
 - **5 Portability/path:** export, import, path, history clear.

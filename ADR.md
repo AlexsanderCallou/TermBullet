@@ -51,9 +51,10 @@ Consequences:
 
 Rejected: TUI-only and CLI-only.
 
-## ADR-0003 - Layered Architecture
+## ADR-0003 - Simple Folder Architecture
 
-Use Core, Application, Infrastructure, CLI, TUI, and Bootstrap boundaries.
+Use Domain, Application, Repositories, Services, CLI, TUI, and Bootstrap
+boundaries.
 
 Central rule:
 

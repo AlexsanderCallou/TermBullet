@@ -1,8 +1,8 @@
-using TermBullet.Application.Ports;
+using TermBullet.Repositories.Interfaces;
 
 namespace TermBullet.Application.Configuration;
 
-public sealed class GetConfigurationUseCase(ISettingsStore settingsStore)
+public sealed class GetConfigurationUseCase(ISettingsRepository settingsStore)
 {
     public async Task<string> ExecuteAsync(
         string key,

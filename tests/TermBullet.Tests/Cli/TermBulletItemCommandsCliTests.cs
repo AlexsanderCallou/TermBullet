@@ -1,11 +1,15 @@
+using TermBullet.Services.Clock;
+using TermBullet.Services.Ids;
+using TermBullet.Services.DataTransfer;
+using TermBullet.Services.History;
 using System.Text;
 using TermBullet.Application.Configuration;
 using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
-using TermBullet.Application.Ports;
+using TermBullet.Repositories.Interfaces;
 using TermBullet.Cli;
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Tests.Cli;
 
@@ -173,7 +177,7 @@ public sealed class TermBulletItemCommandsCliTests
         {
             _items.Add(Item.Restore(
                 itemResult.Id,
-                TermBullet.Core.Refs.PublicRef.Parse(itemResult.PublicRef),
+                TermBullet.Domain.Refs.PublicRef.Parse(itemResult.PublicRef),
                 itemResult.Type,
                 itemResult.Content,
                 itemResult.Description,
@@ -234,7 +238,7 @@ public sealed class TermBulletItemCommandsCliTests
             => Task.FromResult(_items.FirstOrDefault(item => string.Equals(item.PublicRef.Value, publicRef, StringComparison.Ordinal)));
     }
 
-    private sealed class FakeSettingsStore : ISettingsStore
+    private sealed class FakeSettingsStore : ISettingsRepository
     {
         public string SettingsPath => "C:\\term\\data\\settings.json";
 

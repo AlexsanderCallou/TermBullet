@@ -1,5 +1,5 @@
-using TermBullet.Application.Ports;
-using TermBullet.Core.Items;
+using TermBullet.Repositories.Interfaces;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Application.Items;
 

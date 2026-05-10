@@ -1,14 +1,15 @@
+using TermBullet.Services.Clock;
 using TermBullet.Application.Configuration;
 using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
-using TermBullet.Application.Ports;
+using TermBullet.Repositories.Interfaces;
 using TermBullet.Application.Startup;
 using TermBullet.Application.Tags;
 using TermBullet.Cli;
-using TermBullet.Infrastructure.Export;
-using TermBullet.Infrastructure.Identity;
-using TermBullet.Infrastructure.Persistence.JsonFiles;
+using TermBullet.Services.DataTransfer;
+using TermBullet.Services.Ids;
+using TermBullet.Repositories.Json;
 using TermBullet.Tui;
 
 namespace TermBullet.Bootstrap;
@@ -77,24 +78,24 @@ public static class TermBulletBootstrap
 
     private static (
         IClock Clock,
-        JsonFileItemRepository ItemRepository,
-        LocalTagCatalogRepository TagCatalogRepository,
+        JsonItemRepository ItemRepository,
+        JsonTagCatalogRepository TagCatalogRepository,
         JsonDataTransferService DataTransferService,
-        LocalHistoryMaintenanceService HistoryMaintenanceService,
-        LocalSettingsStore SettingsStore)
+        JsonHistoryMaintenanceService HistoryMaintenanceService,
+        JsonSettingsRepository SettingsStore)
         CreateSharedServices(string projectRootPath)
     {
-        var fileStore = new SafeJsonFileStore();
+        var fileStore = new JsonFileStore();
         var clock = new SystemClock();
-        var pathResolver = new MonthlyJsonFilePathResolver(projectRootPath);
-        var indexService = new LocalJsonIndexService(projectRootPath, fileStore);
-        var itemRepository = new JsonFileItemRepository(clock, pathResolver, fileStore, indexService);
-        var tagCatalogRepository = new LocalTagCatalogRepository(projectRootPath, fileStore);
+        var pathResolver = new MonthlyJsonPathResolver(projectRootPath);
+        var indexService = new JsonIndexService(projectRootPath, fileStore);
+        var itemRepository = new JsonItemRepository(clock, pathResolver, fileStore, indexService);
+        var tagCatalogRepository = new JsonTagCatalogRepository(projectRootPath, fileStore);
         var dataTransferService = new JsonDataTransferService(
-            projectRootPath, fileStore, new LocalJsonIndexService(projectRootPath, fileStore));
-        var historyMaintenanceService = new LocalHistoryMaintenanceService(
+            projectRootPath, fileStore, new JsonIndexService(projectRootPath, fileStore));
+        var historyMaintenanceService = new JsonHistoryMaintenanceService(
             projectRootPath, pathResolver, fileStore);
-        var settingsStore = new LocalSettingsStore(projectRootPath, fileStore);
+        var settingsStore = new JsonSettingsRepository(projectRootPath, fileStore);
 
         return (clock, itemRepository, tagCatalogRepository, dataTransferService, historyMaintenanceService, settingsStore);
     }

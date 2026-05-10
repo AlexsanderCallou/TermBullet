@@ -162,11 +162,12 @@ dotnet test
 dotnet run --project src/TermBullet -- [command] [arguments] [options]
 ```
 
-TermBullet uses a modular monolith:
+TermBullet uses one production project with clear folders:
 
-- `Core`
+- `Domain`
 - `Application`
-- `Infrastructure`
+- `Repositories`
+- `Services`
 - `Cli`
 - `Tui`
 - `Bootstrap`

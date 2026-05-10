@@ -1,6 +1,7 @@
 using TermBullet.Application.Configuration;
 using TermBullet.Application.Items;
 using TermBullet.Application.Tags;
+using TermBullet.Repositories.Interfaces;
 
 namespace TermBullet.Tui;
 
@@ -32,7 +33,7 @@ public sealed class TuiSnapshotLoader(
             ? await listItemsUseCase.ExecuteAsync(new ListItemsRequest(), cancellationToken)
             : todayItems.Concat(weekItems).Concat(backlogItems).ToArray();
         var allItems = listItemsUseCase is not null
-            && listItemsUseCase.ItemRepository is TermBullet.Application.Ports.IItemArchiveReader archiveReader
+            && listItemsUseCase.ItemRepository is IItemArchiveReader archiveReader
                 ? (await archiveReader.ListAllAsync(cancellationToken)).Select(ItemResult.From).ToArray()
                 : currentItems;
         var tags = listTagsUseCase is not null

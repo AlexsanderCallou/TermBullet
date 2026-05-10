@@ -4,7 +4,7 @@ using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Application.Startup;
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Cli;
 

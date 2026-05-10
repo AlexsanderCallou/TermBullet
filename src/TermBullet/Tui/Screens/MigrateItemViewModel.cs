@@ -90,8 +90,8 @@ public sealed class MigrateItemViewModel
         {
             PublicRef = Item.PublicRef,
             DestinationCollection = DateSelected
-                ? TermBullet.Core.Items.ItemCollection.Week
-                : TermBullet.Core.Items.ItemCollection.Backlog,
+                ? TermBullet.Domain.Items.ItemCollection.Week
+                : TermBullet.Domain.Items.ItemCollection.Backlog,
             PlannedFor = DateSelected ? PlannedFor : null
         };
 }

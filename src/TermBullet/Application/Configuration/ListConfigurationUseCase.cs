@@ -1,8 +1,8 @@
-using TermBullet.Application.Ports;
+using TermBullet.Repositories.Interfaces;
 
 namespace TermBullet.Application.Configuration;
 
-public sealed class ListConfigurationUseCase(ISettingsStore settingsStore)
+public sealed class ListConfigurationUseCase(ISettingsRepository settingsStore)
 {
     public Task<IReadOnlyDictionary<string, string>> ExecuteAsync(
         string profile = "default",

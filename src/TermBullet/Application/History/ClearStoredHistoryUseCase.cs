@@ -1,4 +1,6 @@
-using TermBullet.Application.Ports;
+using TermBullet.Services.Clock;
+using TermBullet.Services.History;
+using TermBullet.Repositories.Interfaces;
 
 namespace TermBullet.Application.History;
 

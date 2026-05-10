@@ -2,7 +2,7 @@ using Terminal.Gui;
 using TermBullet.Application.Configuration;
 using TermBullet.Application.Items;
 using TermBullet.Application.Tags;
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 using TermBullet.Tui.Navigation;
 using TermBullet.Tui.Screens;
 using TGui = Terminal.Gui.Application;

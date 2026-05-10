@@ -1,5 +1,5 @@
 using Terminal.Gui;
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Tui.Screens;
 

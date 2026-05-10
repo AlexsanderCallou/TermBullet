@@ -1,6 +1,6 @@
 using Terminal.Gui;
 using TermBullet.Application.Items;
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Tui.Screens;
 

@@ -1,4 +1,4 @@
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 using TermBullet.Tui.Screens;
 
 namespace TermBullet.Tests.Tui;

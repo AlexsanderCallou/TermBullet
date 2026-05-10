@@ -1,9 +1,9 @@
 using TermBullet.Application.Configuration;
 using TermBullet.Application.Items;
-using TermBullet.Application.Ports;
+using TermBullet.Repositories.Interfaces;
 using TermBullet.Application.Tags;
-using TermBullet.Core.Items;
-using TermBullet.Core.Tags;
+using TermBullet.Domain.Items;
+using TermBullet.Domain.Tags;
 using TermBullet.Tui;
 
 namespace TermBullet.Tests.Tui;
@@ -93,7 +93,7 @@ public sealed class TuiSnapshotLoaderTests
     private static Item MakeItem(string publicRef, ItemCollection collection, string content) =>
         Item.Create(
             Guid.NewGuid(),
-            TermBullet.Core.Refs.PublicRef.Parse(publicRef),
+            TermBullet.Domain.Refs.PublicRef.Parse(publicRef),
             ItemType.Task,
             content,
             collection,
@@ -150,7 +150,7 @@ public sealed class TuiSnapshotLoaderTests
             => Task.FromResult<IReadOnlyCollection<Item>>(_items.Concat(_archiveItems).ToArray());
     }
 
-    private sealed class FakeSettingsStore : ISettingsStore
+    private sealed class FakeSettingsStore : ISettingsRepository
     {
         private readonly Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
 

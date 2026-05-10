@@ -1,4 +1,4 @@
-using TermBullet.Application.Ports;
+using TermBullet.Repositories.Interfaces;
 
 namespace TermBullet.Application.Items;
 

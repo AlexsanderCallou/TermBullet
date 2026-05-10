@@ -1,14 +1,7 @@
 using TermBullet.Application.Items;
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Tui.Screens;
-
-public enum AddItemTimingChoice
-{
-    Today,
-    FutureDate,
-    Backlog
-}
 
 public sealed class AddItemFormDraft
 {
@@ -20,7 +13,7 @@ public sealed class AddItemFormDraft
 
     public string Description { get; set; } = string.Empty;
 
-    public Priority Priority { get; set; } = TermBullet.Core.Items.Priority.None;
+    public Priority Priority { get; set; } = TermBullet.Domain.Items.Priority.None;
 
     public string TagsText { get; set; } = string.Empty;
 
@@ -51,7 +44,7 @@ public sealed class AddItemFormDraft
             Content = content,
             Collection = collection,
             Description = description,
-            Priority = Type == ItemType.Task ? Priority : TermBullet.Core.Items.Priority.None,
+            Priority = Type == ItemType.Task ? Priority : TermBullet.Domain.Items.Priority.None,
             Tags = tags.Count > 0 ? tags : null,
             PlannedFor = Type == ItemType.Task ? plannedAt : null,
             ScheduledAt = Type == ItemType.Event && plannedAt is not null ? ToUtcInstant(plannedAt.Value) : null

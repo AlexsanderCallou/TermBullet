@@ -66,20 +66,25 @@ PostgreSQL runtime dependency.
 
 ## Architecture Rules
 
-TermBullet is a modular monolith. Production code lives in one project under:
+TermBullet is a single-project local-first application. Production code lives
+under readable folders:
 
 - `Bootstrap`
-- `Core`
 - `Application`
-- `Infrastructure`
+- `Domain`
+- `Repositories`
+- `Services`
 - `Cli`
 - `Tui`
 
 Dependency rules:
 
-- Core depends on no internal outer module.
-- Application depends on Core, not Infrastructure, CLI, or TUI.
-- Infrastructure implements Application contracts.
+- Domain depends on no internal outer folder.
+- Application depends on Domain and repository/service interfaces, not concrete
+  JSON repositories, CLI, or TUI.
+- Repositories implement persistence contracts.
+- Services implement technical services such as clock, IDs, data transfer, and
+  maintenance.
 - CLI and TUI call Application use cases.
 - Bootstrap wires everything together.
 

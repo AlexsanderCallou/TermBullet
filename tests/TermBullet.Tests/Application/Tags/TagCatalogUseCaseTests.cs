@@ -1,6 +1,7 @@
-using TermBullet.Application.Ports;
+using TermBullet.Services.Clock;
+using TermBullet.Repositories.Interfaces;
 using TermBullet.Application.Tags;
-using TermBullet.Core.Tags;
+using TermBullet.Domain.Tags;
 
 namespace TermBullet.Tests.Application.Tags;
 

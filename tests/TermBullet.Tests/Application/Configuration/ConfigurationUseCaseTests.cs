@@ -1,5 +1,5 @@
 using TermBullet.Application.Configuration;
-using TermBullet.Application.Ports;
+using TermBullet.Repositories.Interfaces;
 
 namespace TermBullet.Tests.Application.Configuration;
 
@@ -66,7 +66,7 @@ public sealed class ConfigurationUseCaseTests
         Assert.Equal("C:\\term\\data\\settings.json", path);
     }
 
-    private sealed class FakeSettingsStore : ISettingsStore
+    private sealed class FakeSettingsStore : ISettingsRepository
     {
         private readonly Dictionary<string, Dictionary<string, string>> _profiles =
             new(StringComparer.OrdinalIgnoreCase)

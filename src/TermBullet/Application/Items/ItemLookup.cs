@@ -1,6 +1,6 @@
-using TermBullet.Application.Ports;
-using TermBullet.Core.Items;
-using TermBullet.Core.Refs;
+using TermBullet.Repositories.Interfaces;
+using TermBullet.Domain.Items;
+using TermBullet.Domain.Refs;
 
 namespace TermBullet.Application.Items;
 

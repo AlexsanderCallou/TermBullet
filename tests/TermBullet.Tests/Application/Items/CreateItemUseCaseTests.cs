@@ -1,6 +1,8 @@
+using TermBullet.Services.Clock;
+using TermBullet.Services.Ids;
 using TermBullet.Application.Items;
-using TermBullet.Application.Ports;
-using TermBullet.Core.Items;
+using TermBullet.Repositories.Interfaces;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Tests.Application.Items;
 
