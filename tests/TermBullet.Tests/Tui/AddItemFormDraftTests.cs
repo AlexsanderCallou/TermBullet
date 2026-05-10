@@ -15,6 +15,7 @@ public sealed class AddItemFormDraftTests
             Timing = AddItemTimingChoice.Today,
             Content = "  Fix authentication flow  ",
             Description = "  Keep the CLI and TUI aligned.  ",
+            Priority = Priority.High,
             TagsText = " auth, cli ; auth "
         };
 
@@ -24,6 +25,7 @@ public sealed class AddItemFormDraftTests
         Assert.Equal("Fix authentication flow", request.Content);
         Assert.Equal(ItemCollection.Today, request.Collection);
         Assert.Equal("Keep the CLI and TUI aligned.", request.Description);
+        Assert.Equal(Priority.High, request.Priority);
         Assert.Equal(["auth", "cli"], request.Tags);
         Assert.Equal(DateOnly.FromDateTime(DateTime.Today), request.PlannedFor);
         Assert.Null(request.ScheduledAt);
@@ -61,6 +63,7 @@ public sealed class AddItemFormDraftTests
 
         Assert.Equal(ItemType.Note, request.Type);
         Assert.Equal(ItemCollection.Backlog, request.Collection);
+        Assert.Equal(Priority.None, request.Priority);
         Assert.Null(request.PlannedFor);
         Assert.Null(request.ScheduledAt);
         Assert.Equal("Terminal.Gui throws while rendering.", request.Description);
@@ -74,10 +77,27 @@ public sealed class AddItemFormDraftTests
         Assert.Equal(ItemType.Task, request.Type);
         Assert.Equal("Fix auth flow", request.Content);
         Assert.Equal(ItemCollection.Today, request.Collection);
+        Assert.Equal(Priority.None, request.Priority);
         Assert.Equal(DateOnly.FromDateTime(DateTime.Today), request.PlannedFor);
         Assert.Null(request.Description);
         Assert.Null(request.Tags);
         Assert.Null(request.ScheduledAt);
+    }
+
+    [Fact]
+    public void BuildRequest_ignores_priority_for_events()
+    {
+        var draft = new AddItemFormDraft
+        {
+            Type = ItemType.Event,
+            Content = "Team sync",
+            PlannedForText = "2026-05-12",
+            Priority = Priority.High
+        };
+
+        var request = draft.BuildRequest();
+
+        Assert.Equal(Priority.None, request.Priority);
     }
 
     [Fact]

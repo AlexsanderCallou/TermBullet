@@ -24,7 +24,7 @@ public static class AddItemTypePickerScreen
             Width = 64,
             Height = 10
         };
-        var list = new ListView(BuildRows(selectedIndex))
+        var list = new ListView(BuildRows())
         {
             X = 1,
             Y = 1,
@@ -42,8 +42,7 @@ public static class AddItemTypePickerScreen
 
         void Select(int index)
         {
-            selectedIndex = index < 0 ? 2 : index > 2 ? 0 : index;
-            TuiScreenUtilities.RefreshListView(list, BuildRows(selectedIndex));
+            selectedIndex = NormalizeSelectedIndex(index);
             list.SelectedItem = selectedIndex;
         }
 
@@ -54,14 +53,7 @@ public static class AddItemTypePickerScreen
 
         list.SelectedItemChanged += _ =>
         {
-            if (list.SelectedItem < 0 || list.SelectedItem > 2)
-            {
-                return;
-            }
-
-            selectedIndex = list.SelectedItem;
-            TuiScreenUtilities.RefreshListView(list, BuildRows(selectedIndex));
-            list.SelectedItem = selectedIndex;
+            selectedIndex = NormalizeSelectedIndex(list.SelectedItem);
         };
         list.KeyPress += args =>
         {
@@ -110,24 +102,20 @@ public static class AddItemTypePickerScreen
     }
 
     public static ItemType ResolveType(int selectedIndex) =>
-        selectedIndex switch
+        NormalizeSelectedIndex(selectedIndex) switch
         {
             1 => ItemType.Note,
             2 => ItemType.Event,
             _ => ItemType.Task
         };
 
-    private static string[] BuildRows(int selectedIndex)
-    {
-        var rows = new[]
-        {
-            "Task   executable work with planned_for",
-            "Note   reference or context, no planned date",
-            "Event  scheduled appointment with scheduled_at"
-        };
+    public static int NormalizeSelectedIndex(int selectedIndex) =>
+        selectedIndex < 0 ? 2 : selectedIndex > 2 ? 0 : selectedIndex;
 
-        return rows
-            .Select((row, index) => $"{(index == selectedIndex ? ">" : " ")} {row}")
-            .ToArray();
-    }
+    private static string[] BuildRows() =>
+    [
+        "Task   executable work with planned_for",
+        "Note   reference or context, no planned date",
+        "Event  scheduled appointment with scheduled_at"
+    ];
 }

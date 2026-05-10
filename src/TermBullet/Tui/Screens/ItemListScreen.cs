@@ -19,7 +19,7 @@ public static class ItemListScreen
         Action onBack,
         Action onQuit,
         Func<ItemDisplayRow, string>? formatRow = null,
-        string footerText = " Enter open  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back  q quit")
+        string footerText = " Enter open  > migrate  x done  z cancel  d delete  Tab/1-3 focus  ? help  Esc back  q quit")
     {
         var selectedIndex = rows.Count > 0 ? 0 : -1;
         var selectedItem = selectedIndex >= 0 ? rows[selectedIndex] : null;
@@ -111,6 +111,12 @@ public static class ItemListScreen
             if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(ResolveScreen(title));
+                args.Handled = true;
+                return;
+            }
+
+            if (TuiScreenUtilities.TryFocusPanelByNumber(args.KeyEvent, navigation, panels, panelTitles, focusTargets))
+            {
                 args.Handled = true;
                 return;
             }
@@ -217,8 +223,13 @@ public static class ItemListScreen
             return Tui.Navigation.TuiScreen.Backlog;
         }
 
-        return title.Equals("Forgotten", StringComparison.OrdinalIgnoreCase)
-            ? Tui.Navigation.TuiScreen.Forgotten
+        if (title.Equals("Forgotten", StringComparison.OrdinalIgnoreCase))
+        {
+            return Tui.Navigation.TuiScreen.Forgotten;
+        }
+
+        return title.Equals("Notes", StringComparison.OrdinalIgnoreCase)
+            ? Tui.Navigation.TuiScreen.Notes
             : Tui.Navigation.TuiScreen.MainDashboard;
     }
 }

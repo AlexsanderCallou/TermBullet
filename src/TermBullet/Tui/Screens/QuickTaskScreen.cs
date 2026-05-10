@@ -14,9 +14,9 @@ public static class QuickTaskScreen
         var panel = new FrameView("Quick Task")
         {
             X = Pos.Center() - 32,
-            Y = Pos.Center() - 4,
+            Y = Pos.Center() - 5,
             Width = 64,
-            Height = 8
+            Height = 10
         };
         var taskLabel = new Label("Task:")
         {
@@ -35,13 +35,23 @@ public static class QuickTaskScreen
             Y = 3,
             Width = Dim.Fill(2)
         };
-        var statusLabel = new Label(error is null ? "Enter add  Esc cancel" : $"Status: {error}")
+        var saveButton = new Button("Save")
         {
             X = 1,
             Y = 5,
+        };
+        var cancelButton = new Button("Cancel")
+        {
+            X = Pos.Right(saveButton) + 2,
+            Y = 5,
+        };
+        var statusLabel = new Label(error is null ? "Enter activate  Tab focus  Esc cancel" : $"Status: {error}")
+        {
+            X = 1,
+            Y = 7,
             Width = Dim.Fill(2)
         };
-        panel.Add(taskLabel, taskField, plannedLabel, statusLabel);
+        panel.Add(taskLabel, taskField, plannedLabel, saveButton, cancelButton, statusLabel);
         root.Add(panel);
 
         void Submit()
@@ -56,13 +66,24 @@ public static class QuickTaskScreen
             }
         }
 
+        saveButton.Clicked += Submit;
+        cancelButton.Clicked += onCancel;
+
         root.KeyPress += args =>
         {
             switch (args.KeyEvent.Key)
             {
                 case Key.Enter:
-                    Submit();
-                    args.Handled = true;
+                    if (saveButton.HasFocus)
+                    {
+                        Submit();
+                        args.Handled = true;
+                    }
+                    else if (cancelButton.HasFocus)
+                    {
+                        onCancel();
+                        args.Handled = true;
+                    }
                     break;
                 case Key.Esc:
                     onCancel();

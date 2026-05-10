@@ -30,7 +30,7 @@ public static class WeekScreen
             Y = 0,
             Width = Dim.Fill()
         };
-        var footer = new Label(" Enter open  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back  q quit")
+        var footer = new Label(" Enter open  > migrate  x done  z cancel  d delete  Tab/1-7 focus  ? help  Esc back  q quit")
         {
             X = 0,
             Y = Pos.AnchorEnd(1),
@@ -90,6 +90,15 @@ public static class WeekScreen
             if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.Week);
+                args.Handled = true;
+                return;
+            }
+
+            if (TuiScreenUtilities.TryFocusPanelByNumber(args.KeyEvent, navigation, panels, panelTitles, focusTargets))
+            {
+                selectedItem = ResolveFocusedItem(groupedRows, lists, navigation.FocusedPanelIndex) ?? selectedItem;
+                TuiScreenUtilities.RefreshListView(previewList, ItemListScreen.BuildPreviewLines(selectedItem));
+                onSelectedItemChanged(selectedItem);
                 args.Handled = true;
                 return;
             }

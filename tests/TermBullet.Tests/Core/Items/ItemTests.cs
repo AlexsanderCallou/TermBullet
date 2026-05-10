@@ -245,6 +245,23 @@ public sealed class ItemTests
     }
 
     [Fact]
+    public void Set_priority_rejects_non_task_items()
+    {
+        var item = Item.Create(
+            ItemId,
+            PublicRef.Parse("n-0426-1"),
+            ItemType.Note,
+            "Investigate stacktrace",
+            ItemCollection.Backlog,
+            CreatedAt);
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => item.SetPriority(Priority.High, ChangedAt));
+
+        Assert.Contains("Priority can only be changed for tasks", exception.Message);
+    }
+
+    [Fact]
     public void Move_to_collection_updates_collection_and_increments_version()
     {
         var item = CreateTask();

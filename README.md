@@ -10,6 +10,7 @@ It provides two first-class interfaces over the same Application use cases:
 
 > Status: experimental MVP. CLI and local JSON persistence are the most complete
 > areas. The active TUI MVP includes Main Dashboard, Search, Item Detail,
+> Planning placeholder, Week, Backlog, Forgotten, Notes, Calendar, Tags,
 > Migrate Item, and Add Item.
 
 ## Repository
@@ -119,8 +120,10 @@ The full command tree is documented in [CLI.md](CLI.md).
 V1 delivers:
 
 - tasks, notes, and events;
-- Today, Backlog, and Forgotten collections;
-- Week planning view;
+- Today, Week, and Backlog collections;
+- Forgotten review;
+- Week View;
+- Notes, Calendar, and Tags views;
 - CLI and TUI MVP;
 - local monthly JSON persistence;
 - local JSON index;
@@ -138,7 +141,7 @@ The product direction, roadmap, item model, and acceptance criteria are in
 
 ## TUI
 
-The TUI is a personal cockpit for planning and execution:
+The TUI is a personal cockpit for dated work, review, and execution:
 
 - terminal-first and keyboard-first;
 - panel-based;

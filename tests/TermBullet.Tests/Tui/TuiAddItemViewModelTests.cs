@@ -40,10 +40,25 @@ public sealed class TuiAddItemViewModelTests
     [InlineData(0, ItemType.Task)]
     [InlineData(1, ItemType.Note)]
     [InlineData(2, ItemType.Event)]
+    [InlineData(-1, ItemType.Event)]
+    [InlineData(3, ItemType.Task)]
     public void AddItemTypePicker_resolves_selected_index_to_item_type(int selectedIndex, ItemType expectedType)
     {
         var type = AddItemTypePickerScreen.ResolveType(selectedIndex);
 
         Assert.Equal(expectedType, type);
+    }
+
+    [Theory]
+    [InlineData(-1, 2)]
+    [InlineData(0, 0)]
+    [InlineData(1, 1)]
+    [InlineData(2, 2)]
+    [InlineData(3, 0)]
+    public void AddItemTypePicker_normalizes_selected_index(int selectedIndex, int expectedIndex)
+    {
+        var normalizedIndex = AddItemTypePickerScreen.NormalizeSelectedIndex(selectedIndex);
+
+        Assert.Equal(expectedIndex, normalizedIndex);
     }
 }

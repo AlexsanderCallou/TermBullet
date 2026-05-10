@@ -12,6 +12,9 @@ Source checked:
 - `src/TermBullet/Tui/Screens/AddItemScreen.cs`
 - `src/TermBullet/Tui/Screens/PlanningScreen.cs`
 - `src/TermBullet/Tui/Screens/WeekScreen.cs`
+- `src/TermBullet/Tui/Screens/CalendarScreen.cs`
+- `src/TermBullet/Tui/Screens/TagsScreen.cs`
+- `src/TermBullet/Tui/Screens/CreateTagScreen.cs`
 - `src/TermBullet/Tui/Screens/ItemDetailScreen.cs`
 - `src/TermBullet/Tui/Screens/MigrateItemScreen.cs`
 
@@ -25,17 +28,16 @@ Current implemented screens:
 - Week View
 - Backlog
 - Forgotten
+- Notes
+- Calendar
+- Tags
+- Create Tag auxiliary flow
 - Migrate Item
 
 Planned but not currently implemented as TUI screens:
 
-- Daily Focus
-- Notes
-- Calendar
-- Tags
 - AI Planning
 - Review
-- Calendar View
 - Sync / Cloud
 
 ## Screen 01 - Main Dashboard
@@ -49,7 +51,7 @@ Navigation:
 - `/` opens Search.
 - `c` opens the Add Item type picker.
 - `n` opens Quick Task and creates a task planned for today with only content.
-- `Tab` and `Shift+Tab` move panel focus.
+- `Tab`, `Shift+Tab`, or the visible panel number (`1`-`9`) move panel focus.
 - `Enter` opens the selected item detail.
 - `x` marks the selected day item as done.
 - `z` cancels the selected item through the root shortcut mapper.
@@ -91,12 +93,12 @@ Notes:
 
 - The code names the second panel `Day Items`, not `Daily Log`.
 - This cleaner dashboard removes AI-facing language from the main surface. AI
-  should appear later inside planning flows that propose new tasks, not as a
+  should appear later inside the Planning workspace that proposes new tasks, not as a
   permanent dashboard panel.
 - `Details` keeps structured metadata compact and leaves the larger lower panel
   for the selected item's actual content.
-- `Context` shows collection counts, the Week planning view, and active tags.
-  Week is a view derived from `planned_for`, not a persisted collection.
+- `Context` shows collection counts, the Week View, and active tags.
+  Week is the V1 dated week collection/view.
 - `Planning` opens a future AI-assisted planning placeholder. It is not the
   Week View and is not part of the V1 execution workflow.
 - `Tags` opens the catalog view where tags can be created, inspected, and later
@@ -201,8 +203,10 @@ from the dashboard.
 
 Navigation:
 
-- Type content and press `Enter` to create the task.
-- `Esc` cancels.
+- `Tab` and `Shift+Tab` move between Task, Save, and Cancel.
+- `Enter` activates the focused control.
+- `Save` creates the task.
+- `Cancel` or `Esc` returns to the dashboard without creating anything.
 
 Request mapping:
 
@@ -221,7 +225,9 @@ ASCII layout:
 | Task: fix auth flow                                      |
 |                                                           |
 | planned_for: today                                       |
-| Enter add  Esc cancel                                    |
+|                                                           |
+| [ Save ]  [ Cancel ]                                     |
+| Enter activate  Tab focus  Esc cancel                    |
 +-----------------------------------------------------------+
 ```
 
@@ -229,18 +235,20 @@ Notes:
 
 - This is intentionally not the full task form.
 - Empty content is invalid and should show an inline error in the modal.
+- `Enter` must not create the task unless the focused control is `Save`.
 
 ### Flow 03C - Add Task
 
-Role: full task form for work that may need planning metadata.
+Role: full task form for work that may need date metadata.
 
 Navigation:
 
-- `Tab` and `Shift+Tab` move between fields.
-- `CursorUp` and `CursorDown` change the timing choice.
-- `Space` cycles the timing choice.
-- `Enter` submits.
-- `Esc` returns to the dashboard.
+- `Tab` and `Shift+Tab` move between fields, choices, Save, and Cancel.
+- `CursorUp` and `CursorDown` change the active timing or priority choice.
+- `Space` cycles the active timing or priority choice.
+- `Enter` activates the focused control.
+- `Save` submits the form.
+- `Cancel` or `Esc` returns to the dashboard without creating anything.
 
 Fields:
 
@@ -248,6 +256,7 @@ Fields:
 - `Description` optional multiline context.
 - `Timing` required: `Today`, `Future date`, or `Backlog`.
 - `Planned for` visible and required only for `Future date`.
+- `Priority` required: `None`, `Low`, `Medium`, or `High`.
 - `Tags` optional comma-separated labels.
 
 Request mapping:
@@ -255,6 +264,7 @@ Request mapping:
 - `type`: `task`
 - `collection`: `today`, `week`, or `backlog`
 - `planned_for`: today for `Today`, selected date for `Future date`, `null` for `Backlog`
+- `priority`: selected priority
 - `scheduled_at`: `null`
 
 ASCII layout:
@@ -273,13 +283,24 @@ ASCII layout:
 |   Future date  planned_for: 2026-05-12                               |
 |   Backlog      planned_for: -                                        |
 |                                                                      |
+| Priority                                                             |
+| > None   Low   Medium   High                                        |
+|                                                                      |
 | Tags                                                                 |
 | auth, cli                                                            |
+|                                                                      |
+| [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
-| Status: task | today | planned_for: today | tags: auth, cli          |
-| Enter add  Tab focus  CursorUp/CursorDown move  Esc cancel  ? help   |
+| Status: task | today | priority: high | planned_for: today           |
+| Enter activate  Tab focus  Arrows move  Space cycle  Esc cancel  ? help |
 +----------------------------------------------------------------------+
 ```
+
+Notes:
+
+- `Enter` must not submit the form unless the focused control is `Save`.
+- When focus is inside a multiline text field, `Enter` keeps its text-editing
+  behavior.
 
 ### Flow 03D - Add Note
 
@@ -287,9 +308,10 @@ Role: capture reference material or context that is not executable work.
 
 Navigation:
 
-- `Tab` and `Shift+Tab` move between fields.
-- `Enter` submits when focus is outside the multiline description.
-- `Esc` returns to the dashboard.
+- `Tab` and `Shift+Tab` move between fields, Save, and Cancel.
+- `Enter` activates the focused control.
+- `Save` submits the form.
+- `Cancel` or `Esc` returns to the dashboard without creating anything.
 
 Fields:
 
@@ -301,6 +323,7 @@ Request mapping:
 
 - `type`: `note`
 - `collection`: `backlog`
+- `priority`: `none`
 - `planned_for`: `null`
 - `scheduled_at`: `null`
 
@@ -316,11 +339,19 @@ ASCII layout:
 |                                                                      |
 | Tags                                                                 |
 | auth, incident                                                       |
+|                                                                      |
+| [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
 | Status: note | no planned date | tags: auth, incident                |
-| Enter add  Tab focus  Esc cancel  ? help                             |
+| Enter activate  Tab focus  Esc cancel  ? help                        |
 +----------------------------------------------------------------------+
 ```
+
+Notes:
+
+- `Enter` must not submit the form unless the focused control is `Save`.
+- When focus is inside the multiline description, `Enter` keeps its text-editing
+  behavior.
 
 ### Flow 03E - Add Event
 
@@ -328,9 +359,10 @@ Role: capture a scheduled appointment or time marker.
 
 Navigation:
 
-- `Tab` and `Shift+Tab` move between fields.
-- `Enter` submits.
-- `Esc` returns to the dashboard.
+- `Tab` and `Shift+Tab` move between fields, Save, and Cancel.
+- `Enter` activates the focused control.
+- `Save` submits the form.
+- `Cancel` or `Esc` returns to the dashboard without creating anything.
 
 Fields:
 
@@ -344,6 +376,7 @@ Request mapping:
 
 - `type`: `event`
 - `collection`: `week`
+- `priority`: `none`
 - `planned_for`: `null`
 - `scheduled_at`: selected scheduled date/time
 
@@ -362,11 +395,19 @@ ASCII layout:
 |                                                                      |
 | Tags                                                                 |
 | health                                                               |
+|                                                                      |
+| [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
 | Status: event | scheduled_at: 2026-05-12                             |
-| Enter add  Tab focus  Esc cancel  ? help                             |
+| Enter activate  Tab focus  Esc cancel  ? help                        |
 +----------------------------------------------------------------------+
 ```
+
+Notes:
+
+- `Enter` must not submit the form unless the focused control is `Save`.
+- When focus is inside the multiline description, `Enter` keeps its text-editing
+  behavior.
 
 ## Screen 04 - Item Detail
 
@@ -512,9 +553,9 @@ Notes:
 
 Status: implemented.
 
-Role: planning view for tasks and events scheduled across the current week. Week
-is derived from `planned_for` for tasks and `scheduled_at` for events; it is not
-a separate persisted collection.
+Role: weekly schedule view for tasks and events scheduled across the current week. Week
+uses the V1 `week` collection and groups tasks by `planned_for` and
+events by `scheduled_at`.
 
 Entry points:
 
@@ -559,7 +600,7 @@ Notes:
 - Only tasks with `planned_for` in the visible week and events with
   `scheduled_at` in the visible week appear here.
 - Backlog tasks do not appear until migrated to a date.
-- Notes do not appear unless a future product decision gives notes a planning
+- Notes do not appear unless a future product decision gives notes a date
   relation.
 - Moving an item between days should use the same business rule as migration:
   the original task can be migrated when appropriate instead of silently editing
@@ -615,7 +656,7 @@ Notes:
 
 - Backlog task rows have `planned_for: null`.
 - Notes may live in Backlog because they are not planned work.
-- The primary action is planning: move a task from Backlog into Today or a
+- The primary action is scheduling: move a task from Backlog into Today or a
   future date.
 - Event rows should not normally appear here because events require
   `scheduled_at`.
@@ -678,7 +719,7 @@ Notes:
 
 ## Screen 09 - Notes
 
-Status: target design pending validation.
+Status: implemented.
 
 Role: focused reading view for every item with `type: note`. Notes are
 reference material and should not be mixed with executable work in this view.
@@ -722,7 +763,7 @@ Target ASCII layout:
 Notes:
 
 - This screen lists only notes, regardless of collection.
-- Notes do not expose planning actions because they do not use `planned_for` or
+- Notes do not expose date actions because they do not use `planned_for` or
   `scheduled_at`.
 - A note can still be opened in Item Detail to inspect identity, content,
   description, tags, and timestamps.
@@ -730,9 +771,9 @@ Notes:
 
 ## Screen 10 - Calendar
 
-Status: target design pending validation.
+Status: implemented.
 
-Role: month-style planning view for dated work and scheduled events. Calendar is
+Role: month-style schedule view for dated work and scheduled events. Calendar is
 a derived view, not a persisted collection.
 
 Entry points:
@@ -805,7 +846,7 @@ Notes:
 
 ## Screen 11 - Tags
 
-Status: target design pending validation.
+Status: implemented.
 
 Role: catalog view for tags used by item metadata and by the dashboard Context
 panel. Tags describe topics, areas, or grouping labels. This screen is not an
@@ -851,7 +892,8 @@ Target ASCII layout:
 Notes:
 
 - Tags are metadata strings attached to items; they are not item types.
-- The current model has `tags` on items and no separate `project` field.
+- The current model has `tags` on items and a local tag catalog for tag names
+  and optional descriptions. There is no separate `project` field.
 - The dashboard Context panel should show the most relevant active tags based on
   item usage.
 - Deleting a tag needs a clear business rule before implementation: block
@@ -859,7 +901,7 @@ Notes:
 
 ## Flow 12 - Create Tag
 
-Status: target design pending validation.
+Status: implemented.
 
 Role: compact creation flow opened from Tags. The user gives the tag a name and
 can optionally add a short description if the final model supports tag catalog
@@ -872,9 +914,11 @@ Entry points:
 
 Navigation:
 
-- `Tab` and `Shift+Tab` move between Name, Description, and Preview.
-- `Enter` creates the tag.
-- `Esc` cancels and returns to Tags.
+- `Tab` and `Shift+Tab` move between Name, Description, Preview, Save, and
+  Cancel.
+- `Enter` activates the focused control.
+- `Save` creates the tag.
+- `Cancel` or `Esc` returns to Tags without creating anything.
 - `?` opens contextual help.
 
 Target ASCII layout:
@@ -890,8 +934,10 @@ Target ASCII layout:
 | Preview                                                                                 |
 | name: auth                                                                              |
 | description: authentication and authorization work                                      |
+|                                                                                         |
+| [ Save ]  [ Cancel ]                                                                    |
 +-----------------------------------------------------------------------------------------+
-| Enter create  Tab focus  Esc cancel  ? help                                             |
+| Enter activate  Tab focus  Esc cancel  ? help                                           |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -901,8 +947,8 @@ Notes:
 - Names should be normalized consistently before persistence; the exact
   normalization rule belongs in the data model decision.
 - Creating a tag catalog entry must not mutate existing items automatically.
-- If tags become first-class catalog records instead of derived strings,
-  documentation must update `DATA_MODEL.md` before implementation.
+- Tag catalog entries are persisted in `data/tags.json`.
+- `Enter` must not create the tag unless the focused control is `Save`.
 
 ## Flow 13 - Migrate Item
 
@@ -919,10 +965,11 @@ Entry points:
 
 Navigation:
 
-- `Tab` and `Shift+Tab` move between destination controls.
+- `Tab` and `Shift+Tab` move between destination controls, Save, and Cancel.
 - `Space` toggles destination choice.
-- `Enter` confirms migration.
-- `Esc` cancels and returns to the previous screen.
+- `Enter` activates the focused control.
+- `Save` confirms migration.
+- `Cancel` or `Esc` returns to the previous screen without migrating.
 - `?` opens contextual help.
 
 Target ASCII layout:
@@ -946,8 +993,10 @@ Target ASCII layout:
 | Result                                                                                    |
 | original: t-0526-1 -> migrate                                                            |
 | new task:  open at 2026-05-12                                                             |
+|                                                                                           |
+| [ Save ]  [ Cancel ]                                                                      |
 +-------------------------------------------------------------------------------------------+
-| Enter migrate  Tab focus  Space toggle  Esc cancel  ? help                               |
+| Enter activate  Tab focus  Space toggle  Esc cancel  ? help                              |
 +-------------------------------------------------------------------------------------------+
 ```
 
@@ -970,8 +1019,10 @@ Backlog destination example:
 | Result                                                                                    |
 | original: t-0526-1 -> migrate                                                            |
 | new task:  open in backlog                                                                |
+|                                                                                           |
+| [ Save ]  [ Cancel ]                                                                      |
 +-------------------------------------------------------------------------------------------+
-| Enter migrate  Tab focus  Space toggle  Esc cancel  ? help                               |
+| Enter activate  Tab focus  Space toggle  Esc cancel  ? help                              |
 +-------------------------------------------------------------------------------------------+
 ```
 
@@ -984,13 +1035,14 @@ Notes:
 - The flow should not expose the full history; that belongs to Item Detail.
 - On confirmation, the original task remains stored with status `migrate`, and
   the destination is a new `open` task linked by migration fields.
+- `Enter` must not confirm migration unless the focused control is `Save`.
 
 ## Implementation Gap Notes
 
-The product spec describes a broader TUI with Daily Focus, AI Planning, Week,
-Backlog Triage, Forgotten Review, Review, and Search. The active codebase
-currently contains `MainDashboard`, `Search`, `ItemDetail`, `Planning`, `Week`,
-`Backlog`, `Forgotten`, and `MigrateItem` in `TuiScreen`, plus the Add Item
-auxiliary flow for type picking, quick task capture, and type-specific creation
-forms. Notes, Calendar, and Tags are target designs pending validation before
-implementation. Review remains a future screen outside the current route set.
+The product spec describes a broader TUI with AI Planning, Week,
+Backlog Triage, Forgotten Review, Review, Notes, Calendar, Tags, and Search.
+The active codebase currently contains `MainDashboard`, `Search`, `ItemDetail`,
+`Planning`, `Week`, `Backlog`, `Forgotten`, `Notes`, `Calendar`, `Tags`, and
+`MigrateItem` in `TuiScreen`, plus the Add Item auxiliary flow for type picking,
+quick task capture, type-specific creation forms, and the Create Tag flow.
+Review remains a future screen outside the current route set.

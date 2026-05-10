@@ -20,6 +20,8 @@ public sealed class AddItemFormDraft
 
     public string Description { get; set; } = string.Empty;
 
+    public Priority Priority { get; set; } = TermBullet.Core.Items.Priority.None;
+
     public string TagsText { get; set; } = string.Empty;
 
     public string PlannedForText { get; set; } = DateOnly.FromDateTime(DateTime.Today.AddDays(1)).ToString("yyyy-MM-dd");
@@ -49,6 +51,7 @@ public sealed class AddItemFormDraft
             Content = content,
             Collection = collection,
             Description = description,
+            Priority = Type == ItemType.Task ? Priority : TermBullet.Core.Items.Priority.None,
             Tags = tags.Count > 0 ? tags : null,
             PlannedFor = Type == ItemType.Task ? plannedAt : null,
             ScheduledAt = Type == ItemType.Event && plannedAt is not null ? ToUtcInstant(plannedAt.Value) : null
@@ -74,6 +77,7 @@ public sealed class AddItemFormDraft
             $"collection: {ResolveCollection().ToString().ToLowerInvariant()}",
             $"content: {content}",
             $"description: {description}",
+            Type == ItemType.Task ? $"priority: {FormatPriority(Priority)}" : "priority: none",
             planningLine,
             $"tags: {FormatTags(TagsText)}"
         ];
@@ -166,4 +170,7 @@ public sealed class AddItemFormDraft
         var tags = ParseTags(value);
         return tags.Count > 0 ? string.Join(", ", tags) : "-";
     }
+
+    private static string FormatPriority(Priority priority) =>
+        priority.ToString().ToLowerInvariant();
 }

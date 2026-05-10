@@ -100,13 +100,18 @@ V1 uses:
 Required initial collections:
 
 - Today;
-- Backlog;
-- Forgotten.
+- Week;
+- Backlog.
 
-Week is not a persisted collection. It is a planning view derived from task
-`planned_for` dates.
+Week is the V1 dated week area. The TUI Week View groups tasks by `planned_for`
+and events by `scheduled_at`.
+
+Forgotten is a derived review list for unresolved open tasks planned before
+today. It is not a persisted item collection in V1.
 
 Tasks and Events remain distinct; a task must not automatically become an event.
+Priority is task metadata in V1. Notes and events do not expose priority and
+are stored with `none`.
 
 Official task statuses are `open`, `done`, `cancelled`, and `migrate`.
 `migrate` represents an intentional move out of a previous planned placement.
@@ -114,7 +119,7 @@ The source item remains stored with migrate status, and the destination is a new
 task that records the source item.
 
 Tasks created for Today are planned for Today by default. Future planned dates
-must be intentional. Open tasks planned before today move into Forgotten for
+must be intentional. Open tasks planned before today appear in Forgotten for
 manual review when the app starts or begins a new day.
 
 Rejected: generic-only item model and many V1 item types.
@@ -190,8 +195,8 @@ Rejected: sequential prompt interface and mouse-dependent interface.
 
 V1 provides JSON export/import for backup, migration, and portability.
 
-Export/import must preserve IDs, refs, types, statuses, collections, priorities,
-tags, timestamps, and relevant history.
+Export/import must preserve IDs, refs, types, statuses, collections, task
+priorities, tags, timestamps, and relevant history.
 
 Rejected: postponing export/import until sync and exporting only rendered text.
 

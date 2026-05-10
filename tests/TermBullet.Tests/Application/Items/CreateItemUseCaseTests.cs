@@ -67,6 +67,26 @@ public sealed class CreateItemUseCaseTests
         Assert.Null(result.PlannedFor);
     }
 
+    [Theory]
+    [InlineData(ItemType.Note)]
+    [InlineData(ItemType.Event)]
+    public async Task Execute_ignores_priority_for_non_task_items(ItemType type)
+    {
+        var repository = new FakeItemRepository();
+        var useCase = CreateUseCase(repository);
+        var request = new CreateItemRequest
+        {
+            Type = type,
+            Content = "Reference item",
+            Priority = Priority.High
+        };
+
+        var result = await useCase.ExecuteAsync(request);
+
+        Assert.Equal(Priority.None, result.Priority);
+        Assert.Equal(Priority.None, Assert.Single(repository.AddedItems).Priority);
+    }
+
     [Fact]
     public async Task Execute_keeps_backlog_task_without_planned_for()
     {

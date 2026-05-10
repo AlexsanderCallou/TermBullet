@@ -17,7 +17,7 @@ public static class ItemDetailScreen
         {
             X = 0, Y = 0, Width = Dim.Fill()
         };
-        var footer = new Label(" e edit  x done  z cancel  > migrate  d delete  Tab focus  ? help  Esc back  q quit")
+        var footer = new Label(" e edit  x done  z cancel  > migrate  d delete  Tab/1-5 focus  ? help  Esc back  q quit")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
@@ -62,6 +62,12 @@ public static class ItemDetailScreen
             if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.ItemDetail);
+                args.Handled = true;
+                return;
+            }
+
+            if (TuiScreenUtilities.TryFocusPanelByNumber(args.KeyEvent, navigation, panels, panelTitles, focusTargets))
+            {
                 args.Handled = true;
                 return;
             }

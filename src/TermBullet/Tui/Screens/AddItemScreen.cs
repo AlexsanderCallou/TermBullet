@@ -9,10 +9,13 @@ public static class AddItemScreen
     private enum FocusArea
     {
         Timing,
+        Priority,
         PlannedFor,
         Content,
         Description,
-        Tags
+        Tags,
+        Save,
+        Cancel
     }
 
     public static void Build(
@@ -25,7 +28,9 @@ public static class AddItemScreen
         var draft = new AddItemFormDraft { Type = viewModel.Type };
         var focusArea = FocusArea.Content;
         var selectedTiming = AddItemTimingChoice.Today;
+        var selectedPriority = Priority.None;
         var syncingSelection = false;
+        var syncingPrioritySelection = false;
         var isTask = viewModel.Type == ItemType.Task;
         var isEvent = viewModel.Type == ItemType.Event;
         var title = viewModel.Type switch
@@ -42,7 +47,7 @@ public static class AddItemScreen
             Width = Dim.Fill()
         };
 
-        var footer = new Label(" Enter add  Tab focus  CursorUp/CursorDown move  Esc cancel  ? help  q quit")
+        var footer = new Label(" Enter activate  Tab focus  Arrows move  Space cycle  Esc cancel  ? help  q quit")
         {
             X = 0,
             Y = Pos.AnchorEnd(1),
@@ -108,10 +113,27 @@ public static class AddItemScreen
         };
         planningPanel.Add(timingGroup, plannedLabel, plannedField, plannedHint);
 
+        var priorityPanel = new FrameView("Priority")
+        {
+            X = 0,
+            Y = Pos.Bottom(planningPanel),
+            Width = Dim.Fill(),
+            Height = 6,
+            Visible = isTask
+        };
+        var priorityGroup = new RadioGroup(["None", "Low", "Medium", "High"], 0)
+        {
+            X = 1,
+            Y = 1,
+            Width = Dim.Fill(2),
+            Visible = isTask
+        };
+        priorityPanel.Add(priorityGroup);
+
         var detailsPanel = new FrameView("Details")
         {
             X = 0,
-            Y = isTask || isEvent ? Pos.Bottom(planningPanel) : Pos.Bottom(contentPanel),
+            Y = isTask ? Pos.Bottom(priorityPanel) : isEvent ? Pos.Bottom(planningPanel) : Pos.Bottom(contentPanel),
             Width = Dim.Percent(58),
             Height = 9
         };
@@ -155,6 +177,16 @@ public static class AddItemScreen
             Y = Pos.Bottom(detailsPanel),
             Width = Dim.Fill()
         };
+        var saveButton = new Button("Save")
+        {
+            X = 0,
+            Y = Pos.Bottom(statusLabel) + 1
+        };
+        var cancelButton = new Button("Cancel")
+        {
+            X = Pos.Right(saveButton) + 2,
+            Y = Pos.Bottom(statusLabel) + 1
+        };
 
         root.Add(topBar, contentPanel);
         if (isTask || isEvent)
@@ -162,7 +194,12 @@ public static class AddItemScreen
             root.Add(planningPanel);
         }
 
-        root.Add(detailsPanel, examplesPanel, statusLabel, footer);
+        if (isTask)
+        {
+            root.Add(priorityPanel);
+        }
+
+        root.Add(detailsPanel, examplesPanel, statusLabel, saveButton, cancelButton, footer);
 
         void SetTiming(AddItemTimingChoice timing)
         {
@@ -199,10 +236,38 @@ public static class AddItemScreen
             UpdateStatus();
         }
 
+        void SetPriority(Priority priority)
+        {
+            selectedPriority = priority;
+            var selectedIndex = priority switch
+            {
+                Priority.Low => 1,
+                Priority.Medium => 2,
+                Priority.High => 3,
+                _ => 0
+            };
+
+            if (priorityGroup.SelectedItem != selectedIndex)
+            {
+                syncingPrioritySelection = true;
+                try
+                {
+                    priorityGroup.SelectedItem = selectedIndex;
+                }
+                finally
+                {
+                    syncingPrioritySelection = false;
+                }
+            }
+
+            UpdateStatus();
+        }
+
         void SyncDraftFromControls()
         {
             draft.Type = viewModel.Type;
             draft.Timing = selectedTiming;
+            draft.Priority = isTask ? selectedPriority : Priority.None;
             draft.Content = contentField.Text?.ToString() ?? string.Empty;
             draft.Description = descriptionField.Text?.ToString() ?? string.Empty;
             draft.TagsText = tagsField.Text?.ToString() ?? string.Empty;
@@ -232,6 +297,9 @@ public static class AddItemScreen
                 case FocusArea.Timing:
                     timingGroup.SetFocus();
                     break;
+                case FocusArea.Priority:
+                    priorityGroup.SetFocus();
+                    break;
                 case FocusArea.PlannedFor:
                     plannedField.SetFocus();
                     break;
@@ -244,6 +312,12 @@ public static class AddItemScreen
                 case FocusArea.Tags:
                     tagsField.SetFocus();
                     break;
+                case FocusArea.Save:
+                    saveButton.SetFocus();
+                    break;
+                case FocusArea.Cancel:
+                    cancelButton.SetFocus();
+                    break;
             }
         }
 
@@ -252,13 +326,13 @@ public static class AddItemScreen
             if (isTask)
             {
                 return selectedTiming == AddItemTimingChoice.FutureDate
-                    ? [FocusArea.Content, FocusArea.Timing, FocusArea.PlannedFor, FocusArea.Description, FocusArea.Tags]
-                    : [FocusArea.Content, FocusArea.Timing, FocusArea.Description, FocusArea.Tags];
+                    ? [FocusArea.Content, FocusArea.Timing, FocusArea.PlannedFor, FocusArea.Priority, FocusArea.Description, FocusArea.Tags, FocusArea.Save, FocusArea.Cancel]
+                    : [FocusArea.Content, FocusArea.Timing, FocusArea.Priority, FocusArea.Description, FocusArea.Tags, FocusArea.Save, FocusArea.Cancel];
             }
 
             return isEvent
-                ? [FocusArea.Content, FocusArea.PlannedFor, FocusArea.Description, FocusArea.Tags]
-                : [FocusArea.Content, FocusArea.Description, FocusArea.Tags];
+                ? [FocusArea.Content, FocusArea.PlannedFor, FocusArea.Description, FocusArea.Tags, FocusArea.Save, FocusArea.Cancel]
+                : [FocusArea.Content, FocusArea.Description, FocusArea.Tags, FocusArea.Save, FocusArea.Cancel];
         }
 
         void MoveFocus(int delta)
@@ -311,6 +385,25 @@ public static class AddItemScreen
             });
         };
 
+        priorityGroup.SelectedItemChanged += _ =>
+        {
+            if (syncingPrioritySelection)
+            {
+                return;
+            }
+
+            SetPriority(priorityGroup.SelectedItem switch
+            {
+                1 => Priority.Low,
+                2 => Priority.Medium,
+                3 => Priority.High,
+                _ => Priority.None
+            });
+        };
+
+        saveButton.Clicked += Submit;
+        cancelButton.Clicked += onCancel;
+
         root.KeyPress += args =>
         {
             if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
@@ -342,9 +435,29 @@ public static class AddItemScreen
                     timingGroup.SelectedItem = timingGroup.SelectedItem >= 2 ? 0 : timingGroup.SelectedItem + 1;
                     args.Handled = true;
                     break;
-                case Key.Enter:
-                    Submit();
+                case Key.CursorUp when isTask && focusArea == FocusArea.Priority:
+                    priorityGroup.SelectedItem = priorityGroup.SelectedItem <= 0 ? 3 : priorityGroup.SelectedItem - 1;
                     args.Handled = true;
+                    break;
+                case Key.CursorDown when isTask && focusArea == FocusArea.Priority:
+                    priorityGroup.SelectedItem = priorityGroup.SelectedItem >= 3 ? 0 : priorityGroup.SelectedItem + 1;
+                    args.Handled = true;
+                    break;
+                case Key.Space when isTask && focusArea == FocusArea.Priority:
+                    priorityGroup.SelectedItem = priorityGroup.SelectedItem >= 3 ? 0 : priorityGroup.SelectedItem + 1;
+                    args.Handled = true;
+                    break;
+                case Key.Enter:
+                    if (focusArea == FocusArea.Save)
+                    {
+                        Submit();
+                        args.Handled = true;
+                    }
+                    else if (focusArea == FocusArea.Cancel)
+                    {
+                        onCancel();
+                        args.Handled = true;
+                    }
                     break;
                 case Key.Esc:
                     onCancel();
@@ -358,6 +471,7 @@ public static class AddItemScreen
         };
 
         SetTiming(isEvent ? AddItemTimingChoice.FutureDate : AddItemTimingChoice.Today);
+        SetPriority(Priority.None);
         SetFocusArea(FocusArea.Content);
         UpdateStatus();
     }

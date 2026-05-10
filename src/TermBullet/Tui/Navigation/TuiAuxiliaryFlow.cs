@@ -5,5 +5,6 @@ public enum TuiAuxiliaryFlow
     None,
     AddItemTypePicker,
     QuickTask,
-    AddItem
+    AddItem,
+    CreateTag
 }

@@ -1,7 +1,9 @@
 using TermBullet.Application.Configuration;
 using TermBullet.Application.Items;
 using TermBullet.Application.Ports;
+using TermBullet.Application.Tags;
 using TermBullet.Core.Items;
+using TermBullet.Core.Tags;
 using TermBullet.Tui;
 
 namespace TermBullet.Tests.Tui;
@@ -12,10 +14,12 @@ public sealed class TuiSnapshotLoaderTests
     public async Task LoadAsync_runs_startup_action_only_once_before_first_snapshot()
     {
         var repository = new FakeItemRepository();
+        var tagRepository = new FakeTagCatalogRepository();
         var settingsStore = new FakeSettingsStore();
         var startupCalls = 0;
         var loader = CreateLoader(
             repository,
+            tagRepository,
             settingsStore,
             _ =>
             {
@@ -33,23 +37,27 @@ public sealed class TuiSnapshotLoaderTests
     public async Task LoadAsync_returns_today_backlog_and_config_state()
     {
         var repository = new FakeItemRepository();
+        var tagRepository = new FakeTagCatalogRepository();
         repository.Seed(MakeItem("t-0426-1", ItemCollection.Today, "Fix auth"));
         repository.Seed(MakeItem("t-0426-2", ItemCollection.Backlog, "Review migrations"));
+        await tagRepository.AddAsync(TagCatalogEntry.Create("auth", null, DateTimeOffset.UtcNow));
 
         var settingsStore = new FakeSettingsStore();
         await settingsStore.SetAsync("theme", "dark");
 
-        var loader = CreateLoader(repository, settingsStore);
+        var loader = CreateLoader(repository, tagRepository, settingsStore);
 
         var snapshot = await loader.LoadAsync();
 
         Assert.Single(snapshot.TodayItems);
         Assert.Single(snapshot.BacklogItems);
+        Assert.Single(snapshot.Tags);
         Assert.Equal("dark", snapshot.Configuration["theme"]);
     }
 
     private static TuiSnapshotLoader CreateLoader(
         FakeItemRepository repository,
+        FakeTagCatalogRepository tagRepository,
         FakeSettingsStore settingsStore,
         Func<CancellationToken, Task>? startupAction = null)
     {
@@ -58,6 +66,7 @@ public sealed class TuiSnapshotLoaderTests
             new GetWeekItemsUseCase(repository),
             new GetBacklogItemsUseCase(repository),
             new ListItemsUseCase(repository),
+            new ListTagsUseCase(tagRepository),
             new ListConfigurationUseCase(settingsStore),
             startupAction);
     }
@@ -131,6 +140,23 @@ public sealed class TuiSnapshotLoaderTests
         public Task SetAsync(string key, string value, string profile = "default", CancellationToken cancellationToken = default)
         {
             _values[key] = value;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeTagCatalogRepository : ITagCatalogRepository
+    {
+        private readonly List<TagCatalogEntry> _tags = [];
+
+        public Task<IReadOnlyCollection<TagCatalogEntry>> ListAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyCollection<TagCatalogEntry>>(_tags);
+
+        public Task<TagCatalogEntry?> FindByNameAsync(string name, CancellationToken cancellationToken = default) =>
+            Task.FromResult(_tags.FirstOrDefault(tag => string.Equals(tag.Name, name.Trim(), StringComparison.OrdinalIgnoreCase)));
+
+        public Task AddAsync(TagCatalogEntry tag, CancellationToken cancellationToken = default)
+        {
+            _tags.Add(tag);
             return Task.CompletedTask;
         }
     }

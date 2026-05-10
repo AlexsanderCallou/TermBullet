@@ -41,7 +41,7 @@ public sealed class CreateItemUseCase(
             request.Collection,
             now,
             request.Description,
-            request.Priority,
+            ResolvePriority(request),
             request.Tags,
             ResolvePlannedFor(request, now),
             request.ScheduledAt);
@@ -65,4 +65,7 @@ public sealed class CreateItemUseCase(
 
         return request.PlannedFor ?? DateOnly.FromDateTime(now.UtcDateTime);
     }
+
+    private static Priority ResolvePriority(CreateItemRequest request) =>
+        request.Type == ItemType.Task ? request.Priority : Priority.None;
 }

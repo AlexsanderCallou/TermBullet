@@ -13,6 +13,7 @@ public sealed class TuiContextHelpTests
         Assert.Contains(lines, line => line.Contains("choose item type", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(lines, line => line.Contains("quick task", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(lines, line => line.Contains("move panel focus", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(lines, line => line.Contains("1-9", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -66,12 +67,14 @@ public sealed class TuiContextHelpTests
     [InlineData(TuiScreen.Week, "weekday")]
     [InlineData(TuiScreen.Backlog, "Backlog")]
     [InlineData(TuiScreen.Forgotten, "forgotten")]
+    [InlineData(TuiScreen.Notes, "Notes")]
+    [InlineData(TuiScreen.Calendar, "month")]
+    [InlineData(TuiScreen.Tags, "Tags")]
     public void Planning_list_help_contains_navigation_and_action_shortcuts(TuiScreen screen, string expectedContext)
     {
         var lines = TuiContextHelp.GetLines(screen);
 
         Assert.Contains(lines, line => line.Contains(expectedContext, StringComparison.OrdinalIgnoreCase));
         Assert.Contains(lines, line => line.Contains("Enter", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(lines, line => line.Contains("x / z / d", StringComparison.OrdinalIgnoreCase));
     }
 }

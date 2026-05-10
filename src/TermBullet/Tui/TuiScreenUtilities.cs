@@ -66,6 +66,29 @@ public static class TuiScreenUtilities
         focusTargets[navigation.FocusedPanelIndex].SetFocus();
     }
 
+    public static bool TryFocusPanelByNumber(
+        KeyEvent keyEvent,
+        TuiNavigationState navigation,
+        IReadOnlyList<FrameView> panels,
+        IReadOnlyList<string> titles,
+        IReadOnlyList<View> focusTargets)
+    {
+        if (keyEvent.KeyValue < '1' || keyEvent.KeyValue > '9')
+        {
+            return false;
+        }
+
+        var panelNumber = keyEvent.KeyValue - '0';
+        if (!navigation.FocusPanel(panelNumber))
+        {
+            return false;
+        }
+
+        UpdatePanelTitles(panels, titles, navigation);
+        FocusCurrentPanel(focusTargets, navigation);
+        return true;
+    }
+
     public static void ShowContextHelp(TuiScreen screen)
     {
         var lines = string.Join(Environment.NewLine, TuiContextHelp.GetLines(screen));

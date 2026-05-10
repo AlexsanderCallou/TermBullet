@@ -22,8 +22,8 @@ developers and technical users who prefer fast local tools.
 V1 delivers the offline core:
 
 - tasks, notes, and events;
-- Today, Backlog, and Forgotten collections;
-- Week as a planning view derived from task `planned_for` dates;
+- Today, Week, and Backlog collections;
+- Forgotten as a derived review list for unresolved past planned tasks;
 - CLI;
 - TUI MVP;
 - local monthly JSON persistence;
@@ -61,14 +61,22 @@ Every relevant item has:
 - optional description;
 - status;
 - collection;
-- planned date when it is a task;
-- priority;
+- planned date when it is a dated task;
+- scheduled date/time when it is an event;
+- task priority;
 - tags;
 - creation and update timestamps;
 - version.
 
 Task and Event are distinct concepts. A task must not be automatically converted
 into an event.
+
+Priority is operational task metadata. Notes and events do not expose priority
+and are stored with `none`.
+
+Tags are local metadata labels. Items store tag names, and V1 also keeps a local
+tag catalog for creating named tags with optional descriptions before they are
+attached to items.
 
 Official task statuses in V1:
 
@@ -84,10 +92,9 @@ Tasks created for today are planned for today by default. A task should only get
 a future planned date when the user intentionally creates or moves it to that
 date. Backlog tasks may keep `planned_for` as `null`.
 
-`forgotten` is the review area for open tasks that were planned for a previous
-day and were not done, cancelled, or marked migrate. At the beginning of a day, the
-application should check yesterday and earlier planned dates and move unresolved
-open tasks into `forgotten` so the user can decide what to do with them.
+Forgotten is the review area for open tasks that were planned for a previous
+day and were not done, cancelled, or marked migrate. It is derived from item
+state and dates, not a persisted item collection.
 
 Manual migration must always declare the destination:
 
@@ -145,15 +152,17 @@ The TUI is documented in [screens.md](screens.md). The active MVP scope is:
 - Week View;
 - Backlog Triage;
 - Forgotten Review;
+- Notes;
+- Calendar;
+- Tags;
 - Migrate Item;
 - Add Item as an auxiliary keyboard-only flow.
 
 Deferred TUI screens:
 
-- Daily Focus;
 - AI Planning;
 - Review;
-- Calendar View in V3;
+- External calendar integration in V3;
 - Sync / Cloud in V4.
 
 ## Roadmap
@@ -162,7 +171,8 @@ Deferred TUI screens:
 
 - CLI and TUI MVP;
 - tasks, notes, and events;
-- Today, Backlog, and Forgotten collections;
+- Today, Week, and Backlog collections;
+- Forgotten review;
 - Week view;
 - monthly JSON files;
 - local JSON index;

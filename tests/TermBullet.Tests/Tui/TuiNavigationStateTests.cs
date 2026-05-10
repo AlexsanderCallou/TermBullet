@@ -64,6 +64,30 @@ public sealed class TuiNavigationStateTests
     }
 
     [Fact]
+    public void FocusPanel_moves_focus_to_one_based_panel_number()
+    {
+        var state = new TuiNavigationState(panelCount: 5);
+
+        var focused = state.FocusPanel(4);
+
+        Assert.True(focused);
+        Assert.Equal(3, state.FocusedPanelIndex);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(4)]
+    public void FocusPanel_rejects_numbers_outside_panel_count(int panelNumber)
+    {
+        var state = new TuiNavigationState(panelCount: 3);
+
+        var focused = state.FocusPanel(panelNumber);
+
+        Assert.False(focused);
+        Assert.Equal(0, state.FocusedPanelIndex);
+    }
+
+    [Fact]
     public void NavigateTo_changes_current_screen_and_resets_panel_focus()
     {
         var state = new TuiNavigationState(panelCount: 3);

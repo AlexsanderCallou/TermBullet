@@ -58,7 +58,7 @@ Accepted stack:
 - PostgreSQL only for future optional V4 sync/cloud backend.
 
 V1 is local-first and offline. It includes tasks, notes, events, Today, Backlog,
-Forgotten, Week as a planning view, CLI, TUI MVP, monthly JSON persistence,
+Forgotten review, Week View, CLI, TUI MVP, monthly JSON persistence,
 search, editing, migration, movement, data path discovery, export, and import.
 
 V1 excludes AI execution, Google Calendar, machine sync, cloud accounts, and a

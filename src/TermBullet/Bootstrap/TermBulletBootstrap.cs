@@ -4,6 +4,7 @@ using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Application.Ports;
 using TermBullet.Application.Startup;
+using TermBullet.Application.Tags;
 using TermBullet.Cli;
 using TermBullet.Infrastructure.Export;
 using TermBullet.Infrastructure.Identity;
@@ -19,7 +20,7 @@ public static class TermBulletBootstrap
         TextWriter output,
         TextWriter error)
     {
-        var (clock, itemRepository, dataTransferService, historyMaintenanceService, settingsStore) =
+        var (clock, itemRepository, tagCatalogRepository, dataTransferService, historyMaintenanceService, settingsStore) =
             CreateSharedServices(projectRootPath);
         var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
 
@@ -54,7 +55,7 @@ public static class TermBulletBootstrap
 
     public static TermBulletTuiApp CreateTuiApp(string projectRootPath)
     {
-        var (clock, itemRepository, _, _, settingsStore) = CreateSharedServices(projectRootPath);
+        var (clock, itemRepository, tagCatalogRepository, _, _, settingsStore) = CreateSharedServices(projectRootPath);
         var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
 
         return new TermBulletTuiApp(
@@ -64,6 +65,8 @@ public static class TermBulletBootstrap
             new ListItemsUseCase(itemRepository),
             new SearchItemsUseCase(itemRepository),
             new ListConfigurationUseCase(settingsStore),
+            new ListTagsUseCase(tagCatalogRepository),
+            new CreateTagUseCase(tagCatalogRepository, clock),
             new CreateItemUseCase(itemRepository, clock, new GuidIdGenerator()),
             new MarkDoneItemUseCase(itemRepository, clock),
             new CancelItemUseCase(itemRepository, clock),
@@ -75,6 +78,7 @@ public static class TermBulletBootstrap
     private static (
         IClock Clock,
         JsonFileItemRepository ItemRepository,
+        LocalTagCatalogRepository TagCatalogRepository,
         JsonDataTransferService DataTransferService,
         LocalHistoryMaintenanceService HistoryMaintenanceService,
         LocalSettingsStore SettingsStore)
@@ -85,13 +89,14 @@ public static class TermBulletBootstrap
         var pathResolver = new MonthlyJsonFilePathResolver(projectRootPath);
         var indexService = new LocalJsonIndexService(projectRootPath, fileStore);
         var itemRepository = new JsonFileItemRepository(clock, pathResolver, fileStore, indexService);
+        var tagCatalogRepository = new LocalTagCatalogRepository(projectRootPath, fileStore);
         var dataTransferService = new JsonDataTransferService(
             projectRootPath, fileStore, new LocalJsonIndexService(projectRootPath, fileStore));
         var historyMaintenanceService = new LocalHistoryMaintenanceService(
             projectRootPath, pathResolver, fileStore);
         var settingsStore = new LocalSettingsStore(projectRootPath, fileStore);
 
-        return (clock, itemRepository, dataTransferService, historyMaintenanceService, settingsStore);
+        return (clock, itemRepository, tagCatalogRepository, dataTransferService, historyMaintenanceService, settingsStore);
     }
 
     private sealed class SystemClock : IClock

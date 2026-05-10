@@ -2,6 +2,7 @@ using System.Text.Json;
 using TermBullet.Application.Ports;
 using TermBullet.Core.Items;
 using TermBullet.Core.Refs;
+using TermBullet.Core.Tags;
 using TermBullet.Infrastructure.Export;
 using TermBullet.Infrastructure.Persistence.JsonFiles;
 
@@ -36,6 +37,7 @@ public sealed class JsonDataTransferServiceTests
         var context = CreateContext();
         var repository = CreateRepository(context);
         var settingsStore = new LocalSettingsStore(context.ProjectRootPath, new SafeJsonFileStore());
+        var tagCatalogRepository = new LocalTagCatalogRepository(context.ProjectRootPath, new SafeJsonFileStore());
         var item = CreateItem(
             id: Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
             publicRef: "t-0426-1",
@@ -47,6 +49,7 @@ public sealed class JsonDataTransferServiceTests
         await repository.UpdateAsync(item);
         await settingsStore.SetAsync("theme", "dark");
         await settingsStore.SetAsync("compact_lists", "true");
+        await tagCatalogRepository.AddAsync(TagCatalogEntry.Create("auth", "Authentication work", CreatedAt));
 
         var service = CreateService(context);
         var outputPath = Path.Combine(context.ProjectRootPath, "exports", "backup.json");
@@ -76,6 +79,11 @@ public sealed class JsonDataTransferServiceTests
         var defaultProfile = settings.GetProperty("profiles").GetProperty("default");
         Assert.Equal("dark", defaultProfile.GetProperty("theme").GetString());
         Assert.Equal("true", defaultProfile.GetProperty("compact_lists").GetString());
+
+        var tags = doc.RootElement.GetProperty("tags").GetProperty("tags");
+        var tag = Assert.Single(tags.EnumerateArray());
+        Assert.Equal("auth", tag.GetProperty("name").GetString());
+        Assert.Equal("Authentication work", tag.GetProperty("description").GetString());
     }
 
     [Fact]
@@ -101,6 +109,10 @@ public sealed class JsonDataTransferServiceTests
 
         var settingsStore = new LocalSettingsStore(context.ProjectRootPath, new SafeJsonFileStore());
         Assert.Equal("dark", await settingsStore.GetAsync("theme"));
+
+        var tagCatalogRepository = new LocalTagCatalogRepository(context.ProjectRootPath, new SafeJsonFileStore());
+        var tags = await tagCatalogRepository.ListAsync();
+        Assert.Equal("auth", Assert.Single(tags).Name);
     }
 
     [Fact]
@@ -145,6 +157,7 @@ public sealed class JsonDataTransferServiceTests
         var source = CreateContext();
         var sourceRepository = CreateRepository(source);
         var sourceSettingsStore = new LocalSettingsStore(source.ProjectRootPath, new SafeJsonFileStore());
+        var sourceTagCatalogRepository = new LocalTagCatalogRepository(source.ProjectRootPath, new SafeJsonFileStore());
         var item = CreateItem(
             id: Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
             publicRef: "t-0426-1",
@@ -155,6 +168,7 @@ public sealed class JsonDataTransferServiceTests
         await sourceRepository.AddAsync(item);
         await sourceRepository.UpdateAsync(item);
         await sourceSettingsStore.SetAsync("theme", "dark");
+        await sourceTagCatalogRepository.AddAsync(TagCatalogEntry.Create("auth", "Authentication work", CreatedAt));
 
         var exportPath = Path.Combine(source.ProjectRootPath, "exports", "backup.json");
         await CreateService(source).ExportAsync(exportPath);
@@ -180,6 +194,11 @@ public sealed class JsonDataTransferServiceTests
 
         var importedSettingsStore = new LocalSettingsStore(target.ProjectRootPath, new SafeJsonFileStore());
         Assert.Equal("dark", await importedSettingsStore.GetAsync("theme"));
+
+        var importedTagCatalogRepository = new LocalTagCatalogRepository(target.ProjectRootPath, new SafeJsonFileStore());
+        var importedTag = Assert.Single(await importedTagCatalogRepository.ListAsync());
+        Assert.Equal("auth", importedTag.Name);
+        Assert.Equal("Authentication work", importedTag.Description);
     }
 
     private static JsonDataTransferService CreateService(TestContext context)
@@ -288,6 +307,16 @@ public sealed class JsonDataTransferServiceTests
                 "theme": "dark"
               }
             }
+          },
+          "tags": {
+            "tags": [
+              {
+                "name": "auth",
+                "description": "Authentication work",
+                "created_at": "2026-04-23T10:30:00Z",
+                "updated_at": "2026-04-23T10:30:00Z"
+              }
+            ]
           }
         }
         """;

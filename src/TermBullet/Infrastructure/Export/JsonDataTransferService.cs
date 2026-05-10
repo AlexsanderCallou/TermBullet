@@ -32,6 +32,7 @@ public sealed class JsonDataTransferService(
         {
             ExportedAt = DateTimeOffset.UtcNow,
             MonthlyFiles = await ReadMonthlyFilesAsync(cancellationToken),
+            Tags = await ReadTagsAsync(cancellationToken),
             Settings = await ReadSettingsAsync(cancellationToken)
         };
 
@@ -65,6 +66,14 @@ public sealed class JsonDataTransferService(
             var backupPath = GetSettingsBackupPath();
             var json = JsonSerializer.Serialize(package.Settings, JsonOptions);
             await fileStore.WriteAsync(settingsPath, backupPath, json, cancellationToken);
+        }
+
+        if (package.Tags is not null)
+        {
+            var tagsPath = GetTagsPath();
+            var backupPath = GetTagsBackupPath();
+            var json = JsonSerializer.Serialize(package.Tags, JsonOptions);
+            await fileStore.WriteAsync(tagsPath, backupPath, json, cancellationToken);
         }
 
         await indexService.RebuildAsync(cancellationToken);
@@ -108,6 +117,18 @@ public sealed class JsonDataTransferService(
         }
 
         var json = await fileStore.ReadOrRecoverAsync(settingsPath, GetSettingsBackupPath(), cancellationToken);
+        return ParseJsonElement(json);
+    }
+
+    private async Task<JsonElement?> ReadTagsAsync(CancellationToken cancellationToken)
+    {
+        var tagsPath = GetTagsPath();
+        if (!File.Exists(tagsPath))
+        {
+            return null;
+        }
+
+        var json = await fileStore.ReadOrRecoverAsync(tagsPath, GetTagsBackupPath(), cancellationToken);
         return ParseJsonElement(json);
     }
 
@@ -280,6 +301,10 @@ public sealed class JsonDataTransferService(
 
     private string GetSettingsBackupPath() => Path.Combine(projectRootPath, "data", "settings.backup.json");
 
+    private string GetTagsPath() => Path.Combine(projectRootPath, "data", "tags.json");
+
+    private string GetTagsBackupPath() => Path.Combine(projectRootPath, "data", "tags.backup.json");
+
     private static string GetMonthlyBackupPath(string monthlyPath)
     {
         var directory = Path.GetDirectoryName(monthlyPath)
@@ -306,6 +331,9 @@ public sealed class JsonDataTransferService(
 
         [JsonPropertyName("settings")]
         public JsonElement? Settings { get; set; }
+
+        [JsonPropertyName("tags")]
+        public JsonElement? Tags { get; set; }
     }
 
     private sealed class ExportedMonthlyFile

@@ -265,6 +265,11 @@ public sealed class Item
     public void SetPriority(Priority priority, DateTimeOffset changedAt)
     {
         EnsureActive();
+        if (Type != ItemType.Task)
+        {
+            throw new InvalidOperationException("Priority can only be changed for tasks.");
+        }
+
         EnsureDefined(priority, nameof(priority));
         Priority = priority;
         Touch(changedAt);

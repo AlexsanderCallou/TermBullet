@@ -9,5 +9,8 @@ public enum TuiScreen
     Planning,
     Week,
     Backlog,
-    Forgotten
+    Forgotten,
+    Notes,
+    Calendar,
+    Tags
 }
