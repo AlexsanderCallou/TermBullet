@@ -34,7 +34,6 @@ public sealed class CreateItemUseCaseTests
         Assert.Equal(ItemStatus.Open, result.Status);
         Assert.Equal(ItemCollection.Today, result.Collection);
         Assert.Equal(Priority.High, result.Priority);
-        Assert.Equal(DateOnly.FromDateTime(Now.UtcDateTime), result.PlannedFor);
         Assert.Equal(1, result.Version);
         Assert.Equal(Now, result.CreatedAt);
 
@@ -47,7 +46,6 @@ public sealed class CreateItemUseCaseTests
         Assert.Equal("Fix authentication flow", item.Content);
         Assert.Equal("Keep CLI and TUI behavior aligned.", item.Description);
         Assert.Equal(["auth", "cli"], item.Tags);
-        Assert.Equal(DateOnly.FromDateTime(Now.UtcDateTime), item.PlannedFor);
     }
 
     [Fact]
@@ -66,7 +64,6 @@ public sealed class CreateItemUseCaseTests
         Assert.Equal("n-0426-1", result.PublicRef);
         Assert.Equal(ItemCollection.Today, result.Collection);
         Assert.Equal(Priority.None, result.Priority);
-        Assert.Null(result.PlannedFor);
     }
 
     [Theory]
@@ -90,7 +87,7 @@ public sealed class CreateItemUseCaseTests
     }
 
     [Fact]
-    public async Task Execute_keeps_backlog_task_without_planned_for()
+    public async Task Execute_keeps_backlog_task_without_scheduled_date()
     {
         var repository = new FakeItemRepository();
         var useCase = CreateUseCase(repository);
@@ -102,9 +99,6 @@ public sealed class CreateItemUseCaseTests
         };
 
         var result = await useCase.ExecuteAsync(request);
-
-        Assert.Null(result.PlannedFor);
-        Assert.Null(Assert.Single(repository.AddedItems).PlannedFor);
     }
 
     [Fact]

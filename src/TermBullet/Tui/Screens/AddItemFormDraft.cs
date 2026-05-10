@@ -17,7 +17,7 @@ public sealed class AddItemFormDraft
 
     public string TagsText { get; set; } = string.Empty;
 
-    public string PlannedForText { get; set; } = DateOnly.FromDateTime(DateTime.Today.AddDays(1)).ToString("yyyy-MM-dd");
+    public string ScheduledAtText { get; set; } = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd");
 
     public static CreateItemRequest BuildQuickTaskRequest(string content)
     {
@@ -25,8 +25,7 @@ public sealed class AddItemFormDraft
         {
             Type = ItemType.Task,
             Content = NormalizeRequiredText(content, nameof(content)),
-            Collection = ItemCollection.Today,
-            PlannedFor = DateOnly.FromDateTime(DateTime.Today)
+            Collection = ItemCollection.Today
         };
     }
 
@@ -36,7 +35,7 @@ public sealed class AddItemFormDraft
         var description = NormalizeOptionalText(Description);
         var tags = ParseTags(TagsText);
         var collection = ResolveCollection();
-        var plannedAt = ResolvePlannedDate();
+        var scheduledAt = ResolveScheduledDate();
 
         return new CreateItemRequest
         {
@@ -46,21 +45,18 @@ public sealed class AddItemFormDraft
             Description = description,
             Priority = Type == ItemType.Task ? Priority : TermBullet.Domain.Items.Priority.None,
             Tags = tags.Count > 0 ? tags : null,
-            PlannedFor = Type == ItemType.Task ? plannedAt : null,
-            ScheduledAt = Type == ItemType.Event && plannedAt is not null ? ToUtcInstant(plannedAt.Value) : null
+            ScheduledAt = Type == ItemType.Event ? ToUtcInstant(scheduledAt!.Value) : null
         };
     }
 
     public IReadOnlyList<string> BuildPreviewLines()
     {
-        var plannedAt = ResolvePlannedDate();
+        var scheduledAt = ResolveScheduledDate();
         var planningLine = Type == ItemType.Event
-            ? plannedAt is null
+            ? scheduledAt is null
                 ? "scheduled_at: -"
-                : $"scheduled_at: {plannedAt.Value:yyyy-MM-dd}"
-            : plannedAt is null
-                ? "planned_for: -"
-                : $"planned_for: {plannedAt.Value:yyyy-MM-dd}";
+                : $"scheduled_at: {scheduledAt.Value:yyyy-MM-dd}"
+            : $"collection: {ResolveCollection().ToString().ToLowerInvariant()}";
         var content = string.IsNullOrWhiteSpace(Content) ? "(required)" : Content.Trim();
         var description = string.IsNullOrWhiteSpace(Description) ? "-" : Description.Trim();
 
@@ -84,15 +80,16 @@ public sealed class AddItemFormDraft
             _ => Timing switch
             {
                 AddItemTimingChoice.Today => ItemCollection.Today,
-                AddItemTimingChoice.FutureDate => ItemCollection.Week,
+                AddItemTimingChoice.Week => ItemCollection.Week,
+                AddItemTimingChoice.Month => ItemCollection.Month,
                 AddItemTimingChoice.Backlog => ItemCollection.Backlog,
                 _ => ItemCollection.Today
             }
         };
 
-    private DateOnly ParsePlannedFor()
+    private DateOnly ParseScheduledAt()
     {
-        var value = PlannedForText.Trim();
+        var value = ScheduledAtText.Trim();
         if (!DateOnly.TryParseExact(
             value,
             "yyyy-MM-dd",
@@ -100,24 +97,18 @@ public sealed class AddItemFormDraft
             System.Globalization.DateTimeStyles.None,
             out var plannedFor))
         {
-            throw new ArgumentException("Planned for must use yyyy-MM-dd.", nameof(PlannedForText));
+            throw new ArgumentException("Scheduled at must use yyyy-MM-dd.", nameof(ScheduledAtText));
         }
 
         return plannedFor;
     }
 
-    private DateOnly? ResolvePlannedDate() =>
+    private DateOnly? ResolveScheduledDate() =>
         Type switch
         {
             ItemType.Note => null,
-            ItemType.Event => ParsePlannedFor(),
-            _ => Timing switch
-            {
-                AddItemTimingChoice.Backlog => null,
-                AddItemTimingChoice.Today => DateOnly.FromDateTime(DateTime.Today),
-                AddItemTimingChoice.FutureDate => ParsePlannedFor(),
-                _ => null
-            }
+            ItemType.Event => ParseScheduledAt(),
+            _ => null
         };
 
     private static DateTimeOffset ToUtcInstant(DateOnly date) =>

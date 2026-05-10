@@ -12,35 +12,6 @@ public sealed class Item
         ItemType type,
         string content,
         string? description,
-        ItemCollection collection,
-        Priority priority,
-        IReadOnlyCollection<string> tags,
-        DateOnly? plannedFor,
-        DateTimeOffset createdAt,
-        DateTimeOffset? scheduledAt)
-    {
-        Id = id;
-        PublicRef = publicRef;
-        Type = type;
-        Content = content;
-        Description = description;
-        Status = ItemStatus.Open;
-        Collection = collection;
-        Priority = priority;
-        _tags = [.. tags];
-        PlannedFor = plannedFor;
-        Version = 1;
-        CreatedAt = createdAt;
-        UpdatedAt = createdAt;
-        ScheduledAt = scheduledAt;
-    }
-
-    private Item(
-        Guid id,
-        PublicRef publicRef,
-        ItemType type,
-        string content,
-        string? description,
         ItemStatus status,
         ItemCollection collection,
         Priority priority,
@@ -48,7 +19,6 @@ public sealed class Item
         int version,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
-        DateOnly? plannedFor,
         DateTimeOffset? scheduledAt,
         DateTimeOffset? completedAt,
         DateTimeOffset? cancelledAt,
@@ -64,7 +34,6 @@ public sealed class Item
         Collection = collection;
         Priority = priority;
         _tags = [.. tags];
-        PlannedFor = plannedFor;
         Version = version;
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
@@ -93,8 +62,6 @@ public sealed class Item
 
     public IReadOnlyList<string> Tags => _tags.AsReadOnly();
 
-    public DateOnly? PlannedFor { get; private set; }
-
     public int Version { get; private set; }
 
     public DateTimeOffset CreatedAt { get; }
@@ -121,7 +88,6 @@ public sealed class Item
         string? description = null,
         Priority priority = Priority.None,
         IEnumerable<string>? tags = null,
-        DateOnly? plannedFor = null,
         DateTimeOffset? scheduledAt = null)
     {
         if (id == Guid.Empty)
@@ -143,24 +109,24 @@ public sealed class Item
         EnsureDefined(collection, nameof(collection));
         EnsureDefined(priority, nameof(priority));
 
-        var normalizedPlannedFor = plannedFor;
-        if (type == ItemType.Task && normalizedPlannedFor is null && collection != ItemCollection.Backlog)
-        {
-            normalizedPlannedFor = DateOnly.FromDateTime(createdAt.UtcDateTime);
-        }
-
         return new Item(
             id,
             publicRef,
             type,
             normalizedContent,
             normalizedDescription,
+            ItemStatus.Open,
             collection,
             priority,
             NormalizeTags(tags),
-            normalizedPlannedFor,
+            version: 1,
             createdAt,
-            scheduledAt);
+            updatedAt: createdAt,
+            scheduledAt,
+            completedAt: null,
+            cancelledAt: null,
+            migratedAt: null,
+            migration: null);
     }
 
     public static Item Restore(
@@ -176,7 +142,6 @@ public sealed class Item
         int version,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
-        DateOnly? plannedFor = null,
         DateTimeOffset? scheduledAt = null,
         DateTimeOffset? completedAt = null,
         DateTimeOffset? cancelledAt = null,
@@ -222,7 +187,6 @@ public sealed class Item
             version,
             createdAt,
             updatedAt,
-            plannedFor,
             scheduledAt,
             completedAt,
             cancelledAt,

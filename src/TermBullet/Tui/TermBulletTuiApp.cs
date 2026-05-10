@@ -13,6 +13,7 @@ public sealed class TermBulletTuiApp(
     GetTodayItemsUseCase getTodayItemsUseCase,
     GetBacklogItemsUseCase getBacklogItemsUseCase,
     GetWeekItemsUseCase? getWeekItemsUseCase = null,
+    GetMonthItemsUseCase? getMonthItemsUseCase = null,
     ListItemsUseCase? listItemsUseCase = null,
     SearchItemsUseCase? searchItemsUseCase = null,
     ListConfigurationUseCase? listConfigurationUseCase = null,
@@ -30,6 +31,7 @@ public sealed class TermBulletTuiApp(
         var snapshotLoader = new TuiSnapshotLoader(
             getTodayItemsUseCase,
             getWeekItemsUseCase,
+            getMonthItemsUseCase,
             getBacklogItemsUseCase,
             listItemsUseCase,
             listTagsUseCase,
@@ -120,9 +122,7 @@ public sealed class TermBulletTuiApp(
                 if (item is null) return;
                 if (!item.Type.Equals("task", StringComparison.OrdinalIgnoreCase)) return;
                 selectedItem = item;
-                migrateItemVm = MigrateItemViewModel.ForDate(
-                    item,
-                    DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
+                migrateItemVm = MigrateItemViewModel.ForCollection(item, TermBullet.Domain.Items.ItemCollection.Today);
                 NavigateTo(TuiScreen.MigrateItem, GetPanelCount(TuiScreen.MigrateItem));
             }
 
@@ -272,7 +272,11 @@ public sealed class TermBulletTuiApp(
             void Render()
             {
                 var root = host.ReplaceContent();
-                var dashboardVm = new MainDashboardViewModel(snapshot.TodayItems, snapshot.BacklogItems);
+                var dashboardVm = new MainDashboardViewModel(
+                    snapshot.TodayItems,
+                    snapshot.WeekItems,
+                    snapshot.MonthItems,
+                    snapshot.BacklogItems);
 
                 if (auxiliaryFlow == TuiAuxiliaryFlow.AddItemTypePicker)
                 {
@@ -443,9 +447,12 @@ public sealed class TermBulletTuiApp(
                         break;
 
                     case TuiScreen.Week:
-                        WeekScreen.Build(
+                        ItemListScreen.Build(
                             root,
+                            "Week",
                             snapshot.WeekItems.Select(ItemDisplayRow.From).ToArray(),
+                            "Actions",
+                            ["> move selected task", "Enter open detail", "x mark done", "z cancel", "d delete"],
                             item => selectedItem = item,
                             OpenItemDetail,
                             OpenMigrateItem,
@@ -453,7 +460,28 @@ public sealed class TermBulletTuiApp(
                             item => { if (actionHandler is not null) DispatchSelectedAction(item, actionHandler.HandleCancelAsync); },
                             item => { if (actionHandler is not null) DispatchSelectedAction(item, actionHandler.HandleDeleteAsync); },
                             NavigateBack,
-                            Quit);
+                            Quit,
+                            row => $"{row.Symbol} {row.PublicRef} {row.Content}".Trim(),
+                            " Enter open  > move task  x done  z cancel  d delete  Tab/1-3 focus  ? help  Esc back  q quit");
+                        break;
+
+                    case TuiScreen.Month:
+                        ItemListScreen.Build(
+                            root,
+                            "Month",
+                            snapshot.MonthItems.Select(ItemDisplayRow.From).ToArray(),
+                            "Actions",
+                            ["> move selected task", "Enter open detail", "x mark done", "z cancel", "d delete"],
+                            item => selectedItem = item,
+                            OpenItemDetail,
+                            OpenMigrateItem,
+                            item => { if (actionHandler is not null) DispatchSelectedAction(item, actionHandler.HandleDoneAsync); },
+                            item => { if (actionHandler is not null) DispatchSelectedAction(item, actionHandler.HandleCancelAsync); },
+                            item => { if (actionHandler is not null) DispatchSelectedAction(item, actionHandler.HandleDeleteAsync); },
+                            NavigateBack,
+                            Quit,
+                            row => $"{row.Symbol} {row.PublicRef} {row.Content}".Trim(),
+                            " Enter open  > move task  x done  z cancel  d delete  Tab/1-3 focus  ? help  Esc back  q quit");
                         break;
 
                     case TuiScreen.Backlog:
@@ -542,7 +570,6 @@ public sealed class TermBulletTuiApp(
                         BuildMainDashboard(
                             root,
                             dashboardVm,
-                            snapshot.WeekItems.Count,
                             BuildForgottenRows(snapshot).Length,
                             navigation,
                             actionHandler,
@@ -573,7 +600,6 @@ public sealed class TermBulletTuiApp(
     private static void BuildMainDashboard(
         View root,
         MainDashboardViewModel viewModel,
-        int weekCount,
         int forgottenCount,
         TuiNavigationState navigation,
         MainDashboardActionHandler? actionHandler,
@@ -594,7 +620,7 @@ public sealed class TermBulletTuiApp(
             X = 0, Y = 0, Width = Dim.Fill()
         };
 
-        var footer = new Label(" / filter  c add  n quick task  e edit  x done  z cancel  > migrate  d delete  Enter open  Tab/1-5 focus")
+        var footer = new Label(" / filter  c add  n quick task  e edit  x done  z cancel  > move  d delete  Enter open  Tab/1-5 focus")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
@@ -609,6 +635,7 @@ public sealed class TermBulletTuiApp(
             "> Dashboard",
             "  Search",
             "  Planning",
+            "  Month",
             "  Backlog",
             "  Forgotten",
             "  Notes",
@@ -638,6 +665,21 @@ public sealed class TermBulletTuiApp(
         }
         dayItemsPanel.Add(dayItemsList);
 
+        var weekItemsPanel = new FrameView("Week")
+        {
+            X = 0, Y = Pos.Percent(50), Width = Dim.Fill(), Height = Dim.Fill()
+        };
+        var weekItemsList = new ListView(TuiScreenUtilities.SanitizeListItems(
+            viewModel.WeekItems.Count > 0
+                ? viewModel.WeekItems.Select(r => $"{r.Symbol} {r.PublicRef} {r.Content}").ToArray()
+                : ["(no items)"]))
+        {
+            X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
+        };
+        dayItemsList.Height = Dim.Percent(50);
+        weekItemsPanel.Add(weekItemsList);
+        dayItemsPanel.Add(weekItemsPanel);
+
         var detailsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Details", navigation, 2))
         {
             X = Pos.Right(dayItemsPanel), Y = 1, Width = Dim.Fill(), Height = upperHeight
@@ -652,7 +694,7 @@ public sealed class TermBulletTuiApp(
         {
             X = 0, Y = Pos.Bottom(menuPanel), Width = Dim.Percent(20), Height = Dim.Fill(1)
         };
-        var contextRows = BuildContextLines(viewModel, weekCount, forgottenCount);
+        var contextRows = BuildContextLines(viewModel, forgottenCount);
         var contextList = new ListView(TuiScreenUtilities.SanitizeListItems(contextRows))
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
@@ -836,9 +878,10 @@ public sealed class TermBulletTuiApp(
         {
             TuiScreen.Search => 2,
             TuiScreen.ItemDetail => 5,
-            TuiScreen.MigrateItem => 3,
+            TuiScreen.MigrateItem => 1,
             TuiScreen.Planning => 1,
-            TuiScreen.Week => 7,
+            TuiScreen.Week => 3,
+            TuiScreen.Month => 3,
             TuiScreen.Backlog => 3,
             TuiScreen.Forgotten => 3,
             TuiScreen.Notes => 3,
@@ -853,20 +896,32 @@ public sealed class TermBulletTuiApp(
         return snapshot.AllItems
             .Where(item => item.Type == ItemType.Task
                 && item.Status == ItemStatus.Open
-                && item.PlannedFor is not null
-                && item.PlannedFor.Value < today)
-            .OrderBy(item => item.PlannedFor)
+                && IsFromPreviousMonth(item.PublicRef, today))
+            .OrderBy(item => item.PublicRef, StringComparer.Ordinal)
             .Select(ItemDisplayRow.From)
             .ToArray();
     }
 
     private static string FormatForgottenRow(ItemDisplayRow row)
     {
-        var missedText = row.PlannedFor is null
-            ? string.Empty
-            : $"missed {Math.Max(1, DateOnly.FromDateTime(DateTime.Today).DayNumber - row.PlannedFor.Value.DayNumber)}d";
+        return $"{row.Symbol} {row.PublicRef} {row.Content} previous month".Trim();
+    }
 
-        return $"{row.Symbol} {row.PublicRef} {row.Content} {missedText}".Trim();
+    private static bool IsFromPreviousMonth(string publicRef, DateOnly today)
+    {
+        var parts = publicRef.Split('-');
+        if (parts.Length < 3 || parts[1].Length != 4)
+        {
+            return false;
+        }
+
+        if (!int.TryParse(parts[1][..2], out var month) || !int.TryParse(parts[1][2..], out var yearTwoDigits))
+        {
+            return false;
+        }
+
+        var year = 2000 + yearTwoDigits;
+        return year < today.Year || (year == today.Year && month < today.Month);
     }
 
     private static void DispatchAction(
@@ -896,13 +951,14 @@ public sealed class TermBulletTuiApp(
             ]
             : ["(nothing selected)"];
 
-    private static string[] BuildContextLines(MainDashboardViewModel viewModel, int weekCount, int forgottenCount)
+    private static string[] BuildContextLines(MainDashboardViewModel viewModel, int forgottenCount)
     {
         var lines = new List<string>
         {
             "collections",
             $"> today      {viewModel.DayItems.Count}",
-            $"  week view  {weekCount}",
+            $"  week       {viewModel.WeekItems.Count}",
+            $"  month      {viewModel.MonthItems.Count}",
             $"  backlog    {viewModel.BacklogItems.Count}",
             $"  forgotten  {forgottenCount}",
             "tags"

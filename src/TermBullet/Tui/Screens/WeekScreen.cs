@@ -235,11 +235,6 @@ public static class WeekScreen
 
     private static DateOnly? GetPlanningDate(ItemDisplayRow row)
     {
-        if (row.PlannedFor is not null)
-        {
-            return row.PlannedFor;
-        }
-
         return row.ScheduledAt is null
             ? null
             : DateOnly.FromDateTime(row.ScheduledAt.Value.DateTime);

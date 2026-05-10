@@ -1,4 +1,5 @@
 using Terminal.Gui;
+using TermBullet.Domain.Items;
 using TermBullet.Tui.Navigation;
 
 namespace TermBullet.Tui.Screens;
@@ -7,9 +8,7 @@ public static class MigrateItemScreen
 {
     private enum FocusArea
     {
-        Item,
         Destination,
-        Result,
         Save,
         Cancel
     }
@@ -22,46 +21,59 @@ public static class MigrateItemScreen
         Action<MigrateItemViewModel> onConfirm,
         Action onCancel)
     {
+        _ = navigation;
         var currentViewModel = viewModel;
-        var topBar = new Label($" TermBullet \u2500 Migrate {viewModel.Item.PublicRef}")
+        var focusArea = FocusArea.Destination;
+        var syncingDestinationSelection = false;
+
+        var screen = new FrameView($"TermBullet - Migrate {viewModel.Item.PublicRef}")
         {
-            X = 0, Y = 0, Width = Dim.Fill()
+            X = 0,
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = Dim.Fill(1)
         };
-        var footer = new Label(" Enter activate  Tab/1-3 focus  Space toggle  Esc cancel  ? help")
+        var footer = new Label(" Enter activate  Tab focus  Space toggle  Esc cancel  ? help")
         {
-            X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
+            X = 0,
+            Y = Pos.AnchorEnd(1),
+            Width = Dim.Fill()
         };
 
-        var itemPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, "Item", navigation, 0))
-        {
-            X = 0, Y = 1, Width = Dim.Fill(), Height = Dim.Percent(40)
-        };
-        var destinationPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(2, "Destination", navigation, 1))
-        {
-            X = 0, Y = Pos.Bottom(itemPanel), Width = Dim.Percent(50), Height = Dim.Fill(1)
-        };
-        var resultPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Result", navigation, 2))
-        {
-            X = Pos.Right(destinationPanel), Y = Pos.Bottom(itemPanel), Width = Dim.Fill(), Height = Dim.Fill(1)
-        };
+        AddLines(screen, 1, ["Item", .. viewModel.ItemLines]);
+        AddSeparator(screen, 8);
 
-        var itemList = AddList(itemPanel, viewModel.ItemLines);
-        var destinationList = AddList(destinationPanel, viewModel.DestinationLines);
-        var dateLabel = new Label("planned_for:")
+        var destinationTitle = new Label("Destination")
         {
             X = 1,
-            Y = 5,
-            Visible = currentViewModel.DateSelected
+            Y = 9,
+            Width = Dim.Fill(2)
         };
-        var dateField = new TextField(currentViewModel.PlannedFor?.ToString("yyyy-MM-dd") ?? DateOnly.FromDateTime(DateTime.Today.AddDays(1)).ToString("yyyy-MM-dd"))
+        var destinationGroup = new RadioGroup(["Today", "Week", "Month", "Backlog"], SelectedIndex(currentViewModel.DestinationCollection))
         {
-            X = Pos.Right(dateLabel) + 1,
-            Y = 5,
-            Width = 12,
-            Visible = currentViewModel.DateSelected
+            X = 1,
+            Y = 10,
+            Width = Dim.Fill(2)
         };
-        destinationPanel.Add(dateLabel, dateField);
-        var resultList = AddList(resultPanel, viewModel.ResultLines);
+
+        var resultTitle = new Label("Result")
+        {
+            X = 1,
+            Y = 16,
+            Width = Dim.Fill(2)
+        };
+        var resultLineOne = new Label(currentViewModel.ResultLines.ElementAtOrDefault(0) ?? string.Empty)
+        {
+            X = 1,
+            Y = 17,
+            Width = Dim.Fill(2)
+        };
+        var resultLineTwo = new Label(currentViewModel.ResultLines.ElementAtOrDefault(1) ?? string.Empty)
+        {
+            X = 1,
+            Y = 18,
+            Width = Dim.Fill(2)
+        };
         var saveButton = new Button("Save")
         {
             X = 1,
@@ -72,57 +84,22 @@ public static class MigrateItemScreen
             X = Pos.Right(saveButton) + 2,
             Y = Pos.AnchorEnd(2)
         };
-        resultPanel.Add(saveButton, cancelButton);
 
-        var panels = new[] { itemPanel, destinationPanel, resultPanel };
-        var panelTitles = new[] { "Item", "Destination", "Result" };
-        var focusTargets = new View[] { itemList, destinationList, resultList };
-        TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
-
-        root.Add(topBar, itemPanel, destinationPanel, resultPanel, footer);
-        TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-        var focusArea = navigation.FocusedPanelIndex switch
-        {
-            1 => FocusArea.Destination,
-            2 => FocusArea.Result,
-            _ => FocusArea.Item
-        };
+        screen.Add(destinationTitle, destinationGroup, resultTitle, resultLineOne, resultLineTwo, saveButton, cancelButton);
+        root.Add(screen, footer);
 
         void SetFocusArea(FocusArea area)
         {
             focusArea = area;
             switch (area)
             {
-                case FocusArea.Item:
-                    navigation.FocusPanel(1);
-                    TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
-                    itemList.SetFocus();
-                    break;
                 case FocusArea.Destination:
-                    navigation.FocusPanel(2);
-                    TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
-                    if (currentViewModel.DateSelected)
-                    {
-                        dateField.SetFocus();
-                    }
-                    else
-                    {
-                        destinationList.SetFocus();
-                    }
-                    break;
-                case FocusArea.Result:
-                    navigation.FocusPanel(3);
-                    TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
-                    resultList.SetFocus();
+                    destinationGroup.SetFocus();
                     break;
                 case FocusArea.Save:
-                    navigation.FocusPanel(3);
-                    TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     saveButton.SetFocus();
                     break;
                 case FocusArea.Cancel:
-                    navigation.FocusPanel(3);
-                    TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     cancelButton.SetFocus();
                     break;
             }
@@ -130,14 +107,7 @@ public static class MigrateItemScreen
 
         void MoveFocus(int delta)
         {
-            var order = new[]
-            {
-                FocusArea.Item,
-                FocusArea.Destination,
-                FocusArea.Result,
-                FocusArea.Save,
-                FocusArea.Cancel
-            };
+            FocusArea[] order = [FocusArea.Destination, FocusArea.Save, FocusArea.Cancel];
             var index = Array.IndexOf(order, focusArea);
             index = index < 0 ? 0 : index + delta;
             if (index < 0)
@@ -155,69 +125,40 @@ public static class MigrateItemScreen
         void RefreshDestination(MigrateItemViewModel updated)
         {
             currentViewModel = updated;
-            TuiScreenUtilities.RefreshListView(destinationList, updated.DestinationLines);
-            TuiScreenUtilities.RefreshListView(resultList, updated.ResultLines);
-            dateLabel.Visible = updated.DateSelected;
-            dateField.Visible = updated.DateSelected;
-            if (updated.PlannedFor is not null)
+            syncingDestinationSelection = true;
+            try
             {
-                dateField.Text = updated.PlannedFor.Value.ToString("yyyy-MM-dd");
+                destinationGroup.SelectedItem = SelectedIndex(updated.DestinationCollection);
+            }
+            finally
+            {
+                syncingDestinationSelection = false;
             }
 
+            resultLineOne.Text = updated.ResultLines.ElementAtOrDefault(0) ?? string.Empty;
+            resultLineTwo.Text = updated.ResultLines.ElementAtOrDefault(1) ?? string.Empty;
             onViewModelChanged(updated);
         }
 
-        bool TryBuildCurrentViewModel(out MigrateItemViewModel updated)
-        {
-            if (!currentViewModel.DateSelected)
-            {
-                updated = currentViewModel;
-                return true;
-            }
-
-            if (!DateOnly.TryParse(dateField.Text?.ToString(), out var plannedFor))
-            {
-                updated = currentViewModel;
-                return false;
-            }
-
-            updated = currentViewModel.WithPlannedFor(plannedFor);
-            return true;
-        }
-
-        void Submit()
-        {
-            if (!TryBuildCurrentViewModel(out var updated))
-            {
-                TuiScreenUtilities.RefreshListView(
-                    resultList,
-                    ["status: planned_for must be yyyy-mm-dd"]);
-                return;
-            }
-
-            onConfirm(updated);
-        }
+        void Submit() => onConfirm(currentViewModel);
 
         saveButton.Clicked += Submit;
         cancelButton.Clicked += onCancel;
+        destinationGroup.SelectedItemChanged += _ =>
+        {
+            if (syncingDestinationSelection)
+            {
+                return;
+            }
+
+            RefreshDestination(currentViewModel.WithDestination(CollectionFromIndex(destinationGroup.SelectedItem)));
+        };
 
         root.KeyPress += args =>
         {
             if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.MigrateItem);
-                args.Handled = true;
-                return;
-            }
-
-            if (TuiScreenUtilities.TryFocusPanelByNumber(args.KeyEvent, navigation, panels, panelTitles, focusTargets))
-            {
-                focusArea = navigation.FocusedPanelIndex switch
-                {
-                    1 => FocusArea.Destination,
-                    2 => FocusArea.Result,
-                    _ => FocusArea.Item
-                };
                 args.Handled = true;
                 return;
             }
@@ -233,7 +174,7 @@ public static class MigrateItemScreen
                     args.Handled = true;
                     break;
                 case Key.Space when focusArea == FocusArea.Destination:
-                    RefreshDestination(currentViewModel.ToggleDestination());
+                    destinationGroup.SelectedItem = destinationGroup.SelectedItem >= 3 ? 0 : destinationGroup.SelectedItem + 1;
                     args.Handled = true;
                     break;
                 case Key.Enter:
@@ -247,6 +188,7 @@ public static class MigrateItemScreen
                         onCancel();
                         args.Handled = true;
                     }
+
                     break;
                 case Key.Esc:
                     onCancel();
@@ -254,15 +196,49 @@ public static class MigrateItemScreen
                     break;
             }
         };
+
+        SetFocusArea(FocusArea.Destination);
     }
 
-    private static ListView AddList(FrameView panel, IReadOnlyList<string> lines)
-    {
-        var list = new ListView(TuiScreenUtilities.SanitizeListItems(lines))
+    private static int SelectedIndex(ItemCollection collection) =>
+        collection switch
         {
-            X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
+            ItemCollection.Today => 0,
+            ItemCollection.Week => 1,
+            ItemCollection.Month => 2,
+            ItemCollection.Backlog => 3,
+            _ => 0
         };
-        panel.Add(list);
-        return list;
+
+    private static ItemCollection CollectionFromIndex(int index) =>
+        index switch
+        {
+            1 => ItemCollection.Week,
+            2 => ItemCollection.Month,
+            3 => ItemCollection.Backlog,
+            _ => ItemCollection.Today
+        };
+
+    private static void AddLines(FrameView screen, int startY, IReadOnlyList<string> lines)
+    {
+        for (var index = 0; index < lines.Count; index++)
+        {
+            screen.Add(new Label(lines[index])
+            {
+                X = 1,
+                Y = startY + index,
+                Width = Dim.Fill(2)
+            });
+        }
+    }
+
+    private static void AddSeparator(FrameView screen, int y)
+    {
+        screen.Add(new Label(new string('-', 90))
+        {
+            X = 1,
+            Y = y,
+            Width = Dim.Fill(2)
+        });
     }
 }

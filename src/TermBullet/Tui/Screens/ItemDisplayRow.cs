@@ -15,7 +15,6 @@ public sealed class ItemDisplayRow
     public required string Priority { get; init; }
     public required string Collection { get; init; }
     public required string[] Tags { get; init; }
-    public required DateOnly? PlannedFor { get; init; }
     public required DateTimeOffset? ScheduledAt { get; init; }
     public required int Version { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
@@ -34,7 +33,6 @@ public sealed class ItemDisplayRow
             Priority = item.Priority.ToString().ToLowerInvariant(),
             Collection = item.Collection.ToString().ToLowerInvariant(),
             Tags = [.. item.Tags],
-            PlannedFor = item.PlannedFor,
             ScheduledAt = item.ScheduledAt,
             Version = item.Version,
             CreatedAt = item.CreatedAt,

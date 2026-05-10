@@ -16,7 +16,5 @@ public sealed class CreateItemRequest
 
     public IReadOnlyCollection<string>? Tags { get; init; }
 
-    public DateOnly? PlannedFor { get; init; }
-
     public DateTimeOffset? ScheduledAt { get; init; }
 }

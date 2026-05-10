@@ -264,8 +264,6 @@ public sealed class JsonItemRepositoryTests
         var stored = Assert.Single(doc.RootElement.GetProperty("items").EnumerateArray());
         Assert.True(stored.TryGetProperty("description", out var description));
         Assert.Equal(JsonValueKind.Null, description.ValueKind);
-        Assert.True(stored.TryGetProperty("planned_for", out var plannedFor));
-        Assert.Equal(JsonValueKind.Null, plannedFor.ValueKind);
         Assert.True(stored.TryGetProperty("scheduled_at", out var scheduledAt));
         Assert.Equal(JsonValueKind.Null, scheduledAt.ValueKind);
         Assert.True(stored.TryGetProperty("completed_at", out var completedAt));
@@ -377,7 +375,6 @@ public sealed class JsonItemRepositoryTests
             3,
             CreatedAt,
             ChangedAt,
-            plannedFor: new DateOnly(2026, 5, 1),
             scheduledAt: new DateTimeOffset(2026, 5, 2, 14, 0, 0, TimeSpan.Zero),
             migratedAt: migrationInfo.MigratedAt,
             migration: migrationInfo);
@@ -387,7 +384,6 @@ public sealed class JsonItemRepositoryTests
         var found = await repository.FindByPublicRefAsync("t-0526-1");
         Assert.NotNull(found);
         Assert.Equal(item.Description, found.Description);
-        Assert.Equal(item.PlannedFor, found.PlannedFor);
         Assert.Equal(item.ScheduledAt, found.ScheduledAt);
         Assert.Equal(item.MigratedAt, found.MigratedAt);
         Assert.NotNull(found.Migration);
@@ -399,7 +395,7 @@ public sealed class JsonItemRepositoryTests
         using var doc = JsonDocument.Parse(json);
         var stored = Assert.Single(doc.RootElement.GetProperty("items").EnumerateArray());
         Assert.Equal("keep tests green", stored.GetProperty("description").GetString());
-        Assert.Equal("2026-05-01", stored.GetProperty("planned_for").GetString());
+        Assert.False(stored.TryGetProperty("planned_for", out _));
         Assert.Equal(new DateTimeOffset(2026, 5, 2, 14, 0, 0, TimeSpan.Zero), stored.GetProperty("scheduled_at").GetDateTimeOffset());
         Assert.Equal(migrationInfo.MigratedAt, stored.GetProperty("migrated_at").GetDateTimeOffset());
         var migration = stored.GetProperty("migration");

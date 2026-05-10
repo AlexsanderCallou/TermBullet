@@ -18,7 +18,7 @@ Long-form ADRs may be split into `docs/adr/` later if more detail is needed.
 | 0007 | Accepted | AI, calendar, and sync are optional modules. |
 | 0008 | Superseded | Future sync at JSON file level; superseded by ADR-0014. |
 | 0009 | Accepted | TUI is based on screens, panels, and keyboard. |
-| 0010 | Accepted | Export/import are basic V1 portability features. |
+| 0010 | Rejected | Export/import are not part of TermBullet V1. |
 | 0011 | Accepted | Project is open source and English-first. |
 | 0012 | Accepted | Official stack is .NET 8/C#, Terminal.Gui, System.CommandLine, monthly JSON files, local JSON index, future PostgreSQL. |
 | 0013 | Accepted | V1 uses a modular monolith. |
@@ -85,8 +85,7 @@ n-0426-1
 e-0426-1
 ```
 
-Internal ID is the integrity basis for persistence, import/export, and future
-sync.
+Internal ID is the integrity basis for persistence and future sync.
 
 Rejected: only sequential numbers, only UUIDs, and title-as-identifier.
 
@@ -102,26 +101,28 @@ Required initial collections:
 
 - Today;
 - Week;
+- Month;
 - Backlog.
 
-Week is the V1 dated week area. The TUI Week View groups tasks by `planned_for`
-and events by `scheduled_at`.
+Week and Month are task collections, not dated task schedules. Events use
+`scheduled_at`.
 
-Forgotten is a derived review list for unresolved open tasks planned before
-today. It is not a persisted item collection in V1.
+Forgotten is a derived review list for unresolved open tasks from previous
+monthly files. It is not a persisted item collection in V1.
 
 Tasks and Events remain distinct; a task must not automatically become an event.
 Priority is task metadata in V1. Notes and events do not expose priority and
 are stored with `none`.
 
 Official task statuses are `open`, `done`, `cancelled`, and `migrate`.
-`migrate` represents an intentional move out of a previous planned placement.
+`migrate` represents an intentional move out of a previous collection placement.
 The source item remains stored with migrate status, and the destination is a new open
 task that records the source item.
 
-Tasks created for Today are planned for Today by default. Future planned dates
-must be intentional. Open tasks planned before today appear in Forgotten for
-manual review when the app starts or begins a new day.
+Tasks are planned by collection. Quick Task creates a task in Today, and normal
+task creation chooses Today, Week, Month, or Backlog. Dates belong to events,
+not tasks. Open tasks from previous monthly files appear in Forgotten for manual
+review.
 
 Rejected: generic-only item model and many V1 item types.
 
@@ -192,14 +193,18 @@ Concrete layouts are maintained in [screens.md](screens.md).
 
 Rejected: sequential prompt interface and mouse-dependent interface.
 
-## ADR-0010 - Export and Import
+## ADR-0010 - No Export or Import
 
-V1 provides JSON export/import for backup, migration, and portability.
+TermBullet V1 does not provide export or import commands.
 
-Export/import must preserve IDs, refs, types, statuses, collections, task
-priorities, tags, timestamps, and relevant history.
+Rationale:
 
-Rejected: postponing export/import until sync and exporting only rendered text.
+- local monthly JSON files are already user-accessible;
+- explicit export/import flows add validation and conflict complexity that is
+  not necessary for the product direction;
+- future sync/cloud remains a separate optional capability.
+
+Rejected: adding backup/restore style export/import flows to V1.
 
 ## ADR-0011 - Open Source and English-First
 

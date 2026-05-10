@@ -29,6 +29,7 @@ termbullet
 ├── list
 ├── today
 ├── week
+├── month
 ├── backlog
 ├── show
 ├── edit
@@ -43,8 +44,6 @@ termbullet
 ├── search
 ├── history
 │   └── clear
-├── export
-├── import
 └── path
 ```
 
@@ -86,11 +85,12 @@ termbullet list
 ```bash
 termbullet today
 termbullet week
+termbullet month
 termbullet backlog
 ```
 
-`week` shows items in the Week collection. The TUI Week View groups tasks by
-`planned_for` and events by `scheduled_at`.
+`week` and `month` show tasks in their respective collections. They are not
+date-grouped task schedules.
 
 Forgotten is currently exposed in the TUI as a derived review list. There is no
 active `forgotten` CLI command in the current command tree.
@@ -116,17 +116,19 @@ termbullet edit t-0426-1 "fix auth flow"
 ```bash
 termbullet done t-0426-1
 termbullet cancel t-0426-1
-termbullet migrate t-0426-1 --date 2026-05-12
-termbullet migrate t-0426-1 --backlog
+termbullet migrate t-0426-1 --collection week
+termbullet migrate t-0426-1 --collection backlog
 ```
 
-`migrate` applies to tasks and must receive exactly one destination:
+`migrate` applies to tasks and must receive a destination collection:
 
-- `--date <yyyy-mm-dd>` migrates the task to a specific planned date.
-- `--backlog` migrates the task to Backlog.
+- `--collection today`
+- `--collection week`
+- `--collection month`
+- `--collection backlog`
 
-Open tasks that were planned for previous days and were not done, cancelled, or
-marked migrate are shown in the TUI Forgotten review for manual action.
+Open tasks from previous monthly files that were not done, cancelled, or marked
+migrate are shown in the TUI Forgotten review for manual action.
 
 ### Movement
 
@@ -178,21 +180,6 @@ Clear stored history entries, not active items.
 ```bash
 termbullet history clear
 ```
-
-### Export and Import
-
-```bash
-termbullet export
-termbullet import <path>
-```
-
-Export/import must preserve IDs, public refs, types, status, collections,
-planned dates, task priorities, tags, timestamps, versions, migration metadata, and
-important history.
-
-Import is a restore/migration command for a new installation. It must fail if
-the local data directory already contains monthly JSON files. It does not merge,
-skip conflicts, or overwrite an active local data set.
 
 ### `path`
 

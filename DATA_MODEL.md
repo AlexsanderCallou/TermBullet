@@ -71,21 +71,17 @@ Minimum V1 collections:
 
 - `today`
 - `week`
+- `month`
 - `backlog`
 
-Additional collections may exist for product flow:
-
-- `monthly`
-- `archived`
-
 Review, Forgotten, and Search are screens/features, not item collections.
-Forgotten is a derived review list for open tasks whose `planned_for` date is
-before today. Week is the V1 dated week collection; the TUI Week View groups
-week items by task `planned_for` and event `scheduled_at`.
+Forgotten is a derived review list for open tasks from previous monthly files
+that still have no terminal status. Week and Month are task collections, not
+dated task schedules. Events use `scheduled_at`.
 
 Current operational queries read the current monthly file. Archive/review
 queries may read all monthly files explicitly. Forgotten uses archive review
-semantics to find old open planned tasks, while Today, Week, and Calendar stay
+semantics to find old open tasks, while Today, Week, Month, and Calendar stay
 bounded to the current month unless a future period view is explicitly added.
 
 ## Identity
@@ -95,7 +91,7 @@ Internal ID:
 - UUID string;
 - generated once;
 - immutable;
-- real identity for persistence, import/export, and future sync;
+- real identity for persistence and future sync;
 - preserved on the source item after migration.
 
 Public ref:
@@ -129,15 +125,14 @@ Required persisted fields:
 - `description`
 - `status`
 - `collection`
-- `planned_for`
 - `priority`
 - `tags`
 - `version`
 - `created_at`
 - `updated_at`
 
-`planned_for` is required for active tasks in Today or Week. Backlog tasks may
-store it as `null`. Notes and events may store it as `null`.
+Tasks do not persist a planning date. Task placement is expressed through
+`collection`. Dates belong to events through `scheduled_at`.
 
 Optional fields:
 
@@ -220,7 +215,6 @@ Tag catalog shape:
       "description": null,
       "status": "open",
       "collection": "today",
-      "planned_for": "2026-04-22",
       "priority": "high",
       "tags": ["jwt", "auth"],
       "scheduled_at": null,
@@ -263,29 +257,28 @@ Delete behavior:
 History cleanup removes history entries, not active items, and must create a
 backup before writing.
 
-## Task Planning and Forgotten Review
+## Task Collections and Forgotten Review
 
-Tasks have a `planned_for` date.
+Tasks are planned by collection.
 
 Rules:
 
-- tasks created from Today use today's date as `planned_for`;
-- future dates are only set when the user intentionally plans a task for the
-  future;
-- Backlog tasks keep `planned_for` as `null`;
-- an open task with `planned_for` before today and no terminal action appears
-  in Forgotten review;
+- tasks created from Quick Task use the `today` collection;
+- normal task creation must choose one of `today`, `week`, `month`, or `backlog`;
+- dates must not be stored on tasks;
+- an open task from a previous monthly file with no terminal action appears in
+  Forgotten review;
 - Forgotten tasks wait for explicit user action.
 
-At startup or at the beginning of the day, the application should check open
-tasks planned before today. If a task was not done, cancelled, or marked
-migrate on its planned day, it appears in Forgotten review.
+At startup or at the beginning of a new month, the application should keep old
+open tasks in their original monthly files and expose them through Forgotten for
+explicit review.
 
 Month rollover is maintenance-only in V1. On the first day of a month it ensures
 the current monthly file exists and refreshes the local index. It must not move,
-copy, mark, or automatically migrate old tasks. Old open planned tasks remain in
-their original monthly files and are surfaced through Forgotten for explicit
-human action.
+copy, mark, or automatically migrate old tasks. Old open tasks remain in their
+original monthly files and are surfaced through Forgotten for explicit human
+action.
 
 Recommended forgotten history event:
 
@@ -295,7 +288,6 @@ Recommended forgotten history event:
   "item_id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
   "from_collection": "today",
   "review": "forgotten",
-  "planned_for": "2026-04-22",
   "created_at": "2026-04-23T00:05:00Z"
 }
 ```
@@ -303,17 +295,12 @@ Recommended forgotten history event:
 ## Manual Migration
 
 Manual migration is an intentional user action for tasks. It must always declare
-the destination:
-
-- specific date;
-- Backlog.
+the destination collection: `today`, `week`, `month`, or `backlog`.
 
 Rules:
 
-- migrating to a date marks the source task as `migrate` and creates a new
-  `open` task with the destination planned date;
-- migrating to Backlog marks the source task as `migrate` and creates a new
-  `open` task in Backlog without an active date;
+- migrating marks the source task as `migrate` and creates a new `open` task in
+  the destination collection;
 - the destination task receives a new internal ID and public ref;
 - the destination task records `migrated_from_id` and `migrated_from_ref`;
 - the source task records `migrated_to_id` and `migrated_to_ref`;
@@ -325,42 +312,17 @@ Recommended migration object:
 ```json
 {
   "from_collection": "today",
-  "from_planned_for": "2026-04-22",
   "from_id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
   "from_ref": "t-0426-1",
-  "to_collection": "today",
-  "to_planned_for": "2026-04-23",
+  "to_collection": "week",
   "to_id": "a0f13256-499f-47bc-a623-6fa8f4df36f8",
   "to_ref": "t-0426-4",
   "migrated_at": "2026-04-22T20:15:00Z",
-  "reason": "manual_date"
+  "reason": "manual_collection"
 }
 ```
 
-## Export, Import, AI, and Sync
-
-Export/import must preserve IDs, refs, type, content, description, status,
-collection, planned dates, task priority, tags, timestamps, version, migration
-metadata, tag catalog entries, and important history.
-
-Import is intended for restoring or moving TermBullet JSON files into a new
-installation. It must only run when the local data directory has no existing
-monthly JSON files. If local monthly JSON files already exist, import must fail
-before writing anything.
-
-Import behavior:
-
-- validate the provided data first;
-- reject malformed JSON;
-- reject duplicate public refs inside a period;
-- reject duplicate internal IDs;
-- reject missing required fields;
-- reject import into a non-empty local data set;
-- write the imported monthly files as the new local data set.
-
-Import does not merge, skip conflicting records, or overwrite an existing active
-local data set. Users who want to replace an installation must clear or move the
-existing local data directory first.
+## AI and Sync
 
 Future AI context must be filtered. Do not send all JSON files by default.
 

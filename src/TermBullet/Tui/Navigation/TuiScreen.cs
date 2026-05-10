@@ -8,6 +8,7 @@ public enum TuiScreen
     MigrateItem,
     Planning,
     Week,
+    Month,
     Backlog,
     Forgotten,
     Notes,

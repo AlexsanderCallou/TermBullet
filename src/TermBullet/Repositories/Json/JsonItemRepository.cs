@@ -370,7 +370,6 @@ public sealed class JsonItemRepository(
             Collection = ToCollectionKey(item.Collection),
             Priority = ToPriorityKey(item.Priority),
             Tags = [.. item.Tags],
-            PlannedFor = item.PlannedFor,
             ScheduledAt = item.ScheduledAt,
             Version = item.Version,
             CreatedAt = item.CreatedAt,
@@ -416,7 +415,6 @@ public sealed class JsonItemRepository(
             item.Version,
             item.CreatedAt,
             item.UpdatedAt,
-            item.PlannedFor,
             item.ScheduledAt,
             item.CompletedAt,
             item.CancelledAt,
@@ -474,9 +472,8 @@ public sealed class JsonItemRepository(
         {
             ItemCollection.Today => "today",
             ItemCollection.Week => "week",
+            ItemCollection.Month => "month",
             ItemCollection.Backlog => "backlog",
-            ItemCollection.Monthly => "monthly",
-            ItemCollection.Archived => "archived",
             _ => throw new ArgumentOutOfRangeException(nameof(collection), collection, "Unsupported item collection.")
         };
 
@@ -485,9 +482,9 @@ public sealed class JsonItemRepository(
         {
             "today" => ItemCollection.Today,
             "week" => ItemCollection.Week,
+            "month" => ItemCollection.Month,
             "backlog" => ItemCollection.Backlog,
-            "monthly" => ItemCollection.Monthly,
-            "archived" => ItemCollection.Archived,
+            "monthly" => ItemCollection.Month,
             _ => throw new InvalidDataException($"Unsupported item collection value: {value}.")
         };
 

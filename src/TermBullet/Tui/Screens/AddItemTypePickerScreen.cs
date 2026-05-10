@@ -114,8 +114,8 @@ public static class AddItemTypePickerScreen
 
     private static string[] BuildRows() =>
     [
-        "Task   executable work with planned_for",
-        "Note   reference or context, no planned date",
+        "Task   executable work in a collection",
+        "Note   reference or context, no schedule",
         "Event  scheduled appointment with scheduled_at"
     ];
 }

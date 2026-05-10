@@ -109,7 +109,7 @@ public static class TuiContextHelp
         "Enter: activate focused control",
         "Save: add the item",
         "Cancel / Esc: return without saving",
-        "Task uses planned_for; Event uses scheduled_at; Note has no planning date",
+        "Task uses collections; Event uses scheduled_at; Note has no planning date",
         "q: quit"
     ];
 }

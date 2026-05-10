@@ -59,7 +59,7 @@ Accepted stack:
 
 V1 is local-first and offline. It includes tasks, notes, events, Today, Backlog,
 Forgotten review, Week View, CLI, TUI MVP, monthly JSON persistence,
-search, editing, migration, movement, data path discovery, export, and import.
+search, editing, migration, movement, and data path discovery.
 
 V1 excludes AI execution, Google Calendar, machine sync, cloud accounts, and a
 PostgreSQL runtime dependency.
@@ -114,7 +114,7 @@ e-0426-1
 ```
 
 The public ref is for humans. The internal ID is the real identity for
-persistence, import/export, and future sync.
+persistence and future sync.
 
 ## CLI Rules
 
@@ -184,8 +184,8 @@ dotnet run --project src/TermBullet -- [command] [arguments] [options]
 ```
 
 For CLI changes, verify parsing and help. For TUI changes, verify navigation,
-focus, and rendering where practical. For persistence changes, verify read/write,
-backup/recovery, and import/export compatibility.
+focus, and rendering where practical. For persistence changes, verify read/write
+and backup/recovery.
 
 If tests cannot be run, report why and state the remaining risk.
 

@@ -19,8 +19,7 @@ public sealed class MigrateItemUseCase(
             new MigrateItemRequest
             {
                 PublicRef = publicRef,
-                DestinationCollection = ItemCollection.Today,
-                PlannedFor = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime)
+                DestinationCollection = ItemCollection.Today
             },
             cancellationToken);
     }
@@ -41,9 +40,8 @@ public sealed class MigrateItemUseCase(
             throw new InvalidOperationException("Only tasks can be migrated.");
         }
 
-        var destinationCollection = ResolveDestinationCollection(request);
-        var plannedFor = ResolvePlannedFor(request, destinationCollection);
         var now = clock.UtcNow;
+        var destinationCollection = ResolveDestinationCollection(request);
         var currentSequence = await itemRepository.GetCurrentPublicRefSequenceAsync(
             ItemType.Task,
             now.Month,
@@ -71,8 +69,7 @@ public sealed class MigrateItemUseCase(
             now,
             item.Description,
             item.Priority,
-            item.Tags,
-            plannedFor);
+            item.Tags);
 
         await itemRepository.UpdateAsync(item, cancellationToken);
         await itemRepository.AddAsync(migratedItem, cancellationToken);
@@ -84,25 +81,14 @@ public sealed class MigrateItemUseCase(
     {
         return request.DestinationCollection switch
         {
+            ItemCollection.Today => ItemCollection.Today,
+            ItemCollection.Week => ItemCollection.Week,
+            ItemCollection.Month => ItemCollection.Month,
             ItemCollection.Backlog => ItemCollection.Backlog,
-            ItemCollection.Today or ItemCollection.Week => ItemCollection.Week,
             _ => throw new ArgumentOutOfRangeException(
                 nameof(request.DestinationCollection),
                 request.DestinationCollection,
                 "Unsupported migration destination.")
         };
-    }
-
-    private static DateOnly? ResolvePlannedFor(
-        MigrateItemRequest request,
-        ItemCollection destinationCollection)
-    {
-        if (destinationCollection == ItemCollection.Backlog)
-        {
-            return null;
-        }
-
-        return request.PlannedFor
-            ?? throw new ArgumentException("Date migration requires planned_for.", nameof(request));
     }
 }

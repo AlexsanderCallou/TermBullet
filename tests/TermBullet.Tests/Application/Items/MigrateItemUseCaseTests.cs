@@ -28,12 +28,11 @@ public sealed class MigrateItemUseCaseTests
         Assert.Equal(ChangedAt, updatedItem.MigratedAt);
         var migratedItem = Assert.Single(repository.AddedItems);
         Assert.Equal(ItemStatus.Open, migratedItem.Status);
-        Assert.Equal(ItemCollection.Week, migratedItem.Collection);
-        Assert.Equal(DateOnly.FromDateTime(ChangedAt.UtcDateTime), migratedItem.PlannedFor);
+        Assert.Equal(ItemCollection.Today, migratedItem.Collection);
     }
 
     [Fact]
-    public async Task Execute_with_date_destination_creates_new_week_task_for_selected_date()
+    public async Task Execute_with_week_destination_creates_new_week_task()
     {
         var repository = new FakeItemRepository(CreateTask());
         var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt), new FixedIdGenerator());
@@ -42,7 +41,6 @@ public sealed class MigrateItemUseCaseTests
         {
             PublicRef = "t-0426-1",
             DestinationCollection = ItemCollection.Week,
-            PlannedFor = new DateOnly(2026, 5, 12)
         });
 
         var original = Assert.Single(repository.UpdatedItems);
@@ -51,12 +49,27 @@ public sealed class MigrateItemUseCaseTests
         var migratedItem = Assert.Single(repository.AddedItems);
         Assert.Equal("Fix authentication flow", migratedItem.Content);
         Assert.Equal(ItemCollection.Week, migratedItem.Collection);
-        Assert.Equal(new DateOnly(2026, 5, 12), migratedItem.PlannedFor);
         Assert.Equal("t-0526-1", migratedItem.PublicRef.Value);
     }
 
     [Fact]
-    public async Task Execute_with_backlog_destination_creates_new_backlog_task_without_date()
+    public async Task Execute_with_today_destination_creates_new_today_task()
+    {
+        var repository = new FakeItemRepository(CreateTask());
+        var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt), new FixedIdGenerator());
+
+        await useCase.ExecuteAsync(new MigrateItemRequest
+        {
+            PublicRef = "t-0426-1",
+            DestinationCollection = ItemCollection.Today,
+        });
+
+        var migratedItem = Assert.Single(repository.AddedItems);
+        Assert.Equal(ItemCollection.Today, migratedItem.Collection);
+    }
+
+    [Fact]
+    public async Task Execute_with_backlog_destination_creates_new_backlog_task()
     {
         var repository = new FakeItemRepository(CreateTask());
         var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt), new FixedIdGenerator());
@@ -69,7 +82,6 @@ public sealed class MigrateItemUseCaseTests
 
         var migratedItem = Assert.Single(repository.AddedItems);
         Assert.Equal(ItemCollection.Backlog, migratedItem.Collection);
-        Assert.Null(migratedItem.PlannedFor);
     }
 
     [Fact]

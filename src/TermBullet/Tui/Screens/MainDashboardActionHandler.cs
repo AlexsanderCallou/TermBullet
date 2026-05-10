@@ -46,8 +46,7 @@ public sealed class MainDashboardActionHandler(
             new MigrateItemRequest
             {
                 PublicRef = publicRef,
-                DestinationCollection = TermBullet.Domain.Items.ItemCollection.Today,
-                PlannedFor = DateOnly.FromDateTime(DateTime.Today)
+                DestinationCollection = TermBullet.Domain.Items.ItemCollection.Today
             },
             cancellationToken);
     }

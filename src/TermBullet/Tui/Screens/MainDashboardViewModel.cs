@@ -9,11 +9,15 @@ public sealed class MainDashboardViewModel
 
     public MainDashboardViewModel(
         IReadOnlyCollection<ItemResult> dayItems,
+        IReadOnlyCollection<ItemResult> weekItems,
+        IReadOnlyCollection<ItemResult> monthItems,
         IReadOnlyCollection<ItemResult> backlogItems)
     {
         DayItems = dayItems.Select(MapToRow).ToList();
+        WeekItems = weekItems.Select(MapToRow).ToList();
+        MonthItems = monthItems.Select(MapToRow).ToList();
         BacklogItems = backlogItems.Select(MapToRow).ToList();
-        ProjectOrTagRows = dayItems.Concat(backlogItems)
+        ProjectOrTagRows = dayItems.Concat(weekItems).Concat(monthItems).Concat(backlogItems)
             .SelectMany(item => item.Tags)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
@@ -23,6 +27,10 @@ public sealed class MainDashboardViewModel
     }
 
     public IReadOnlyList<ItemDisplayRow> DayItems { get; }
+
+    public IReadOnlyList<ItemDisplayRow> WeekItems { get; }
+
+    public IReadOnlyList<ItemDisplayRow> MonthItems { get; }
 
     public IReadOnlyList<ItemDisplayRow> BacklogItems { get; }
 

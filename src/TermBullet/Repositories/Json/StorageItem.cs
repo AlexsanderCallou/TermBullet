@@ -31,9 +31,6 @@ internal sealed class StorageItem
     [JsonPropertyName("tags")]
     public List<string> Tags { get; set; } = [];
 
-    [JsonPropertyName("planned_for")]
-    public DateOnly? PlannedFor { get; set; }
-
     [JsonPropertyName("scheduled_at")]
     public DateTimeOffset? ScheduledAt { get; set; }
 

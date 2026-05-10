@@ -22,7 +22,7 @@ public sealed class ItemDetailViewModelTests
         Assert.Contains(vm.IdentityLines, line => line.Contains("type: task", StringComparison.Ordinal));
         Assert.Contains(vm.IdentityLines, line => line.Contains("version: 3", StringComparison.Ordinal));
         Assert.Contains(vm.PlanningLines, line => line.Contains("collection: today", StringComparison.Ordinal));
-        Assert.Contains(vm.PlanningLines, line => line.Contains("planned_for: 2026-05-09", StringComparison.Ordinal));
+        Assert.Contains(vm.PlanningLines, line => line.Contains("scheduled_at: -", StringComparison.Ordinal));
         Assert.Contains(vm.PlanningLines, line => line.Contains("priority: high", StringComparison.Ordinal));
         Assert.Contains(vm.ContentLines, line => line.Contains("Fix auth flow", StringComparison.Ordinal));
         Assert.Contains(vm.ContentLines, line => line.Contains("reproduce login failure", StringComparison.Ordinal));
@@ -47,7 +47,6 @@ public sealed class ItemDetailViewModelTests
             Collection: ItemCollection.Today,
             Priority: Priority.High,
             Tags: ["auth", "cli"],
-            PlannedFor: new DateOnly(2026, 5, 9),
             ScheduledAt: null,
             Version: 3,
             CreatedAt: CreatedAt,
