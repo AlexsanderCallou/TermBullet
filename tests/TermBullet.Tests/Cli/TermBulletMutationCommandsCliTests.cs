@@ -1,11 +1,14 @@
+using TermBullet.Services.Clock;
+using TermBullet.Services.DataTransfer;
+using TermBullet.Services.History;
 using System.Text;
 using TermBullet.Application.Configuration;
 using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
-using TermBullet.Application.Ports;
+using TermBullet.Repositories.Interfaces;
 using TermBullet.Cli;
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Tests.Cli;
 
@@ -97,16 +100,49 @@ public sealed class TermBulletMutationCommandsCliTests
     }
 
     [Fact]
-    public async Task InvokeAsync_runs_migrate_and_updates_status()
+    public async Task InvokeAsync_runs_migrate_to_date_and_creates_destination_task()
+    {
+        var repository = CreateSeededRepository();
+        var app = CreateApp(repository);
+
+        var exitCode = await app.App.InvokeAsync(["migrate", "t-0426-1", "--date", "2026-05-12"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(2, repository.Items.Count);
+        var sourceItem = repository.Items.Single(item => item.PublicRef.Value == "t-0426-1");
+        var migratedItem = repository.Items.Single(item => item.PublicRef.Value == "t-0426-2");
+        Assert.Equal(ItemStatus.Migrate, sourceItem.Status);
+        Assert.Equal(ItemStatus.Open, migratedItem.Status);
+        Assert.Equal(ItemCollection.Week, migratedItem.Collection);
+        Assert.Equal(new DateOnly(2026, 5, 12), migratedItem.PlannedFor);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_runs_migrate_to_backlog_and_creates_destination_task()
+    {
+        var repository = CreateSeededRepository();
+        var app = CreateApp(repository);
+
+        var exitCode = await app.App.InvokeAsync(["migrate", "t-0426-1", "--backlog"]);
+
+        Assert.Equal(0, exitCode);
+        var sourceItem = repository.Items.Single(item => item.PublicRef.Value == "t-0426-1");
+        var migratedItem = repository.Items.Single(item => item.PublicRef.Value == "t-0426-2");
+        Assert.Equal(ItemStatus.Migrate, sourceItem.Status);
+        Assert.Equal(ItemCollection.Backlog, migratedItem.Collection);
+        Assert.Null(migratedItem.PlannedFor);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_returns_error_when_migrate_destination_is_missing()
     {
         var repository = CreateSeededRepository();
         var app = CreateApp(repository);
 
         var exitCode = await app.App.InvokeAsync(["migrate", "t-0426-1"]);
 
-        Assert.Equal(0, exitCode);
-        var item = Assert.Single(repository.Items);
-        Assert.Equal(ItemStatus.Migrate, item.Status);
+        Assert.Equal(1, exitCode);
+        Assert.Contains("exactly one destination", app.Error.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -178,7 +214,7 @@ public sealed class TermBulletMutationCommandsCliTests
         var repository = new FakeItemRepository();
         repository.Items.Add(Item.Create(
             Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
-            TermBullet.Core.Refs.PublicRef.Parse("t-0426-1"),
+            TermBullet.Domain.Refs.PublicRef.Parse("t-0426-1"),
             ItemType.Task,
             "Fix authentication flow",
             ItemCollection.Today,
@@ -193,7 +229,11 @@ public sealed class TermBulletMutationCommandsCliTests
         public List<Item> Items { get; } = [];
 
         public Task<int> GetCurrentPublicRefSequenceAsync(ItemType type, int month, int year, CancellationToken cancellationToken = default)
-            => Task.FromResult(0);
+            => Task.FromResult(Items
+                .Where(item => item.Type == type && item.CreatedAt.Month == month && item.CreatedAt.Year == year)
+                .Select(item => item.PublicRef.Sequence)
+                .DefaultIfEmpty(0)
+                .Max());
 
         public Task<bool> PublicRefExistsAsync(string publicRef, CancellationToken cancellationToken = default)
             => Task.FromResult(Items.Any(item => string.Equals(item.PublicRef.Value, publicRef, StringComparison.Ordinal)));
@@ -231,7 +271,7 @@ public sealed class TermBulletMutationCommandsCliTests
             => Task.FromResult<Item?>(Items.FirstOrDefault(item => string.Equals(item.PublicRef.Value, publicRef, StringComparison.Ordinal)));
     }
 
-    private sealed class FakeSettingsStore : ISettingsStore
+    private sealed class FakeSettingsStore : ISettingsRepository
     {
         public string SettingsPath => "C:\\term\\data\\settings.json";
 

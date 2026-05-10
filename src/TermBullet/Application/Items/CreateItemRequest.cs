@@ -1,4 +1,4 @@
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Application.Items;
 
@@ -16,9 +16,7 @@ public sealed class CreateItemRequest
 
     public IReadOnlyCollection<string>? Tags { get; init; }
 
-    public DateTimeOffset? DueAt { get; init; }
+    public DateOnly? PlannedFor { get; init; }
 
     public DateTimeOffset? ScheduledAt { get; init; }
-
-    public int? EstimateMinutes { get; init; }
 }

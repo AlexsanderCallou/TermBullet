@@ -30,7 +30,6 @@ termbullet
 ├── today
 ├── week
 ├── backlog
-├── forgotten
 ├── show
 ├── edit
 ├── done
@@ -88,11 +87,13 @@ termbullet list
 termbullet today
 termbullet week
 termbullet backlog
-termbullet forgotten
 ```
 
-`week` is a planning view derived from task `planned_for` dates. It is not a
-persisted collection and items are not moved to `week`.
+`week` shows items in the Week collection. The TUI Week View groups tasks by
+`planned_for` and events by `scheduled_at`.
+
+Forgotten is currently exposed in the TUI as a derived review list. There is no
+active `forgotten` CLI command in the current command tree.
 
 ### `show`
 
@@ -125,7 +126,7 @@ termbullet migrate t-0426-1 --backlog
 - `--backlog` migrates the task to Backlog.
 
 Open tasks that were planned for previous days and were not done, cancelled, or
-marked migrate are shown in `forgotten` for manual review.
+marked migrate are shown in the TUI Forgotten review for manual action.
 
 ### Movement
 
@@ -134,7 +135,7 @@ termbullet move t-0426-1 today
 termbullet move t-0426-1 backlog
 ```
 
-### Tags and Priority
+### Tags and Task Priority
 
 ```bash
 termbullet tag t-0426-1 auth
@@ -149,6 +150,8 @@ Priorities:
 - `medium`
 - `high`
 
+Priority is task metadata. Notes and events are stored with `none`.
+
 ### `search`
 
 Search items in local data.
@@ -156,6 +159,9 @@ Search items in local data.
 ```bash
 termbullet search "jwt"
 ```
+
+Search may read across all monthly JSON files. It is a lookup surface and does
+not change item state.
 
 ### `delete`
 
@@ -181,7 +187,7 @@ termbullet import <path>
 ```
 
 Export/import must preserve IDs, public refs, types, status, collections,
-planned dates, priorities, tags, timestamps, versions, migration metadata, and
+planned dates, task priorities, tags, timestamps, versions, migration metadata, and
 important history.
 
 Import is a restore/migration command for a new installation. It must fail if

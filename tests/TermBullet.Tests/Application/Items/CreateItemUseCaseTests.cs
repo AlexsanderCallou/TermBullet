@@ -1,6 +1,8 @@
+using TermBullet.Services.Clock;
+using TermBullet.Services.Ids;
 using TermBullet.Application.Items;
-using TermBullet.Application.Ports;
-using TermBullet.Core.Items;
+using TermBullet.Repositories.Interfaces;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Tests.Application.Items;
 
@@ -32,6 +34,7 @@ public sealed class CreateItemUseCaseTests
         Assert.Equal(ItemStatus.Open, result.Status);
         Assert.Equal(ItemCollection.Today, result.Collection);
         Assert.Equal(Priority.High, result.Priority);
+        Assert.Equal(DateOnly.FromDateTime(Now.UtcDateTime), result.PlannedFor);
         Assert.Equal(1, result.Version);
         Assert.Equal(Now, result.CreatedAt);
 
@@ -44,6 +47,7 @@ public sealed class CreateItemUseCaseTests
         Assert.Equal("Fix authentication flow", item.Content);
         Assert.Equal("Keep CLI and TUI behavior aligned.", item.Description);
         Assert.Equal(["auth", "cli"], item.Tags);
+        Assert.Equal(DateOnly.FromDateTime(Now.UtcDateTime), item.PlannedFor);
     }
 
     [Fact]
@@ -62,6 +66,45 @@ public sealed class CreateItemUseCaseTests
         Assert.Equal("n-0426-1", result.PublicRef);
         Assert.Equal(ItemCollection.Today, result.Collection);
         Assert.Equal(Priority.None, result.Priority);
+        Assert.Null(result.PlannedFor);
+    }
+
+    [Theory]
+    [InlineData(ItemType.Note)]
+    [InlineData(ItemType.Event)]
+    public async Task Execute_ignores_priority_for_non_task_items(ItemType type)
+    {
+        var repository = new FakeItemRepository();
+        var useCase = CreateUseCase(repository);
+        var request = new CreateItemRequest
+        {
+            Type = type,
+            Content = "Reference item",
+            Priority = Priority.High
+        };
+
+        var result = await useCase.ExecuteAsync(request);
+
+        Assert.Equal(Priority.None, result.Priority);
+        Assert.Equal(Priority.None, Assert.Single(repository.AddedItems).Priority);
+    }
+
+    [Fact]
+    public async Task Execute_keeps_backlog_task_without_planned_for()
+    {
+        var repository = new FakeItemRepository();
+        var useCase = CreateUseCase(repository);
+        var request = new CreateItemRequest
+        {
+            Type = ItemType.Task,
+            Content = "Archive old process notes",
+            Collection = ItemCollection.Backlog
+        };
+
+        var result = await useCase.ExecuteAsync(request);
+
+        Assert.Null(result.PlannedFor);
+        Assert.Null(Assert.Single(repository.AddedItems).PlannedFor);
     }
 
     [Fact]

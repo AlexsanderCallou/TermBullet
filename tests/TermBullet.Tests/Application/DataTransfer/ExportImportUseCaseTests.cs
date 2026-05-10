@@ -1,5 +1,6 @@
+using TermBullet.Services.DataTransfer;
 using TermBullet.Application.DataTransfer;
-using TermBullet.Application.Ports;
+using TermBullet.Repositories.Interfaces;
 
 namespace TermBullet.Tests.Application.DataTransfer;
 

@@ -1,5 +1,5 @@
-using TermBullet.Application.Ports;
-using TermBullet.Core.Items;
+using TermBullet.Repositories.Interfaces;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Application.Items;
 
@@ -12,7 +12,9 @@ public sealed class SearchItemsUseCase(IItemRepository itemRepository)
         ArgumentNullException.ThrowIfNull(request);
 
         var normalizedQuery = NormalizeQuery(request.Query);
-        var items = await itemRepository.ListAsync(cancellationToken: cancellationToken);
+        var items = itemRepository is IItemArchiveReader archiveReader
+            ? await archiveReader.ListAllAsync(cancellationToken)
+            : await itemRepository.ListAsync(cancellationToken: cancellationToken);
 
         return items
             .Where(item => Matches(item, normalizedQuery))

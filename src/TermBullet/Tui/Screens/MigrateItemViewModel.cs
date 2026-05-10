@@ -18,7 +18,7 @@ public sealed class MigrateItemViewModel
             $"content: {item.Content}",
             $"status: {item.Status}",
             $"collection: {item.Collection}",
-            "planned_for: -",
+            $"planned_for: {(item.PlannedFor is null ? "-" : item.PlannedFor.Value.ToString("yyyy-MM-dd"))}",
             $"priority: {item.Priority}",
             $"tags: {(item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "-")}"
         ];
@@ -81,4 +81,17 @@ public sealed class MigrateItemViewModel
 
         return ForDate(Item, PlannedFor ?? DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
     }
+
+    public MigrateItemViewModel WithPlannedFor(DateOnly plannedFor) =>
+        ForDate(Item, plannedFor);
+
+    public MigrateItemRequest BuildRequest() =>
+        new()
+        {
+            PublicRef = Item.PublicRef,
+            DestinationCollection = DateSelected
+                ? TermBullet.Domain.Items.ItemCollection.Week
+                : TermBullet.Domain.Items.ItemCollection.Backlog,
+            PlannedFor = DateSelected ? PlannedFor : null
+        };
 }

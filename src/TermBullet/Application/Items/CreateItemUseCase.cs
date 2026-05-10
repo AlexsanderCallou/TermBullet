@@ -1,6 +1,8 @@
-using TermBullet.Application.Ports;
-using TermBullet.Core.Items;
-using TermBullet.Core.Refs;
+using TermBullet.Services.Clock;
+using TermBullet.Services.Ids;
+using TermBullet.Repositories.Interfaces;
+using TermBullet.Domain.Items;
+using TermBullet.Domain.Refs;
 
 namespace TermBullet.Application.Items;
 
@@ -41,14 +43,31 @@ public sealed class CreateItemUseCase(
             request.Collection,
             now,
             request.Description,
-            request.Priority,
+            ResolvePriority(request),
             request.Tags,
-            request.DueAt,
-            request.ScheduledAt,
-            request.EstimateMinutes);
+            ResolvePlannedFor(request, now),
+            request.ScheduledAt);
 
         await itemRepository.AddAsync(item, cancellationToken);
 
         return CreateItemResult.From(item);
     }
+
+    private static DateOnly? ResolvePlannedFor(CreateItemRequest request, DateTimeOffset now)
+    {
+        if (request.Type != ItemType.Task)
+        {
+            return null;
+        }
+
+        if (request.Collection == ItemCollection.Backlog)
+        {
+            return request.PlannedFor;
+        }
+
+        return request.PlannedFor ?? DateOnly.FromDateTime(now.UtcDateTime);
+    }
+
+    private static Priority ResolvePriority(CreateItemRequest request) =>
+        request.Type == ItemType.Task ? request.Priority : Priority.None;
 }

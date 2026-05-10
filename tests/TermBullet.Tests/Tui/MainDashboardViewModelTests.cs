@@ -1,5 +1,5 @@
 using TermBullet.Application.Items;
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 using TermBullet.Tui.Screens;
 
 namespace TermBullet.Tests.Tui;
@@ -165,6 +165,8 @@ public sealed class MainDashboardViewModelTests
             Collection: ItemCollection.Today,
             Priority: priority,
             Tags: [],
+            PlannedFor: null,
+            ScheduledAt: null,
             Version: 1,
             CreatedAt: DateTimeOffset.UtcNow,
             UpdatedAt: DateTimeOffset.UtcNow);

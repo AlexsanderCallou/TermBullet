@@ -10,6 +10,11 @@ Source checked:
 - `src/TermBullet/Tui/TermBulletTuiApp.cs`
 - `src/TermBullet/Tui/Screens/SearchScreen.cs`
 - `src/TermBullet/Tui/Screens/AddItemScreen.cs`
+- `src/TermBullet/Tui/Screens/PlanningScreen.cs`
+- `src/TermBullet/Tui/Screens/WeekScreen.cs`
+- `src/TermBullet/Tui/Screens/CalendarScreen.cs`
+- `src/TermBullet/Tui/Screens/TagsScreen.cs`
+- `src/TermBullet/Tui/Screens/CreateTagScreen.cs`
 - `src/TermBullet/Tui/Screens/ItemDetailScreen.cs`
 - `src/TermBullet/Tui/Screens/MigrateItemScreen.cs`
 
@@ -19,16 +24,20 @@ Current implemented screens:
 - Search
 - Add Item auxiliary flow
 - Item Detail
+- Planning placeholder
+- Week View
+- Backlog
+- Forgotten
+- Notes
+- Calendar
+- Tags
+- Create Tag auxiliary flow
 - Migrate Item
 
 Planned but not currently implemented as TUI screens:
 
-- Daily Focus
-- Weekly Planning
-- Backlog Triage
-- Forgotten Review
+- AI Planning
 - Review
-- Calendar View
 - Sync / Cloud
 
 ## Screen 01 - Main Dashboard
@@ -40,8 +49,9 @@ Role: main operational dashboard loaded when the TUI starts.
 Navigation:
 
 - `/` opens Search.
-- `c` opens Add Item.
-- `Tab` and `Shift+Tab` move panel focus.
+- `c` opens the Add Item type picker.
+- `n` opens Quick Task and creates a task planned for today with only content.
+- `Tab`, `Shift+Tab`, or the visible panel number (`1`-`9`) move panel focus.
 - `Enter` opens the selected item detail.
 - `x` marks the selected day item as done.
 - `z` cancels the selected item through the root shortcut mapper.
@@ -58,8 +68,12 @@ Refined target ASCII layout:
 | > Dashboard         | > [ ] t-0526-1 Fix auth flow      | ref: t-0526-1                 |
 |   Search            |   (.) n-0526-1 Capture edge case  | type: task                    |
 |   Planning          |   (o) e-0526-1 Review 16:00       | status: open                  |
-|   Calendar          |                                   | priority: normal              |
-|                     |                                   | collection: today             |
+|   Backlog           |                                   | priority: normal              |
+|   Forgotten         |                                   | collection: today             |
+|   Notes             |                                   |                               |
+|   Calendar          |                                   |                               |
+|   Tags              |                                   |                               |
+|                     |                                   | planned_for: 2026-05-09       |
 |                     |                                   | tags: auth, cli               |
 |---------------------+-----------------------------------+-------------------------------|
 | 4 Context           | 5 Content                                                         |
@@ -69,9 +83,9 @@ Refined target ASCII layout:
 |   backlog    14     | - reproduce login failure                                        |
 |   forgotten  2      | - check token audience                                           |
 | tags                |                                                                  |
-| > auth  cli  docs   |                                                                  |
+| > auth  cli         |                                                                  |
 +-------------------------------------------------------------------------------------------+
-| / filter  c add  e edit  x done  z cancel  > migrate  d delete  Enter open  Tab focus     |
+| / filter  c add  n quick task  e edit  x done  z cancel  > migrate  d delete  Enter open  |
 +-------------------------------------------------------------------------------------------+
 ```
 
@@ -79,18 +93,20 @@ Notes:
 
 - The code names the second panel `Day Items`, not `Daily Log`.
 - This cleaner dashboard removes AI-facing language from the main surface. AI
-  should appear later inside planning flows that propose new tasks, not as a
+  should appear later inside the Planning workspace that proposes new tasks, not as a
   permanent dashboard panel.
 - `Details` keeps structured metadata compact and leaves the larger lower panel
   for the selected item's actual content.
-- `Context` replaces `Projects / Tags` because projects are not a current V1
-  entity. It can show collection counts, the Week planning view, and active
-  tags. Week is a view derived from `planned_for`, not a persisted collection.
+- `Context` shows collection counts, the Week View, and active tags.
+  Week is the V1 dated week collection/view.
+- `Planning` opens a future AI-assisted planning placeholder. It is not the
+  Week View and is not part of the V1 execution workflow.
+- `Tags` opens the catalog view where tags can be created, inspected, and later
+  selected while editing or creating items.
 - `Content` is the main reading/editing surface for the selected item. It
   should show the item's `content` and optional `description`; tasks do not
   currently have an embedded notes collection in the JSON model.
-- `Enter open` should open the selected item in the Item Detail screen. The
-  current dashboard implementation does not fully support this yet.
+- `Enter open` opens the selected item in the Item Detail screen.
 - The footer includes `e edit`, but edit is not currently handled by the
   dashboard key handling code.
 
@@ -139,59 +155,263 @@ Notes:
 
 ## Flow 03 - Add Item
 
-Status: implemented as an auxiliary flow, not as a `TuiScreen` enum value.
+Status: implemented.
 
-Role: keyboard-only quick capture flow opened from the Main Dashboard with `c`.
+Role: keyboard-first creation flow opened from the Main Dashboard. The flow is
+split because tasks, notes, and events collect different fields.
+
+Entry points:
+
+- `c` opens the Add Item type picker.
+- `n` opens Quick Task, a minimal one-field popup for a task planned for today.
+
+### Flow 03A - Add Type Picker
+
+Role: small modal selector shown after pressing `c`.
 
 Navigation:
 
-- `Enter` submits the input.
-- `Esc` cancels and returns to the previous dashboard state.
-- `?` opens Add Item help.
-- `q` quits.
+- `CursorUp` and `CursorDown` move between item types.
+- `t`, `n`, and `e` jump directly to Task, Note, and Event.
+- `Enter` confirms the selected type and opens the matching form.
+- `Esc` cancels and returns to the dashboard.
 
-Accepted quick-capture prefixes:
-
-- `-` creates a task.
-- `.` creates a note.
-- `o` creates an event.
-
-Current ASCII layout:
+ASCII layout:
 
 ```text
-+ TermBullet - Add Item - target:today -----------------------------------------------------+
-| Add                                                                                       |
-|                                                                                           |
-| Item: fix auth flow                                                                       |
-|                                                                                           |
-| Error:                                                                                    |
-|                                                                                           |
-|-------------------------------------------------------------------------------------------|
-| Examples                                                                                  |
-| Prefixes:                                                                                 |
-|   - task                                                                                  |
-|   . note                                                                                  |
-|   o event                                                                                 |
-|                                                                                           |
-| Examples:                                                                                 |
-|   - fix jwt authentication                                                                |
-|   . error happens when audience is empty                                                  |
-|   o review 16:00                                                                          |
-+-------------------------------------------------------------------------------------------+
-| Enter add  Esc cancel  ? help  q quit                                                     |
-+-------------------------------------------------------------------------------------------+
++------------------------- Add Item -------------------------+
+| What do you want to add?                                  |
+|                                                           |
+| > Task   executable work with planned_for                 |
+|   Note   reference or context, no planned date            |
+|   Event  scheduled appointment with scheduled_at          |
+|                                                           |
+| Enter choose  t task  n note  e event  Esc cancel         |
++-----------------------------------------------------------+
 ```
 
 Notes:
 
-- The target collection is currently `today` when opened from the Main
-  Dashboard.
-- The input is parsed by `QuickCaptureParser`.
-- Validation or use case errors appear on the `Error:` line.
+- The picker does not create an item by itself.
+- The selected type decides which form opens next.
+- Type-specific forms should not show irrelevant fields.
+
+### Flow 03B - Quick Task
+
+Role: fastest possible capture for a task planned for today, opened with `n`
+from the dashboard.
+
+Navigation:
+
+- `Tab` and `Shift+Tab` move between Task, Save, and Cancel.
+- `Enter` activates the focused control.
+- `Save` creates the task.
+- `Cancel` or `Esc` returns to the dashboard without creating anything.
+
+Request mapping:
+
+- `type`: `task`
+- `collection`: `today`
+- `planned_for`: today's date
+- `content`: typed value
+- `description`: `null`
+- `tags`: empty
+- `scheduled_at`: `null`
+
+ASCII layout:
+
+```text
++------------------------ Quick Task -----------------------+
+| Task: fix auth flow                                      |
+|                                                           |
+| planned_for: today                                       |
+|                                                           |
+| [ Save ]  [ Cancel ]                                     |
+| Enter activate  Tab focus  Esc cancel                    |
++-----------------------------------------------------------+
+```
+
+Notes:
+
+- This is intentionally not the full task form.
+- Empty content is invalid and should show an inline error in the modal.
+- `Enter` must not create the task unless the focused control is `Save`.
+
+### Flow 03C - Add Task
+
+Role: full task form for work that may need date metadata.
+
+Navigation:
+
+- `Tab` and `Shift+Tab` move between fields, choices, Save, and Cancel.
+- `CursorUp` and `CursorDown` change the active timing or priority choice.
+- `Space` cycles the active timing or priority choice.
+- `Enter` activates the focused control.
+- `Save` submits the form.
+- `Cancel` or `Esc` returns to the dashboard without creating anything.
+
+Fields:
+
+- `Content` required.
+- `Description` optional multiline context.
+- `Timing` required: `Today`, `Future date`, or `Backlog`.
+- `Planned for` visible and required only for `Future date`.
+- `Priority` required: `None`, `Low`, `Medium`, or `High`.
+- `Tags` optional comma-separated labels.
+
+Request mapping:
+
+- `type`: `task`
+- `collection`: `today`, `week`, or `backlog`
+- `planned_for`: today for `Today`, selected date for `Future date`, `null` for `Backlog`
+- `priority`: selected priority
+- `scheduled_at`: `null`
+
+ASCII layout:
+
+```text
++ TermBullet - Add Task ------------------------------------------------+
+| Content                                                              |
+| fix auth flow                                                        |
+|                                                                      |
+| Description                                                          |
+| reproduce login failure                                              |
+| check token audience                                                 |
+|                                                                      |
+| Timing                                                               |
+| > Today        planned_for: today                                    |
+|   Future date  planned_for: 2026-05-12                               |
+|   Backlog      planned_for: -                                        |
+|                                                                      |
+| Priority                                                             |
+| > None   Low   Medium   High                                        |
+|                                                                      |
+| Tags                                                                 |
+| auth, cli                                                            |
+|                                                                      |
+| [ Save ]  [ Cancel ]                                                 |
++----------------------------------------------------------------------+
+| Status: task | today | priority: high | planned_for: today           |
+| Enter activate  Tab focus  Arrows move  Space cycle  Esc cancel  ? help |
++----------------------------------------------------------------------+
+```
+
+Notes:
+
+- `Enter` must not submit the form unless the focused control is `Save`.
+- When focus is inside a multiline text field, `Enter` keeps its text-editing
+  behavior.
+
+### Flow 03D - Add Note
+
+Role: capture reference material or context that is not executable work.
+
+Navigation:
+
+- `Tab` and `Shift+Tab` move between fields, Save, and Cancel.
+- `Enter` activates the focused control.
+- `Save` submits the form.
+- `Cancel` or `Esc` returns to the dashboard without creating anything.
+
+Fields:
+
+- `Title` or short `Content` required.
+- `Description` optional multiline body.
+- `Tags` optional comma-separated labels.
+
+Request mapping:
+
+- `type`: `note`
+- `collection`: `backlog`
+- `priority`: `none`
+- `planned_for`: `null`
+- `scheduled_at`: `null`
+
+ASCII layout:
+
+```text
++ TermBullet - Add Note -----------------------------------------------+
+| Title                                                                |
+| investigate stacktrace                                               |
+|                                                                      |
+| Description                                                          |
+| error happens when token audience is empty                           |
+|                                                                      |
+| Tags                                                                 |
+| auth, incident                                                       |
+|                                                                      |
+| [ Save ]  [ Cancel ]                                                 |
++----------------------------------------------------------------------+
+| Status: note | no planned date | tags: auth, incident                |
+| Enter activate  Tab focus  Esc cancel  ? help                        |
++----------------------------------------------------------------------+
+```
+
+Notes:
+
+- `Enter` must not submit the form unless the focused control is `Save`.
+- When focus is inside the multiline description, `Enter` keeps its text-editing
+  behavior.
+
+### Flow 03E - Add Event
+
+Role: capture a scheduled appointment or time marker.
+
+Navigation:
+
+- `Tab` and `Shift+Tab` move between fields, Save, and Cancel.
+- `Enter` activates the focused control.
+- `Save` submits the form.
+- `Cancel` or `Esc` returns to the dashboard without creating anything.
+
+Fields:
+
+- `Title` or short `Content` required.
+- `Scheduled for` required. Initial implementation may use `yyyy-mm-dd`; later
+  versions can add time input when the TUI model supports it cleanly.
+- `Description` optional multiline context.
+- `Tags` optional comma-separated labels.
+
+Request mapping:
+
+- `type`: `event`
+- `collection`: `week`
+- `priority`: `none`
+- `planned_for`: `null`
+- `scheduled_at`: selected scheduled date/time
+
+ASCII layout:
+
+```text
++ TermBullet - Add Event ----------------------------------------------+
+| Title                                                                |
+| dentist appointment                                                  |
+|                                                                      |
+| Scheduled for                                                        |
+| 2026-05-12                                                           |
+|                                                                      |
+| Description                                                          |
+| bring insurance card                                                 |
+|                                                                      |
+| Tags                                                                 |
+| health                                                               |
+|                                                                      |
+| [ Save ]  [ Cancel ]                                                 |
++----------------------------------------------------------------------+
+| Status: event | scheduled_at: 2026-05-12                             |
+| Enter activate  Tab focus  Esc cancel  ? help                        |
++----------------------------------------------------------------------+
+```
+
+Notes:
+
+- `Enter` must not submit the form unless the focused control is `Save`.
+- When focus is inside the multiline description, `Enter` keeps its text-editing
+  behavior.
 
 ## Screen 04 - Item Detail
 
-Status: implemented initial version.
+Status: implemented.
 
 Role: full read view for one selected item. This screen opens from Main
 Dashboard, Search, Forgotten Review, Backlog Triage, and any future list where
@@ -218,9 +438,9 @@ Target ASCII layout:
 | Identity                         | Planning                                                |
 | ref: t-0526-1                   | collection: today                                      |
 | id: 0f3a9d94-4df0-47f7-95c1...  | planned_for: 2026-05-09                               |
-| type: task                      | due_at: -                                             |
-| status: open                    | scheduled_at: -                                       |
-| priority: high                  | estimate: -                                           |
+| type: task                      | scheduled_at: -                                       |
+| status: open                    |                                                       |
+| priority: high                  |                                                       |
 | tags: auth, cli                 |                                                       |
 | version: 3                      | Migration                                             |
 | created: 2026-05-09T08:14:00Z   | from: -                                               |
@@ -284,9 +504,459 @@ Notes:
 - For notes and events, task-only fields may be shown as `-` or omitted only if
   the screen remains clear and complete.
 
-## Flow 05 - Migrate Item
+## Screen 05 - Planning
 
-Status: implemented initial version.
+Status: implemented placeholder.
+
+Role: future AI-assisted planning workspace. Planning is where the user will
+eventually ask TermBullet to help turn goals, backlog context, notes, and dated
+work into proposed tasks.
+
+This screen is not part of the V1 execution workflow. In V1 it must stay empty
+and must not call AI, persist suggestions, or mutate items.
+
+Entry points:
+
+- `Enter` on `Planning` from the Main Dashboard menu.
+
+Navigation:
+
+- `Esc` returns to the dashboard.
+- `?` opens contextual help.
+- `q` quits.
+
+Target ASCII layout:
+
+```text
++ TermBullet - Planning ------------------------------------------------------------------+
+| Future AI Planning                                                                       |
+|                                                                                          |
+| Planning will become the AI-assisted workspace for turning goals into tasks.              |
+|                                                                                          |
+| For now, this screen is intentionally empty. V1 keeps planning manual and local-first.    |
+|                                                                                          |
+| Future scope: goals, context selection, task suggestions, and preview before saving.      |
++------------------------------------------------------------------------------------------+
+| ? help  Esc back  q quit                                                                 |
++------------------------------------------------------------------------------------------+
+```
+
+Notes:
+
+- Planning is a future V2 surface, not a synonym for Week View.
+- Planning must not create, edit, migrate, or delete items in V1.
+- Future AI behavior must preview suggestions before saving them.
+- Future AI behavior must operate on filtered local context, not the whole data
+  set by default.
+
+## Screen 06 - Week View
+
+Status: implemented.
+
+Role: weekly schedule view for tasks and events scheduled across the current week. Week
+uses the V1 `week` collection and groups tasks by `planned_for` and
+events by `scheduled_at`.
+
+Entry points:
+
+- Future shortcut: `w` from the dashboard.
+- Future menu entry if Week View becomes a top-level dashboard route again.
+
+Navigation:
+
+- `CursorUp` and `CursorDown` move within the focused day list.
+- `Tab` and `Shift+Tab` move focus between days and Preview.
+- `Enter` opens Item Detail for the selected item.
+- `>` migrates a selected task.
+- `x` marks a selected task done.
+- `z` cancels a selected task or event.
+- `d` deletes the selected item.
+- `Esc` returns to the dashboard.
+- `?` opens contextual help.
+
+Target ASCII layout:
+
+```text
++ TermBullet - Week 2026-05-11..2026-05-17 ---------------------------------------------+
+| 1 Mon 05-11              | 2 Tue 05-12              | 3 Wed 05-13                    |
+| > [ ] t-0526-4 Fix auth  |   (o) e-0526-1 Dentist   |   [ ] t-0526-9 Review import   |
+|   [ ] t-0526-5 Tests     |   [ ] t-0526-7 Release   |                                |
+|--------------------------+--------------------------+--------------------------------|
+| 4 Thu 05-14              | 5 Fri 05-15              | 6 Weekend                      |
+|   [ ] t-0526-8 Write doc |   (o) e-0526-2 Demo      |   [ ] t-0526-10 Weekly review  |
+|                          |                          |                                |
+|-----------------------------------------------------------------------------------------|
+| 7 Preview                                                                               |
+| ref: t-0526-4  type: task  status: open  planned_for: 2026-05-11                        |
+| Fix auth flow                                                                           |
+| Description: reproduce login failure                                                    |
++-----------------------------------------------------------------------------------------+
+| Enter open  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back          |
++-----------------------------------------------------------------------------------------+
+```
+
+Notes:
+
+- Only tasks with `planned_for` in the visible week and events with
+  `scheduled_at` in the visible week appear here.
+- Backlog tasks do not appear until migrated to a date.
+- Notes do not appear unless a future product decision gives notes a date
+  relation.
+- Moving an item between days should use the same business rule as migration:
+  the original task can be migrated when appropriate instead of silently editing
+  history.
+
+## Screen 07 - Backlog
+
+Status: implemented.
+
+Role: triage view for open tasks without `planned_for` and notes kept as
+reference material.
+
+Entry points:
+
+- `Enter` on `Backlog` from the Main Dashboard menu.
+- Future shortcut: `b` from the dashboard.
+
+Navigation:
+
+- `CursorUp` and `CursorDown` move through backlog rows.
+- `Tab` and `Shift+Tab` move focus between Backlog, Preview, and Actions.
+- `Enter` opens Item Detail.
+- `>` migrates a selected task to Today, Future date, or another backlog copy.
+- `x` marks a selected task done.
+- `z` cancels a selected task.
+- `d` deletes the selected item.
+- `Esc` returns to the dashboard.
+- `?` opens contextual help.
+
+Target ASCII layout:
+
+```text
++ TermBullet - Backlog ------------------------------------------------------------------+
+| 1 Backlog                                        | 2 Preview                           |
+| > [ ] t-0526-12 Refactor settings store         | ref: t-0526-12                      |
+|   [ ] t-0526-13 Review CLI help                 | type: task                          |
+|   (.) n-0526-2  OAuth notes                     | status: open                        |
+|   (.) n-0526-3  Terminal.Gui research           | planned_for: -                      |
+|                                                  | collection: backlog                 |
+|                                                  | tags: infra, tui                    |
+|--------------------------------------------------+-------------------------------------|
+| 3 Actions                                                                              |
+| > plan today   planned_for: today                                                       |
+|   plan date    planned_for: 2026-05-15                                                  |
+|   open detail                                                                          |
+|   delete                                                                                |
++-----------------------------------------------------------------------------------------+
+| Enter open  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back          |
++-----------------------------------------------------------------------------------------+
+```
+
+Notes:
+
+- Backlog task rows have `planned_for: null`.
+- Notes may live in Backlog because they are not planned work.
+- The primary action is scheduling: move a task from Backlog into Today or a
+  future date.
+- Event rows should not normally appear here because events require
+  `scheduled_at`.
+
+## Screen 08 - Forgotten
+
+Status: implemented.
+
+Role: review view for open tasks that were planned for a past date and were not
+completed, cancelled, migrated, or replanned.
+
+Entry points:
+
+- `Enter` on `Forgotten` from the Main Dashboard menu.
+- Future shortcut: `f` from the dashboard.
+
+Navigation:
+
+- `CursorUp` and `CursorDown` move through forgotten items.
+- `Tab` and `Shift+Tab` move focus between Items, Preview, and Resolution.
+- `Enter` opens Item Detail.
+- `>` migrates a selected task to Today, Future date, or Backlog.
+- `x` marks the selected task done.
+- `z` cancels the selected task.
+- `d` deletes the selected task.
+- `Esc` returns to the dashboard.
+- `?` opens contextual help.
+
+Target ASCII layout:
+
+```text
++ TermBullet - Forgotten ---------------------------------------------------------------+
+| 1 Items                                         | 2 Preview                            |
+| > [ ] t-0526-3 Fix flaky test      missed 3d   | ref: t-0526-3                       |
+|   [ ] t-0526-6 Update docs         missed 1d   | type: task                          |
+|   [ ] t-0526-8 Check backup path   missed 5d   | status: open                        |
+|                                                  | planned_for: 2026-05-06             |
+|                                                  | collection: today                   |
+|                                                  | tags: tests                         |
+|--------------------------------------------------+-------------------------------------|
+| 3 Resolution                                                                           |
+| > migrate to today      new planned_for: today                                         |
+|   migrate to date       new planned_for: 2026-05-15                                    |
+|   move to backlog       new planned_for: -                                             |
+|   mark done                                                                            |
+|   cancel                                                                               |
++-----------------------------------------------------------------------------------------+
+| Enter open  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back          |
++-----------------------------------------------------------------------------------------+
+```
+
+Notes:
+
+- Forgotten is a derived review list, not a persisted collection.
+- A task is forgotten when `status: open`, `planned_for` is before today, and
+  the task is not already migrated.
+- Forgotten may read all monthly files so old unresolved tasks remain visible
+  without being automatically moved during month rollover.
+- Notes do not appear here because they have no `planned_for`.
+- Events may need a later overdue-events review, but this screen is task-first
+  for V1.
+
+## Screen 09 - Notes
+
+Status: implemented.
+
+Role: focused reading view for every item with `type: note`. Notes are
+reference material and should not be mixed with executable work in this view.
+
+Entry points:
+
+- `Enter` on `Notes` from the Main Dashboard menu.
+- Future shortcut: `N` from the dashboard.
+
+Navigation:
+
+- `CursorUp` and `CursorDown` move through note rows.
+- `Tab` and `Shift+Tab` move focus between Notes, Preview, and Actions.
+- `Enter` opens Item Detail for the selected note.
+- `d` deletes the selected note.
+- `Esc` returns to the dashboard.
+- `?` opens contextual help.
+
+Target ASCII layout:
+
+```text
++ TermBullet - Notes --------------------------------------------------------------------+
+| 1 Notes                                         | 2 Preview                            |
+| > (.) n-0526-1 Capture edge case               | ref: n-0526-1                       |
+|   (.) n-0526-2 OAuth notes                     | type: note                          |
+|   (.) n-0526-3 Terminal.Gui research           | status: open                        |
+|   (.) n-0526-4 Import caveats                  | collection: backlog                 |
+|                                                  | planned_for: -                      |
+|                                                  | scheduled_at: -                     |
+|                                                  | tags: auth, tui                     |
+|--------------------------------------------------+-------------------------------------|
+| 3 Actions                                                                              |
+| > open detail                                                                          |
+|   delete                                                                                |
+|                                                                                         |
++-----------------------------------------------------------------------------------------+
+| Enter open  d delete  Tab focus  ? help  Esc back  q quit                               |
++-----------------------------------------------------------------------------------------+
+```
+
+Notes:
+
+- This screen lists only notes, regardless of collection.
+- Notes do not expose date actions because they do not use `planned_for` or
+  `scheduled_at`.
+- A note can still be opened in Item Detail to inspect identity, content,
+  description, tags, and timestamps.
+- Deleting a note must use the same delete use case as other item types.
+
+## Screen 10 - Calendar
+
+Status: implemented.
+
+Role: month-style schedule view for dated work and scheduled events. Calendar is
+a derived view, not a persisted collection.
+
+Entry points:
+
+- `Enter` on `Calendar` from the Main Dashboard menu.
+- Future shortcut: `k` from the dashboard.
+
+Navigation:
+
+- `CursorLeft` and `CursorRight` move the selected day.
+- `CursorUp` and `CursorDown` move by week.
+- `[` and `]` move to the previous or next month.
+- `Tab` and `Shift+Tab` move focus between Month, Day Items, Preview, and
+  Actions.
+- `Enter` opens Item Detail for the selected item in the focused day.
+- `>` migrates a selected task.
+- `x` marks a selected task done.
+- `z` cancels a selected task or event.
+- `d` deletes the selected item.
+- `Esc` returns to the dashboard.
+- `?` opens contextual help.
+
+Target ASCII layout:
+
+```text
++ TermBullet - Calendar May 2026 ---------------------------------------------------------+
+| 1 Month                                                                                 |
+| Mon          Tue          Wed          Thu          Fri          Sat          Sun         |
+|              01           02           03           04           05           06          |
+| 07           08           09*          10           11           12           13          |
+| [2]          [ ]          [ ]          (1)          [1]          -            -           |
+| 14           15           16           17           18           19           20          |
+| -            (2)          [1]          -            [ ]          -            -           |
+| 21           22           23           24           25           26           27          |
+| -            -            (1)          [2]          -            -            -           |
+| 28           29           30           31                                               |
+| -            [1]          -            (1)                                              |
+|-----------------------------------------------------------------------------------------|
+| 2 Day Items                                    | 3 Preview                             |
+| > [ ] t-0526-1 Fix auth flow                  | ref: t-0526-1                        |
+|   (o) e-0526-1 Review 16:00                   | type: task                           |
+|                                                | status: open                         |
+|                                                | planned_for: 2026-05-09              |
+|                                                | scheduled_at: -                      |
+|-----------------------------------------------------------------------------------------|
+| 4 Actions                                                                              |
+| > open detail   migrate task   mark done   cancel   delete                             |
++-----------------------------------------------------------------------------------------+
+| Arrows day  [/] month  Enter open  > migrate  x done  z cancel  d delete  Esc back      |
++-----------------------------------------------------------------------------------------+
+```
+
+Legend:
+
+- `[n]` means `n` tasks planned for that date.
+- `(n)` means `n` events scheduled for that date.
+- `*` marks today.
+- A cell can show both task and event counts when both exist.
+
+Notes:
+
+- Calendar includes tasks with `planned_for` and events with `scheduled_at`.
+- Calendar uses the current monthly operational set. It must not surface old
+  unresolved tasks from previous months; those belong in Forgotten.
+- Notes do not appear because they have no calendar relation.
+- Backlog tasks do not appear until they receive a `planned_for` date.
+- Calendar must not convert tasks into events. Task and event remain distinct
+  item types and keep their own fields.
+- Moving a task to a different date should use the migration rule where
+  appropriate; moving an event should be treated as an edit/reschedule behavior
+  when that workflow exists.
+
+## Screen 11 - Tags
+
+Status: implemented.
+
+Role: catalog view for tags used by item metadata and by the dashboard Context
+panel. Tags describe topics, areas, or grouping labels. This screen is not an
+item list and must not create tasks, notes, or events by itself.
+
+Entry points:
+
+- `Enter` on `Tags` from the Main Dashboard menu.
+- Future shortcut: `g` from the dashboard.
+
+Navigation:
+
+- `CursorUp` and `CursorDown` move inside the focused list.
+- `Tab` and `Shift+Tab` move focus between Tags, Preview, and Actions.
+- `c` opens the Create Tag flow.
+- `Enter` opens the selected tag preview.
+- `d` deletes or removes the selected tag according to the final business rule.
+- `Esc` returns to the dashboard.
+- `?` opens contextual help.
+
+Target ASCII layout:
+
+```text
++ TermBullet - Tags ----------------------------------------------------------------------+
+| 1 Tags                                         | 2 Preview                            |
+| > auth                                6 items | name: auth                           |
+|   cli                                 4 items | usage: 6 items                       |
+|   tui                                 3 items | active tasks: 3                      |
+|   import                              2 items | notes: 2                             |
+|   backup                              1 item  | events: 1                            |
+|                                                 | last used: 2026-05-09                |
+|                                                 |                                      |
+|-------------------------------------------------+--------------------------------------|
+| 3 Actions                                                                              |
+| > create tag                                                                           |
+|   rename selected                                                                      |
+|   remove selected from all items                                                       |
++-----------------------------------------------------------------------------------------+
+| c create  Enter preview  d delete  Tab focus  ? help  Esc back  q quit                 |
++-----------------------------------------------------------------------------------------+
+```
+
+Notes:
+
+- Tags are metadata strings attached to items; they are not item types.
+- The current model has `tags` on items and a local tag catalog for tag names
+  and optional descriptions. There is no separate `project` field.
+- The dashboard Context panel should show the most relevant active tags based on
+  item usage.
+- Deleting a tag needs a clear business rule before implementation: block
+  deletion while referenced, or remove it from all items after confirmation.
+
+## Flow 12 - Create Tag
+
+Status: implemented.
+
+Role: compact creation flow opened from Tags. The user gives the tag a name and
+can optionally add a short description if the final model supports tag catalog
+metadata.
+
+Entry points:
+
+- `c` from Tags.
+- `create tag` action from Tags.
+
+Navigation:
+
+- `Tab` and `Shift+Tab` move between Name, Description, Preview, Save, and
+  Cancel.
+- `Enter` activates the focused control.
+- `Save` creates the tag.
+- `Cancel` or `Esc` returns to Tags without creating anything.
+- `?` opens contextual help.
+
+Target ASCII layout:
+
+```text
++ TermBullet - Create Tag ----------------------------------------------------------------+
+| Name                                                                                    |
+| auth                                                                                    |
+|                                                                                         |
+| Description                                                                             |
+| authentication and authorization work                                                   |
+|                                                                                         |
+| Preview                                                                                 |
+| name: auth                                                                              |
+| description: authentication and authorization work                                      |
+|                                                                                         |
+| [ Save ]  [ Cancel ]                                                                    |
++-----------------------------------------------------------------------------------------+
+| Enter activate  Tab focus  Esc cancel  ? help                                           |
++-----------------------------------------------------------------------------------------+
+```
+
+Notes:
+
+- Empty name is invalid and should show an inline error.
+- Names should be normalized consistently before persistence; the exact
+  normalization rule belongs in the data model decision.
+- Creating a tag catalog entry must not mutate existing items automatically.
+- Tag catalog entries are persisted in `data/tags.json`.
+- `Enter` must not create the tag unless the focused control is `Save`.
+
+## Flow 13 - Migrate Item
+
+Status: implemented.
 
 Role: focused confirmation flow for migrating one task. It should stay simple:
 show the basic item data, ask for one destination, and confirm or cancel.
@@ -299,10 +969,11 @@ Entry points:
 
 Navigation:
 
-- `Tab` and `Shift+Tab` move between destination controls.
+- `Tab` and `Shift+Tab` move between destination controls, Save, and Cancel.
 - `Space` toggles destination choice.
-- `Enter` confirms migration.
-- `Esc` cancels and returns to the previous screen.
+- `Enter` activates the focused control.
+- `Save` confirms migration.
+- `Cancel` or `Esc` returns to the previous screen without migrating.
 - `?` opens contextual help.
 
 Target ASCII layout:
@@ -326,8 +997,10 @@ Target ASCII layout:
 | Result                                                                                    |
 | original: t-0526-1 -> migrate                                                            |
 | new task:  open at 2026-05-12                                                             |
+|                                                                                           |
+| [ Save ]  [ Cancel ]                                                                      |
 +-------------------------------------------------------------------------------------------+
-| Enter migrate  Tab focus  Space toggle  Esc cancel  ? help                               |
+| Enter activate  Tab focus  Space toggle  Esc cancel  ? help                              |
 +-------------------------------------------------------------------------------------------+
 ```
 
@@ -350,8 +1023,10 @@ Backlog destination example:
 | Result                                                                                    |
 | original: t-0526-1 -> migrate                                                            |
 | new task:  open in backlog                                                                |
+|                                                                                           |
+| [ Save ]  [ Cancel ]                                                                      |
 +-------------------------------------------------------------------------------------------+
-| Enter migrate  Tab focus  Space toggle  Esc cancel  ? help                               |
+| Enter activate  Tab focus  Space toggle  Esc cancel  ? help                              |
 +-------------------------------------------------------------------------------------------+
 ```
 
@@ -364,12 +1039,14 @@ Notes:
 - The flow should not expose the full history; that belongs to Item Detail.
 - On confirmation, the original task remains stored with status `migrate`, and
   the destination is a new `open` task linked by migration fields.
+- `Enter` must not confirm migration unless the focused control is `Save`.
 
 ## Implementation Gap Notes
 
-The product spec describes a broader V1 TUI with Daily Focus, Weekly Planning,
-Backlog Triage, Forgotten Review, Review, and Search. The active codebase
-currently contains `MainDashboard`, `Search`, `ItemDetail`, and `MigrateItem` in
-`TuiScreen`, plus the Add Item auxiliary flow. This file documents the current
-implemented state so the next design pass can adjust the intended screens before
-implementation.
+The product spec describes a broader TUI with AI Planning, Week,
+Backlog Triage, Forgotten Review, Review, Notes, Calendar, Tags, and Search.
+The active codebase currently contains `MainDashboard`, `Search`, `ItemDetail`,
+`Planning`, `Week`, `Backlog`, `Forgotten`, `Notes`, `Calendar`, `Tags`, and
+`MigrateItem` in `TuiScreen`, plus the Add Item auxiliary flow for type picking,
+quick task capture, type-specific creation forms, and the Create Tag flow.
+Review remains a future screen outside the current route set.

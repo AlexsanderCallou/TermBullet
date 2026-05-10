@@ -1,4 +1,6 @@
-using TermBullet.Application.Ports;
+using TermBullet.Services.Clock;
+using TermBullet.Services.Maintenance;
+using TermBullet.Repositories.Interfaces;
 using TermBullet.Application.Startup;
 
 namespace TermBullet.Tests.Application.Startup;

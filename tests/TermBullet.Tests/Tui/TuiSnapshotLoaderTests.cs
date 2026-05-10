@@ -1,7 +1,9 @@
 using TermBullet.Application.Configuration;
 using TermBullet.Application.Items;
-using TermBullet.Application.Ports;
-using TermBullet.Core.Items;
+using TermBullet.Repositories.Interfaces;
+using TermBullet.Application.Tags;
+using TermBullet.Domain.Items;
+using TermBullet.Domain.Tags;
 using TermBullet.Tui;
 
 namespace TermBullet.Tests.Tui;
@@ -12,10 +14,12 @@ public sealed class TuiSnapshotLoaderTests
     public async Task LoadAsync_runs_startup_action_only_once_before_first_snapshot()
     {
         var repository = new FakeItemRepository();
+        var tagRepository = new FakeTagCatalogRepository();
         var settingsStore = new FakeSettingsStore();
         var startupCalls = 0;
         var loader = CreateLoader(
             repository,
+            tagRepository,
             settingsStore,
             _ =>
             {
@@ -33,23 +37,46 @@ public sealed class TuiSnapshotLoaderTests
     public async Task LoadAsync_returns_today_backlog_and_config_state()
     {
         var repository = new FakeItemRepository();
+        var tagRepository = new FakeTagCatalogRepository();
         repository.Seed(MakeItem("t-0426-1", ItemCollection.Today, "Fix auth"));
         repository.Seed(MakeItem("t-0426-2", ItemCollection.Backlog, "Review migrations"));
+        await tagRepository.AddAsync(TagCatalogEntry.Create("auth", null, DateTimeOffset.UtcNow));
 
         var settingsStore = new FakeSettingsStore();
         await settingsStore.SetAsync("theme", "dark");
 
-        var loader = CreateLoader(repository, settingsStore);
+        var loader = CreateLoader(repository, tagRepository, settingsStore);
 
         var snapshot = await loader.LoadAsync();
 
         Assert.Single(snapshot.TodayItems);
         Assert.Single(snapshot.BacklogItems);
+        Assert.Single(snapshot.Tags);
         Assert.Equal("dark", snapshot.Configuration["theme"]);
     }
 
+    [Fact]
+    public async Task LoadAsync_keeps_current_items_separate_from_archive_items()
+    {
+        var repository = new FakeItemRepository();
+        var tagRepository = new FakeTagCatalogRepository();
+        var settingsStore = new FakeSettingsStore();
+        repository.Seed(MakeItem("t-0526-1", ItemCollection.Today, "Current task"));
+        repository.SeedArchive(MakeItem("t-0426-1", ItemCollection.Today, "Old forgotten task"));
+
+        var loader = CreateLoader(repository, tagRepository, settingsStore);
+
+        var snapshot = await loader.LoadAsync();
+
+        Assert.Contains(snapshot.CurrentItems, item => item.PublicRef == "t-0526-1");
+        Assert.DoesNotContain(snapshot.CurrentItems, item => item.PublicRef == "t-0426-1");
+        Assert.Contains(snapshot.AllItems, item => item.PublicRef == "t-0426-1");
+    }
+
+
     private static TuiSnapshotLoader CreateLoader(
         FakeItemRepository repository,
+        FakeTagCatalogRepository tagRepository,
         FakeSettingsStore settingsStore,
         Func<CancellationToken, Task>? startupAction = null)
     {
@@ -58,6 +85,7 @@ public sealed class TuiSnapshotLoaderTests
             new GetWeekItemsUseCase(repository),
             new GetBacklogItemsUseCase(repository),
             new ListItemsUseCase(repository),
+            new ListTagsUseCase(tagRepository),
             new ListConfigurationUseCase(settingsStore),
             startupAction);
     }
@@ -65,17 +93,20 @@ public sealed class TuiSnapshotLoaderTests
     private static Item MakeItem(string publicRef, ItemCollection collection, string content) =>
         Item.Create(
             Guid.NewGuid(),
-            TermBullet.Core.Refs.PublicRef.Parse(publicRef),
+            TermBullet.Domain.Refs.PublicRef.Parse(publicRef),
             ItemType.Task,
             content,
             collection,
             DateTimeOffset.UtcNow);
 
-    private sealed class FakeItemRepository : IItemRepository
+    private sealed class FakeItemRepository : IItemRepository, IItemArchiveReader
     {
         private readonly List<Item> _items = [];
+        private readonly List<Item> _archiveItems = [];
 
         public void Seed(Item item) => _items.Add(item);
+
+        public void SeedArchive(Item item) => _archiveItems.Add(item);
 
         public Task<int> GetCurrentPublicRefSequenceAsync(ItemType type, int month, int year, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
@@ -114,9 +145,12 @@ public sealed class TuiSnapshotLoaderTests
 
         public Task<Item?> FindByPublicRefAsync(string publicRef, CancellationToken cancellationToken = default)
             => Task.FromResult<Item?>(_items.FirstOrDefault(item => item.PublicRef.Value == publicRef));
+
+        public Task<IReadOnlyCollection<Item>> ListAllAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyCollection<Item>>(_items.Concat(_archiveItems).ToArray());
     }
 
-    private sealed class FakeSettingsStore : ISettingsStore
+    private sealed class FakeSettingsStore : ISettingsRepository
     {
         private readonly Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
 
@@ -131,6 +165,23 @@ public sealed class TuiSnapshotLoaderTests
         public Task SetAsync(string key, string value, string profile = "default", CancellationToken cancellationToken = default)
         {
             _values[key] = value;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeTagCatalogRepository : ITagCatalogRepository
+    {
+        private readonly List<TagCatalogEntry> _tags = [];
+
+        public Task<IReadOnlyCollection<TagCatalogEntry>> ListAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyCollection<TagCatalogEntry>>(_tags);
+
+        public Task<TagCatalogEntry?> FindByNameAsync(string name, CancellationToken cancellationToken = default) =>
+            Task.FromResult(_tags.FirstOrDefault(tag => string.Equals(tag.Name, name.Trim(), StringComparison.OrdinalIgnoreCase)));
+
+        public Task AddAsync(TagCatalogEntry tag, CancellationToken cancellationToken = default)
+        {
+            _tags.Add(tag);
             return Task.CompletedTask;
         }
     }

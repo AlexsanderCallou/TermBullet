@@ -1,8 +1,11 @@
+using TermBullet.Services.Clock;
+using TermBullet.Services.DataTransfer;
+using TermBullet.Services.History;
 using System.Text;
 using TermBullet.Application.Configuration;
 using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
-using TermBullet.Application.Ports;
+using TermBullet.Repositories.Interfaces;
 using TermBullet.Cli;
 
 namespace TermBullet.Tests.Cli;
@@ -247,7 +250,7 @@ public sealed class TermBulletCliAppTests
         StringWriter Output,
         StringWriter Error);
 
-    private sealed class FakeSettingsStore : ISettingsStore
+    private sealed class FakeSettingsStore : ISettingsRepository
     {
         private readonly Dictionary<string, Dictionary<string, string>> _profiles =
             new(StringComparer.OrdinalIgnoreCase)

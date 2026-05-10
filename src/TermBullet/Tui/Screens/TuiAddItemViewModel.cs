@@ -1,32 +1,59 @@
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Tui.Screens;
 
 public sealed class TuiAddItemViewModel
 {
-    private TuiAddItemViewModel(ItemCollection collection, string? error)
+    private TuiAddItemViewModel(ItemType type, ItemCollection collection, string? error)
     {
+        Type = type;
         Collection = collection;
         Error = error;
     }
+
+    public ItemType Type { get; }
 
     public ItemCollection Collection { get; }
 
     public string? Error { get; }
 
     public IReadOnlyList<string> Examples =>
-    [
-        "- Review pull request",
-        ". Investigate stacktrace",
-        "o Team sync at 16:00",
-        "- Write release notes #release",
-        ". Decision: keep V1 local-first",
-        "o Dentist 2026-04-25 09:00"
-    ];
+        Type switch
+        {
+            ItemType.Note =>
+            [
+                "investigate stacktrace",
+                "decision keep V1 local-first",
+                "Terminal.Gui research notes"
+            ],
+            ItemType.Event =>
+            [
+                "team sync on 2026-05-12",
+                "dentist appointment on 2026-05-12",
+                "release demo on 2026-05-15"
+            ],
+            _ =>
+            [
+                "fix jwt authentication",
+                "review pull request",
+                "write release notes for 2026-05-12"
+            ]
+        };
 
     public static TuiAddItemViewModel ForMainDashboard() =>
-        new(ItemCollection.Today, error: null);
+        ForType(ItemType.Task);
+
+    public static TuiAddItemViewModel ForType(ItemType type) =>
+        new(type, ResolveDefaultCollection(type), error: null);
 
     public TuiAddItemViewModel WithError(string error) =>
-        new(Collection, error);
+        new(Type, Collection, error);
+
+    private static ItemCollection ResolveDefaultCollection(ItemType type) =>
+        type switch
+        {
+            ItemType.Note => ItemCollection.Backlog,
+            ItemType.Event => ItemCollection.Week,
+            _ => ItemCollection.Today
+        };
 }

@@ -1,5 +1,5 @@
 using TermBullet.Application.Items;
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 using TermBullet.Tui.Screens;
 
 namespace TermBullet.Tests.Tui;
@@ -147,6 +147,8 @@ public sealed class SearchViewModelTests
             Collection: ItemCollection.Today,
             Priority: Priority.None,
             Tags: [],
+            PlannedFor: null,
+            ScheduledAt: null,
             Version: 1,
             CreatedAt: DateTimeOffset.UtcNow,
             UpdatedAt: DateTimeOffset.UtcNow);

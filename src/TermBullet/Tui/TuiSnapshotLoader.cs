@@ -1,5 +1,7 @@
 using TermBullet.Application.Configuration;
 using TermBullet.Application.Items;
+using TermBullet.Application.Tags;
+using TermBullet.Repositories.Interfaces;
 
 namespace TermBullet.Tui;
 
@@ -8,6 +10,7 @@ public sealed class TuiSnapshotLoader(
     GetWeekItemsUseCase? getWeekItemsUseCase,
     GetBacklogItemsUseCase getBacklogItemsUseCase,
     ListItemsUseCase? listItemsUseCase = null,
+    ListTagsUseCase? listTagsUseCase = null,
     ListConfigurationUseCase? listConfigurationUseCase = null,
     Func<CancellationToken, Task>? startupAction = null)
 {
@@ -26,9 +29,16 @@ public sealed class TuiSnapshotLoader(
             ? await getWeekItemsUseCase.ExecuteAsync(cancellationToken)
             : Array.Empty<ItemResult>();
         var backlogItems = await getBacklogItemsUseCase.ExecuteAsync(cancellationToken);
-        var allItems = listItemsUseCase is not null
+        var currentItems = listItemsUseCase is not null
             ? await listItemsUseCase.ExecuteAsync(new ListItemsRequest(), cancellationToken)
             : todayItems.Concat(weekItems).Concat(backlogItems).ToArray();
+        var allItems = listItemsUseCase is not null
+            && listItemsUseCase.ItemRepository is IItemArchiveReader archiveReader
+                ? (await archiveReader.ListAllAsync(cancellationToken)).Select(ItemResult.From).ToArray()
+                : currentItems;
+        var tags = listTagsUseCase is not null
+            ? await listTagsUseCase.ExecuteAsync(cancellationToken)
+            : Array.Empty<TagCatalogResult>();
         IReadOnlyDictionary<string, string> configuration = new Dictionary<string, string>();
 
         if (listConfigurationUseCase is not null)
@@ -36,6 +46,6 @@ public sealed class TuiSnapshotLoader(
             configuration = await listConfigurationUseCase.ExecuteAsync("default", cancellationToken);
         }
 
-        return new TuiSnapshot(todayItems, weekItems, backlogItems, allItems, configuration);
+        return new TuiSnapshot(todayItems, weekItems, backlogItems, currentItems, allItems, tags, configuration);
     }
 }

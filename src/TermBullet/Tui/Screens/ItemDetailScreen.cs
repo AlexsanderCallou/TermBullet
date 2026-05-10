@@ -17,7 +17,7 @@ public static class ItemDetailScreen
         {
             X = 0, Y = 0, Width = Dim.Fill()
         };
-        var footer = new Label(" e edit  x done  z cancel  > migrate  d delete  Tab focus  ? help  Esc back  q quit")
+        var footer = new Label(" e edit  x done  z cancel  > migrate  d delete  Tab/1-5 focus  ? help  Esc back  q quit")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
@@ -57,43 +57,63 @@ public static class ItemDetailScreen
         root.Add(topBar, identityPanel, planningPanel, contentPanel, migrationPanel, historyPanel, footer);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
 
-        root.KeyPress += args =>
+        bool HandleDetailShortcut(KeyEvent keyEvent)
         {
-            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            if (TuiScreenUtilities.IsHelpKey(keyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.ItemDetail);
-                args.Handled = true;
-                return;
+                return true;
             }
 
-            switch (args.KeyEvent.Key)
+            if (TuiScreenUtilities.TryFocusPanelByNumber(keyEvent, navigation, panels, panelTitles, focusTargets))
+            {
+                return true;
+            }
+
+            switch (keyEvent.Key)
             {
                 case Key.Tab:
                     navigation.MoveNextPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.BackTab:
                     navigation.MovePreviousPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.Esc:
                     onBack();
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.q:
                     onQuit();
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key x when x == (Key)'>':
                     onMigrate();
-                    args.Handled = true;
-                    break;
+                    return true;
+            }
+
+            return false;
+        }
+
+        root.KeyPress += args =>
+        {
+            if (HandleDetailShortcut(args.KeyEvent))
+            {
+                args.Handled = true;
             }
         };
+
+        foreach (var target in focusTargets)
+        {
+            target.KeyPress += args =>
+            {
+                if (HandleDetailShortcut(args.KeyEvent))
+                {
+                    args.Handled = true;
+                }
+            };
+        }
     }
 
     private static ListView AddList(FrameView panel, IReadOnlyList<string> lines)

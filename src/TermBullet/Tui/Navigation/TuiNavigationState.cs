@@ -28,6 +28,17 @@ public sealed class TuiNavigationState
         FocusedPanelIndex = (FocusedPanelIndex - 1 + _panelCount) % _panelCount;
     }
 
+    public bool FocusPanel(int panelNumber)
+    {
+        if (panelNumber < 1 || panelNumber > _panelCount)
+        {
+            return false;
+        }
+
+        FocusedPanelIndex = panelNumber - 1;
+        return true;
+    }
+
     public void NavigateTo(TuiScreen screen, int panelCount = 6)
     {
         _history.Push((CurrentScreen, _panelCount));

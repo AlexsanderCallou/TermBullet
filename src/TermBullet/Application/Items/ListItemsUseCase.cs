@@ -1,10 +1,12 @@
-using TermBullet.Application.Ports;
-using TermBullet.Core.Items;
+using TermBullet.Repositories.Interfaces;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Application.Items;
 
 public sealed class ListItemsUseCase(IItemRepository itemRepository)
 {
+    public IItemRepository ItemRepository { get; } = itemRepository;
+
     public async Task<IReadOnlyCollection<ItemResult>> ExecuteAsync(
         ListItemsRequest request,
         CancellationToken cancellationToken = default)
@@ -14,7 +16,7 @@ public sealed class ListItemsUseCase(IItemRepository itemRepository)
         ValidateFilter(request.Collection, nameof(request.Collection));
         ValidateFilter(request.Status, nameof(request.Status));
 
-        var items = await itemRepository.ListAsync(
+        var items = await ItemRepository.ListAsync(
             request.Collection,
             request.Status,
             cancellationToken);

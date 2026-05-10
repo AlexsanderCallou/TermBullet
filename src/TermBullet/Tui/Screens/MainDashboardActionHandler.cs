@@ -42,9 +42,23 @@ public sealed class MainDashboardActionHandler(
         string publicRef,
         CancellationToken cancellationToken = default)
     {
+        return await HandleMigrateAsync(
+            new MigrateItemRequest
+            {
+                PublicRef = publicRef,
+                DestinationCollection = TermBullet.Domain.Items.ItemCollection.Today,
+                PlannedFor = DateOnly.FromDateTime(DateTime.Today)
+            },
+            cancellationToken);
+    }
+
+    public async Task<ActionResult> HandleMigrateAsync(
+        MigrateItemRequest request,
+        CancellationToken cancellationToken = default)
+    {
         try
         {
-            await migrateItemUseCase.ExecuteAsync(publicRef, cancellationToken);
+            await migrateItemUseCase.ExecuteAsync(request, cancellationToken);
             return ActionResult.Ok();
         }
         catch (Exception ex)

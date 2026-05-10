@@ -1,7 +1,8 @@
+using TermBullet.Services.Clock;
 using TermBullet.Application.Items;
-using TermBullet.Application.Ports;
-using TermBullet.Core.Items;
-using TermBullet.Core.Refs;
+using TermBullet.Repositories.Interfaces;
+using TermBullet.Domain.Items;
+using TermBullet.Domain.Refs;
 
 namespace TermBullet.Tests.Application.Items;
 
@@ -232,6 +233,23 @@ public sealed class MutateItemUseCaseTests
     }
 
     [Fact]
+    public async Task Set_priority_rejects_non_task_items()
+    {
+        var repository = new FakeItemRepository(CreateNote());
+        var useCase = new SetItemPriorityUseCase(repository, new FixedClock(ChangedAt));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => useCase.ExecuteAsync(new SetItemPriorityRequest
+            {
+                PublicRef = "n-0426-1",
+                Priority = Priority.High
+            }));
+
+        Assert.Contains("Priority can only be changed for tasks", exception.Message);
+        Assert.Empty(repository.UpdatedItems);
+    }
+
+    [Fact]
     public async Task Tag_rejects_empty_tag()
     {
         var repository = new FakeItemRepository(CreateTask());
@@ -258,6 +276,17 @@ public sealed class MutateItemUseCaseTests
             ItemCollection.Today,
             CreatedAt,
             tags: tags);
+    }
+
+    private static Item CreateNote()
+    {
+        return Item.Create(
+            Guid.Parse("8e01cbde-aea7-433c-9a8b-b9a94d31a888"),
+            PublicRef.Parse("n-0426-1"),
+            ItemType.Note,
+            "Investigate stacktrace",
+            ItemCollection.Backlog,
+            CreatedAt);
     }
 
     private sealed class FakeItemRepository(Item? item) : IItemRepository

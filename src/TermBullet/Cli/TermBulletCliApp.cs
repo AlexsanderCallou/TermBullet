@@ -4,7 +4,7 @@ using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Application.Startup;
-using TermBullet.Core.Items;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Cli;
 
@@ -625,15 +625,20 @@ public sealed class TermBulletCliApp(
         CancellationToken cancellationToken)
     {
         var publicRefArgument = new Argument<string>("ref") { Description = "Public ref" };
-        var toOption = new Option<string?>("--to")
+        var dateOption = new Option<string?>("--date")
         {
-            Description = "Migration destination"
+            Description = "Destination planned date in yyyy-mm-dd format"
+        };
+        var backlogOption = new Option<bool>("--backlog")
+        {
+            Description = "Migrate the task to Backlog"
         };
 
-        var command = new Command("migrate", "Mark an item with migrate status")
+        var command = new Command("migrate", "Migrate a task to a date or Backlog")
         {
             publicRefArgument,
-            toOption
+            dateOption,
+            backlogOption
         };
 
         command.SetAction(async parseResult =>
@@ -642,19 +647,39 @@ public sealed class TermBulletCliApp(
             {
                 var publicRef = parseResult.GetValue(publicRefArgument)
                     ?? throw new InvalidOperationException("Public ref is required.");
-                var destination = parseResult.GetValue(toOption);
-                if (!string.IsNullOrWhiteSpace(destination))
+                var dateValue = parseResult.GetValue(dateOption);
+                var backlog = parseResult.GetValue(backlogOption);
+                var hasDate = !string.IsNullOrWhiteSpace(dateValue);
+
+                if (hasDate == backlog)
                 {
-                    var collection = ParseCollection(destination)
-                        ?? throw new InvalidOperationException("Destination collection is required.");
-                    await moveItemUseCase!.ExecuteAsync(new MoveItemRequest
-                    {
-                        PublicRef = publicRef,
-                        Collection = collection
-                    }, cancellationToken);
+                    throw new InvalidOperationException(
+                        "Migration requires exactly one destination: --date <yyyy-mm-dd> or --backlog.");
                 }
 
-                var item = await migrateItemUseCase!.ExecuteAsync(publicRef, cancellationToken);
+                var request = new MigrateItemRequest
+                {
+                    PublicRef = publicRef,
+                    DestinationCollection = backlog ? ItemCollection.Backlog : ItemCollection.Week,
+                    PlannedFor = null
+                };
+
+                if (hasDate)
+                {
+                    if (!DateOnly.TryParse(dateValue, out var plannedFor))
+                    {
+                        throw new InvalidOperationException("Date must be in yyyy-mm-dd format.");
+                    }
+
+                    request = new MigrateItemRequest
+                    {
+                        PublicRef = publicRef,
+                        DestinationCollection = ItemCollection.Week,
+                        PlannedFor = plannedFor
+                    };
+                }
+
+                var item = await migrateItemUseCase!.ExecuteAsync(request, cancellationToken);
                 await WriteItemDetailAsync(item, standardOutput);
                 return 0;
             }

@@ -1,7 +1,9 @@
+using TermBullet.Services.Clock;
+using TermBullet.Services.Ids;
 using TermBullet.Application.Items;
-using TermBullet.Application.Ports;
-using TermBullet.Core.Items;
-using TermBullet.Core.Refs;
+using TermBullet.Repositories.Interfaces;
+using TermBullet.Domain.Items;
+using TermBullet.Domain.Refs;
 
 namespace TermBullet.Tests.Application.Items;
 
@@ -24,6 +26,50 @@ public sealed class MigrateItemUseCaseTests
 
         var updatedItem = Assert.Single(repository.UpdatedItems);
         Assert.Equal(ChangedAt, updatedItem.MigratedAt);
+        var migratedItem = Assert.Single(repository.AddedItems);
+        Assert.Equal(ItemStatus.Open, migratedItem.Status);
+        Assert.Equal(ItemCollection.Week, migratedItem.Collection);
+        Assert.Equal(DateOnly.FromDateTime(ChangedAt.UtcDateTime), migratedItem.PlannedFor);
+    }
+
+    [Fact]
+    public async Task Execute_with_date_destination_creates_new_week_task_for_selected_date()
+    {
+        var repository = new FakeItemRepository(CreateTask());
+        var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt), new FixedIdGenerator());
+
+        await useCase.ExecuteAsync(new MigrateItemRequest
+        {
+            PublicRef = "t-0426-1",
+            DestinationCollection = ItemCollection.Week,
+            PlannedFor = new DateOnly(2026, 5, 12)
+        });
+
+        var original = Assert.Single(repository.UpdatedItems);
+        Assert.Equal(ItemStatus.Migrate, original.Status);
+
+        var migratedItem = Assert.Single(repository.AddedItems);
+        Assert.Equal("Fix authentication flow", migratedItem.Content);
+        Assert.Equal(ItemCollection.Week, migratedItem.Collection);
+        Assert.Equal(new DateOnly(2026, 5, 12), migratedItem.PlannedFor);
+        Assert.Equal("t-0526-1", migratedItem.PublicRef.Value);
+    }
+
+    [Fact]
+    public async Task Execute_with_backlog_destination_creates_new_backlog_task_without_date()
+    {
+        var repository = new FakeItemRepository(CreateTask());
+        var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt), new FixedIdGenerator());
+
+        await useCase.ExecuteAsync(new MigrateItemRequest
+        {
+            PublicRef = "t-0426-1",
+            DestinationCollection = ItemCollection.Backlog
+        });
+
+        var migratedItem = Assert.Single(repository.AddedItems);
+        Assert.Equal(ItemCollection.Backlog, migratedItem.Collection);
+        Assert.Null(migratedItem.PlannedFor);
     }
 
     [Fact]
@@ -70,25 +116,28 @@ public sealed class MigrateItemUseCaseTests
 
         public List<Item> UpdatedItems { get; } = [];
 
+        public List<Item> AddedItems { get; } = [];
+
         public Task<int> GetCurrentPublicRefSequenceAsync(
             ItemType type,
             int month,
             int year,
             CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            return Task.FromResult(0);
         }
 
         public Task<bool> PublicRefExistsAsync(
             string publicRef,
             CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            return Task.FromResult(false);
         }
 
         public Task AddAsync(Item itemToAdd, CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            AddedItems.Add(itemToAdd);
+            return Task.CompletedTask;
         }
 
         public Task UpdateAsync(Item itemToUpdate, CancellationToken cancellationToken = default)
@@ -127,5 +176,10 @@ public sealed class MigrateItemUseCaseTests
     private sealed class FixedClock(DateTimeOffset utcNow) : IClock
     {
         public DateTimeOffset UtcNow { get; } = utcNow;
+    }
+
+    private sealed class FixedIdGenerator : IIdGenerator
+    {
+        public Guid NewId() => Guid.Parse("11111111-1111-1111-1111-111111111111");
     }
 }

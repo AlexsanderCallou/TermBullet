@@ -34,7 +34,7 @@ public static class SearchScreen
             X = 0, Y = 2, Width = Dim.Fill()
         };
 
-        var footer = new Label(" / search  Enter open  Ctrl+e edit  Ctrl+x done  Tab focus  ? help  Esc back")
+        var footer = new Label(" / search  Enter open  Ctrl+e edit  Ctrl+x done  Tab/1-2 focus  ? help  Esc back")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
@@ -96,6 +96,12 @@ public static class SearchScreen
                 return;
             }
 
+            if (TuiScreenUtilities.TryFocusPanelByNumber(args.KeyEvent, navigation, panels, panelTitles, focusTargets))
+            {
+                args.Handled = true;
+                return;
+            }
+
             switch (args.KeyEvent.Key)
             {
                 case Key.Tab:
@@ -134,6 +140,13 @@ public static class SearchScreen
                 for (var i = 0; i < -diff; i++) viewModel.SelectPreviousResult();
 
             TuiScreenUtilities.RefreshListView(previewList, BuildPreviewLines(viewModel.SelectedResult));
+        };
+        resultsList.KeyPress += args =>
+        {
+            if (TuiScreenUtilities.TryHandleEnter(args.KeyEvent.Key, () => onOpenSelected(viewModel.SelectedResult)))
+            {
+                args.Handled = true;
+            }
         };
     }
 

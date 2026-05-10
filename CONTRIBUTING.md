@@ -51,22 +51,24 @@ verification commands for code-affecting changes when practical.
 
 ## Architecture Expectations
 
-TermBullet uses a modular monolith:
+TermBullet uses one production project with clear folders:
 
-- `Core`
+- `Domain`
 - `Application`
-- `Infrastructure`
+- `Repositories`
+- `Services`
 - `Cli`
 - `Tui`
 - `Bootstrap`
 
 Respect dependency direction:
 
-- Core depends on no internal outer module.
-- Application depends on Core.
-- Infrastructure implements Application contracts.
+- Domain depends on no internal outer folder.
+- Application depends on Domain and repository/service interfaces.
+- Repositories implement persistence contracts.
+- Services implement technical service contracts.
 - CLI and TUI call Application use cases.
-- Bootstrap wires modules together.
+- Bootstrap wires everything together.
 
 Do not put business rules in CLI handlers, TUI screens, or JSON repositories.
 
@@ -112,7 +114,7 @@ Good issues include:
 - actual behavior if applicable;
 - reproduction steps;
 - relevant command or screen;
-- affected area: Core, Application, Infrastructure, CLI, TUI, docs.
+- affected area: Domain, Application, Repositories, Services, CLI, TUI, docs.
 
 ## Dependency Policy
 

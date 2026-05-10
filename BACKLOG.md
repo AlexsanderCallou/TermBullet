@@ -9,7 +9,7 @@ Complete:
 
 - repository scaffold;
 - smoke test setup;
-- Core domain model;
+- Domain model;
 - public refs and generation;
 - Application item lifecycle use cases;
 - monthly JSON path resolver;
@@ -19,16 +19,21 @@ Complete:
 - local JSON index rebuild and automatic update after writes;
 - local data path reporting;
 - delete and clear-history use cases;
-- export/import use cases and infrastructure;
+- export/import use cases and services;
 - data path use case;
 - CLI command flows for item lifecycle, collections, search, path, export,
   import, and history clear;
 - migration metadata persistence;
 - repository/schema conformance for optional fields;
-- TUI MVP with Main Dashboard, Search, Add Item, contextual help, focus updates,
-  search state, add flow, and dashboard lifecycle shortcuts;
+- TUI MVP with Main Dashboard, Search, Add Item, Notes, Calendar, Tags,
+  contextual help, focus updates, search state, add flow, and dashboard
+  lifecycle shortcuts;
 - initial TUI Item Detail screen with available item fields;
 - initial TUI Migrate Item flow with basic item data and destination preview;
+- TUI Planning placeholder for future AI-assisted planning;
+- TUI Week, Backlog, and Forgotten review views;
+- task, note, and event specific Add Item flows;
+- quick task capture for today's tasks;
 - official task status model aligned to `open`, `done`, `cancelled`, and
   `migrate`;
 - manual TUI smoke validation;
@@ -36,24 +41,23 @@ Complete:
 
 Still missing for the experimental MVP:
 
-- align implementation with approved task planning model;
 - V1 release candidate hardening.
 
 ## V1 Goal
 
 Deliver a local-first offline terminal planner with CLI, TUI MVP, tasks, notes,
-events, Today, Backlog, Forgotten, Week as a planning view, monthly JSON
-persistence, local JSON index, search, editing, migration, movement, data path
-discovery, export, and import.
+events, Today, Week, Backlog, Forgotten review, monthly JSON persistence, local
+JSON index, search, editing, migration, movement, data path discovery, export,
+and import.
 
 ## Milestone Status
 
 | Milestone | Status |
 | --- | --- |
 | 0 - Repository Scaffold | Complete |
-| 1 - Core Domain | Complete |
+| 1 - Domain | Complete |
 | 2 - Application Use Cases | Complete |
-| 3 - JSON File Infrastructure | Complete |
+| 3 - JSON Repositories | Complete |
 | 4 - CLI MVP | Complete |
 | 5 - Export, Import, Data Path | Complete |
 | 6 - TUI MVP | Complete |
@@ -62,14 +66,16 @@ discovery, export, and import.
 Milestone responsibilities:
 
 - **0 Scaffold:** solution, projects, smoke test, build/test pipeline.
-- **1 Core:** item model, status/priority/collection rules, public refs.
+- **1 Domain:** item model, status/priority/collection rules, public refs.
 - **2 Application:** item lifecycle, collections, search, data path, export/import
   use cases.
-- **3 Infrastructure:** monthly JSON files, safe writes, backup/recovery, local
+- **3 Repositories:** monthly JSON files, safe writes, backup/recovery, local
   index, data path reporting, migration metadata.
 - **4 CLI:** official command tree from [CLI.md](CLI.md).
 - **5 Portability/path:** export, import, path, history clear.
-- **6 TUI MVP:** Main Dashboard, Search, Add Item using [screens.md](screens.md).
+- **6 TUI MVP:** Main Dashboard, Search, Add Item, Item Detail, Migrate Item,
+  Planning placeholder, Week, Backlog, Forgotten, Notes, Calendar, and Tags
+  using [screens.md](screens.md).
 - **7 Release candidate:** validation, regression tests, smoke tests, release
   notes.
 
@@ -81,26 +87,28 @@ The active TUI MVP is intentionally limited to:
 - Search;
 - Item Detail;
 - Migrate Item;
+- Planning placeholder;
+- Week View;
+- Backlog;
+- Forgotten;
+- Notes;
+- Calendar;
+- Tags;
 - Add Item auxiliary flow.
 
 Deferred post-MVP screens:
 
-- Daily Focus;
-- Weekly Planning;
-- Backlog Triage;
-- Forgotten Review;
+- AI Planning implementation;
 - Review;
 
 The current TUI visual reference is [screens.md](screens.md).
 
 ## Milestone 7 Remaining
 
-- [ ] Add task `planned_for` persistence, indexing, export, and import support
-- [ ] Add `forgotten` collection and startup/day-begin review for stale open
-      tasks
-- [ ] Refactor `week` from persisted collection to date-derived view
-- [ ] Refactor manual migration to require `--date <yyyy-mm-dd>` or `--backlog`
-- [ ] Add CLI/TUI coverage for the `forgotten` review flow
+- [x] Implement validated Notes screen
+- [x] Implement validated Calendar screen
+- [x] Implement validated Tags and Create Tag flow
+- [ ] Decide whether the CLI needs a derived `forgotten` command
 - [ ] Expose per-item JSON history through Application contracts for Item Detail
 - [ ] Import/export validation
 - [ ] JSON file backup/recovery validation
@@ -126,6 +134,9 @@ Already done for Milestone 7:
 - [x] Add initial TUI Migrate Item flow
 - [x] Replace old task status model with `open`, `done`, `cancelled`, and
       `migrate`
+- [x] Add task `planned_for` persistence, indexing, export, and import support
+- [x] Refactor manual migration to require `--date <yyyy-mm-dd>` or `--backlog`
+- [x] Add TUI coverage for the Forgotten review flow
 
 ## Manual TUI Smoke Checklist
 
