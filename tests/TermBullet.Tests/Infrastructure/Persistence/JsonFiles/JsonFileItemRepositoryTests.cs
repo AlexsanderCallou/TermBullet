@@ -112,6 +112,105 @@ public sealed class JsonFileItemRepositoryTests
     }
 
     [Fact]
+    public async Task ListAllAsync_reads_items_from_all_monthly_files()
+    {
+        var context = CreateContext(now: new DateTimeOffset(2026, 5, 10, 8, 0, 0, TimeSpan.Zero));
+        var repository = CreateRepository(context);
+        Directory.CreateDirectory(Path.GetDirectoryName(context.PreviousMonthlyFilePath)!);
+        await File.WriteAllTextAsync(
+            context.PreviousMonthlyFilePath,
+            """
+            {
+              "period": "2026-04",
+              "file_name": "data_04_2026.json",
+              "public_ref_sequences": { "task": 1, "note": 0, "event": 0 },
+              "items": [
+                {
+                  "id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
+                  "public_ref": "t-0426-1",
+                  "type": "task",
+                  "content": "Previous month task",
+                  "description": null,
+                  "status": "open",
+                  "collection": "today",
+                  "priority": "none",
+                  "tags": [],
+                  "version": 1,
+                  "created_at": "2026-04-23T10:30:00Z",
+                  "updated_at": "2026-04-23T10:30:00Z",
+                  "completed_at": null,
+                  "cancelled_at": null,
+                  "migrated_at": null,
+                  "migration": null
+                }
+              ],
+              "history": [],
+              "settings": {}
+            }
+            """);
+        await repository.AddAsync(CreateItem(
+            id: Guid.Parse("13f2b4de-9dc3-4d66-b4ad-e8596ef1d391"),
+            publicRef: "t-0526-1",
+            collection: ItemCollection.Today));
+
+        var items = await repository.ListAllAsync();
+
+        Assert.Contains(items, item => item.PublicRef.Value == "t-0426-1");
+        Assert.Contains(items, item => item.PublicRef.Value == "t-0526-1");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_updates_item_in_public_ref_month()
+    {
+        var context = CreateContext(now: new DateTimeOffset(2026, 5, 10, 8, 0, 0, TimeSpan.Zero));
+        var repository = CreateRepository(context);
+        Directory.CreateDirectory(Path.GetDirectoryName(context.PreviousMonthlyFilePath)!);
+        await File.WriteAllTextAsync(
+            context.PreviousMonthlyFilePath,
+            """
+            {
+              "period": "2026-04",
+              "file_name": "data_04_2026.json",
+              "public_ref_sequences": { "task": 1, "note": 0, "event": 0 },
+              "items": [
+                {
+                  "id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
+                  "public_ref": "t-0426-1",
+                  "type": "task",
+                  "content": "Previous month task",
+                  "description": null,
+                  "status": "open",
+                  "collection": "today",
+                  "priority": "none",
+                  "tags": [],
+                  "version": 1,
+                  "created_at": "2026-04-23T10:30:00Z",
+                  "updated_at": "2026-04-23T10:30:00Z",
+                  "completed_at": null,
+                  "cancelled_at": null,
+                  "migrated_at": null,
+                  "migration": null
+                }
+              ],
+              "history": [],
+              "settings": {}
+            }
+            """);
+
+        var item = await repository.FindByPublicRefAsync("t-0426-1");
+        Assert.NotNull(item);
+        item.MarkDone(ChangedAt);
+
+        await repository.UpdateAsync(item);
+
+        var previousJson = await File.ReadAllTextAsync(context.PreviousMonthlyFilePath);
+        using var previousDoc = JsonDocument.Parse(previousJson);
+        var previousItem = Assert.Single(previousDoc.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal("done", previousItem.GetProperty("status").GetString());
+        Assert.False(File.Exists(context.MonthlyFilePath));
+    }
+
+    [Fact]
     public async Task AddAsync_rejects_duplicate_public_ref_in_same_month()
     {
         var repository = CreateRepository();
@@ -266,7 +365,7 @@ public sealed class JsonFileItemRepositoryTests
             "automatic_month_rollover");
         var item = Item.Restore(
             Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
-            PublicRef.Parse("t-0426-1"),
+            PublicRef.Parse("t-0526-1"),
             ItemType.Task,
             "Fix authentication flow",
             "keep tests green",
@@ -284,7 +383,7 @@ public sealed class JsonFileItemRepositoryTests
 
         await repository.AddAsync(item);
 
-        var found = await repository.FindByPublicRefAsync("t-0426-1");
+        var found = await repository.FindByPublicRefAsync("t-0526-1");
         Assert.NotNull(found);
         Assert.Equal(item.Description, found.Description);
         Assert.Equal(item.PlannedFor, found.PlannedFor);
@@ -309,7 +408,7 @@ public sealed class JsonFileItemRepositoryTests
     }
 
     [Fact]
-    public async Task RunAutomaticMonthRolloverAsync_moves_active_tasks_from_previous_month_to_current_month()
+    public async Task RunAutomaticMonthRolloverAsync_creates_current_month_without_migrating_previous_tasks()
     {
         var context = CreateContext(now: new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero));
         var repository = CreateRepository(context);
@@ -354,28 +453,17 @@ public sealed class JsonFileItemRepositoryTests
 
         var previousJson = await File.ReadAllTextAsync(context.PreviousMonthlyFilePath);
         using var previousDoc = JsonDocument.Parse(previousJson);
-        Assert.Empty(previousDoc.RootElement.GetProperty("items").EnumerateArray());
-        var previousHistory = previousDoc.RootElement.GetProperty("history").EnumerateArray().ToArray();
-        Assert.Single(previousHistory);
-        Assert.Equal("migrate", previousHistory[0].GetProperty("event_type").GetString());
+        var previousItem = Assert.Single(previousDoc.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal("t-0426-1", previousItem.GetProperty("public_ref").GetString());
+        Assert.Equal("open", previousItem.GetProperty("status").GetString());
+        Assert.Equal(JsonValueKind.Null, previousItem.GetProperty("migrated_at").ValueKind);
+        Assert.Empty(previousDoc.RootElement.GetProperty("history").EnumerateArray());
 
         Assert.True(File.Exists(context.MonthlyFilePath));
         var currentJson = await File.ReadAllTextAsync(context.MonthlyFilePath);
         using var currentDoc = JsonDocument.Parse(currentJson);
-        var migratedItem = Assert.Single(currentDoc.RootElement.GetProperty("items").EnumerateArray());
-        Assert.Equal("t-0426-1", migratedItem.GetProperty("public_ref").GetString());
-        Assert.Equal("open", migratedItem.GetProperty("status").GetString());
-        Assert.Equal(new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero), migratedItem.GetProperty("migrated_at").GetDateTimeOffset());
-        var migration = migratedItem.GetProperty("migration");
-        Assert.Equal("2026-04", migration.GetProperty("from_period").GetString());
-        Assert.Equal("2026-05", migration.GetProperty("to_period").GetString());
-        Assert.Equal("automatic_month_rollover", migration.GetProperty("reason").GetString());
-
-        var found = await repository.FindByPublicRefAsync("t-0426-1");
-        Assert.NotNull(found);
-        Assert.NotNull(found.Migration);
-        Assert.Equal("2026-04", found.Migration!.FromPeriod);
-        Assert.Equal("2026-05", found.Migration.ToPeriod);
+        Assert.Empty(currentDoc.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal("2026-05", currentDoc.RootElement.GetProperty("period").GetString());
 
         var indexJson = await File.ReadAllTextAsync(context.IndexFilePath);
         using var indexDoc = JsonDocument.Parse(indexJson);
@@ -425,7 +513,11 @@ public sealed class JsonFileItemRepositoryTests
 
         var currentJson = await File.ReadAllTextAsync(context.MonthlyFilePath);
         using var currentDoc = JsonDocument.Parse(currentJson);
-        Assert.Single(currentDoc.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Empty(currentDoc.RootElement.GetProperty("items").EnumerateArray());
+
+        var previousJson = await File.ReadAllTextAsync(context.PreviousMonthlyFilePath);
+        using var previousDoc = JsonDocument.Parse(previousJson);
+        Assert.Single(previousDoc.RootElement.GetProperty("items").EnumerateArray());
     }
 
     private static readonly DateTimeOffset CreatedAt = new(2026, 4, 23, 10, 30, 0, TimeSpan.Zero);

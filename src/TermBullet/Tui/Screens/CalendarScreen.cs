@@ -139,89 +139,93 @@ public static class CalendarScreen
             }
         };
 
-        root.KeyPress += args =>
+        bool HandleCalendarShortcut(KeyEvent keyEvent, bool includeEnter)
         {
-            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            if (TuiScreenUtilities.IsHelpKey(keyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.Calendar);
-                args.Handled = true;
-                return;
+                return true;
             }
 
-            if (TuiScreenUtilities.TryFocusPanelByNumber(args.KeyEvent, navigation, panels, panelTitles, focusTargets))
+            if (TuiScreenUtilities.TryFocusPanelByNumber(keyEvent, navigation, panels, panelTitles, focusTargets))
             {
-                args.Handled = true;
-                return;
+                return true;
             }
 
-            switch (args.KeyEvent.Key)
+            switch (keyEvent.Key)
             {
                 case Key.Tab:
                     navigation.MoveNextPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.BackTab:
                     navigation.MovePreviousPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.CursorLeft:
                     RefreshCalendar(CalendarViewModel.MoveSelectedDate(selectedDate, -1));
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.CursorRight:
                     RefreshCalendar(CalendarViewModel.MoveSelectedDate(selectedDate, 1));
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.CursorUp:
                     RefreshCalendar(CalendarViewModel.MoveSelectedDate(selectedDate, -7));
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.CursorDown:
                     RefreshCalendar(CalendarViewModel.MoveSelectedDate(selectedDate, 7));
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key open when open == (Key)'[':
                     RefreshCalendar(CalendarViewModel.MoveSelectedMonth(selectedDate, -1));
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key close when close == (Key)']':
                     RefreshCalendar(CalendarViewModel.MoveSelectedMonth(selectedDate, 1));
-                    args.Handled = true;
-                    break;
-                case Key.Enter:
+                    return true;
+                case Key.Enter when includeEnter:
                     onOpenDetail(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key migrate when migrate == (Key)'>':
                     onOpenMigrate(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key done when done == (Key)'x':
                     onMarkDone(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key cancel when cancel == (Key)'z':
                     onCancelItem(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key delete when delete == (Key)'d':
                     onDeleteItem(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.Esc:
                     onBack();
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.q:
                     onQuit();
-                    args.Handled = true;
-                    break;
+                    return true;
+            }
+
+            return false;
+        }
+
+        root.KeyPress += args =>
+        {
+            if (HandleCalendarShortcut(args.KeyEvent, includeEnter: true))
+            {
+                args.Handled = true;
             }
         };
+
+        foreach (var target in focusTargets)
+        {
+            target.KeyPress += args =>
+            {
+                if (HandleCalendarShortcut(args.KeyEvent, includeEnter: false))
+                {
+                    args.Handled = true;
+                }
+            };
+        }
     }
 
     private static string[] BuildMonthLines(CalendarViewModel vm)

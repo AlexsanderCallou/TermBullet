@@ -59,4 +59,20 @@ public sealed class TuiScreenHostTests
         Assert.False(handled);
         Assert.False(invoked);
     }
+
+    [Fact]
+    public void GetDigit_reads_digit_from_key_value()
+    {
+        var digit = TuiScreenUtilities.GetDigit(new KeyEvent((Key)'3', default));
+
+        Assert.Equal(3, digit);
+    }
+
+    [Fact]
+    public void GetDigit_reads_digit_from_raw_key()
+    {
+        var digit = TuiScreenUtilities.GetDigit(new KeyEvent((Key)'4', default));
+
+        Assert.Equal(4, digit);
+    }
 }

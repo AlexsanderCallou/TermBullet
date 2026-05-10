@@ -66,6 +66,28 @@ public static class TuiScreenUtilities
         focusTargets[navigation.FocusedPanelIndex].SetFocus();
     }
 
+    public static int? GetDigit(KeyEvent keyEvent)
+    {
+        if (keyEvent.KeyValue >= '1' && keyEvent.KeyValue <= '9')
+        {
+            return keyEvent.KeyValue - '0';
+        }
+
+        return keyEvent.Key switch
+        {
+            var key when key == (Key)'1' => 1,
+            var key when key == (Key)'2' => 2,
+            var key when key == (Key)'3' => 3,
+            var key when key == (Key)'4' => 4,
+            var key when key == (Key)'5' => 5,
+            var key when key == (Key)'6' => 6,
+            var key when key == (Key)'7' => 7,
+            var key when key == (Key)'8' => 8,
+            var key when key == (Key)'9' => 9,
+            _ => null
+        };
+    }
+
     public static bool TryFocusPanelByNumber(
         KeyEvent keyEvent,
         TuiNavigationState navigation,
@@ -73,13 +95,13 @@ public static class TuiScreenUtilities
         IReadOnlyList<string> titles,
         IReadOnlyList<View> focusTargets)
     {
-        if (keyEvent.KeyValue < '1' || keyEvent.KeyValue > '9')
+        var panelNumber = GetDigit(keyEvent);
+        if (panelNumber is null)
         {
             return false;
         }
 
-        var panelNumber = keyEvent.KeyValue - '0';
-        if (!navigation.FocusPanel(panelNumber))
+        if (!navigation.FocusPanel(panelNumber.Value))
         {
             return false;
         }

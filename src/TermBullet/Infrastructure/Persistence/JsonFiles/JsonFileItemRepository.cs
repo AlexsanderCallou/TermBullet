@@ -10,7 +10,7 @@ public sealed class JsonFileItemRepository(
     IClock clock,
     MonthlyJsonFilePathResolver pathResolver,
     SafeJsonFileStore fileStore,
-    LocalJsonIndexService? indexService = null) : IItemRepository, IMonthRolloverService
+    LocalJsonIndexService? indexService = null) : IItemRepository, IItemArchiveReader, IMonthRolloverService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -77,7 +77,7 @@ public sealed class JsonFileItemRepository(
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        var (year, month) = GetCurrentPeriod();
+        var (year, month) = GetPeriodFromPublicRef(item.PublicRef);
         var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
         var index = document.Items.FindIndex(existing => existing.Id == item.Id);
         if (index < 0)
@@ -111,7 +111,7 @@ public sealed class JsonFileItemRepository(
         ArgumentException.ThrowIfNullOrWhiteSpace(publicRef);
         var parsedPublicRef = PublicRef.Parse(publicRef);
 
-        var (year, month) = GetCurrentPeriod();
+        var (year, month) = GetPeriodFromPublicRef(parsedPublicRef);
         var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
         var index = document.Items.FindIndex(existing => string.Equals(
             existing.PublicRef,
@@ -171,85 +171,45 @@ public sealed class JsonFileItemRepository(
         string publicRef,
         CancellationToken cancellationToken = default)
     {
-        var document = await ReadCurrentMonthlyDocumentAsync(cancellationToken);
-        var storageItem = document.Items.FirstOrDefault(item => item.PublicRef == publicRef);
+        var parsedPublicRef = PublicRef.Parse(publicRef);
+        var (year, month) = GetPeriodFromPublicRef(parsedPublicRef);
+        var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
+        var storageItem = document.Items.FirstOrDefault(item => item.PublicRef == parsedPublicRef.Value);
         return storageItem is null ? null : ToDomainItem(storageItem);
+    }
+
+    public async Task<IReadOnlyCollection<Item>> ListAllAsync(CancellationToken cancellationToken = default)
+    {
+        var dataRoot = Path.Combine(pathResolver.ProjectRootPath, "data");
+        if (!Directory.Exists(dataRoot))
+        {
+            return [];
+        }
+
+        var items = new List<Item>();
+        foreach (var monthlyPath in Directory.EnumerateFiles(dataRoot, "data_??_????.json", SearchOption.AllDirectories))
+        {
+            var fileName = Path.GetFileName(monthlyPath);
+            if (!TryParseMonthlyFileName(fileName, out var month, out var year))
+            {
+                continue;
+            }
+
+            var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
+            items.AddRange(document.Items.Select(ToDomainItem));
+        }
+
+        return items
+            .OrderBy(item => item.CreatedAt)
+            .ThenBy(item => item.PublicRef.Value, StringComparer.Ordinal)
+            .ToArray();
     }
 
     public async Task RunAutomaticMonthRolloverAsync(CancellationToken cancellationToken = default)
     {
         var (currentYear, currentMonth) = GetCurrentPeriod();
-        var currentPeriod = $"{currentYear:0000}-{currentMonth:00}";
-        var previousDate = new DateTimeOffset(currentYear, currentMonth, 1, 0, 0, 0, TimeSpan.Zero).AddMonths(-1);
-        var previousYear = previousDate.Year;
-        var previousMonth = previousDate.Month;
-        var previousPeriod = $"{previousYear:0000}-{previousMonth:00}";
-
-        var sourceDocument = await ReadMonthlyDocumentByPeriodAsync(previousYear, previousMonth, cancellationToken);
-        if (sourceDocument.Items.Count == 0)
-        {
-            return;
-        }
-
-        var destinationDocument = await ReadMonthlyDocumentByPeriodAsync(currentYear, currentMonth, cancellationToken);
-        var candidates = sourceDocument.Items
-            .Where(IsAutomaticRolloverCandidate)
-            .ToArray();
-
-        if (candidates.Length == 0)
-        {
-            return;
-        }
-
-        var now = clock.UtcNow;
-        foreach (var sourceItem in candidates)
-        {
-            var destinationIndex = destinationDocument.Items.FindIndex(existing =>
-                string.Equals(existing.PublicRef, sourceItem.PublicRef, StringComparison.Ordinal));
-
-            if (destinationIndex >= 0)
-            {
-                var existing = destinationDocument.Items[destinationIndex];
-                if (existing.Id != sourceItem.Id)
-                {
-                    throw new InvalidOperationException(
-                        $"Automatic rollover detected conflicting public ref in destination month: {sourceItem.PublicRef}.");
-                }
-            }
-            else
-            {
-                var migratedItem = CreateRolloverDestinationItem(sourceItem, previousPeriod, currentPeriod, now);
-                destinationDocument.Items.Add(migratedItem);
-                UpdateSequence(destinationDocument, ParseType(migratedItem.Type), PublicRef.Parse(migratedItem.PublicRef).Sequence);
-                AppendHistory(
-                    destinationDocument,
-                    migratedItem.Id,
-                    migratedItem.PublicRef,
-                    "migrate",
-                    new
-                    {
-                        from_period = previousPeriod,
-                        to_period = currentPeriod,
-                        reason = "automatic_month_rollover"
-                    });
-            }
-
-            sourceDocument.Items.RemoveAll(existing => existing.Id == sourceItem.Id);
-            AppendHistory(
-                sourceDocument,
-                sourceItem.Id,
-                sourceItem.PublicRef,
-                "migrate",
-                new
-                {
-                    from_period = previousPeriod,
-                    to_period = currentPeriod,
-                    reason = "automatic_month_rollover"
-                });
-        }
-
-        await WriteMonthlyDocumentAsync(previousYear, previousMonth, sourceDocument, cancellationToken);
-        await WriteMonthlyDocumentAsync(currentYear, currentMonth, destinationDocument, cancellationToken);
+        var currentDocument = await ReadMonthlyDocumentByPeriodAsync(currentYear, currentMonth, cancellationToken);
+        await WriteMonthlyDocumentAsync(currentYear, currentMonth, currentDocument, cancellationToken);
         await RebuildIndexIfConfiguredAsync(cancellationToken);
     }
 
@@ -285,6 +245,24 @@ public sealed class JsonFileItemRepository(
         return document;
     }
 
+    private static bool TryParseMonthlyFileName(string fileName, out int month, out int year)
+    {
+        month = 0;
+        year = 0;
+
+        if (!fileName.StartsWith("data_", StringComparison.OrdinalIgnoreCase)
+            || !fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var parts = Path.GetFileNameWithoutExtension(fileName).Split('_');
+        return parts.Length == 3
+            && int.TryParse(parts[1], out month)
+            && int.TryParse(parts[2], out year)
+            && month is >= 1 and <= 12;
+    }
+
     private async Task WriteMonthlyDocumentAsync(
         int year,
         int month,
@@ -312,6 +290,12 @@ public sealed class JsonFileItemRepository(
     {
         var now = clock.UtcNow;
         return (now.Year, now.Month);
+    }
+
+    private (int Year, int Month) GetPeriodFromPublicRef(PublicRef publicRef)
+    {
+        var (currentYear, _) = GetCurrentPeriod();
+        return GetPeriodFromPublicRef(publicRef, currentYear);
     }
 
     private Task RebuildIndexIfConfiguredAsync(CancellationToken cancellationToken)
@@ -442,45 +426,6 @@ public sealed class JsonFileItemRepository(
                     item.Migration.ToPeriod,
                     item.Migration.MigratedAt,
                     item.Migration.Reason));
-    }
-
-    private static bool IsAutomaticRolloverCandidate(StorageItem item) =>
-        string.Equals(item.Type, "task", StringComparison.Ordinal)
-        && item.Status is "open";
-
-    private static StorageItem CreateRolloverDestinationItem(
-        StorageItem sourceItem,
-        string previousPeriod,
-        string currentPeriod,
-        DateTimeOffset now)
-    {
-        return new StorageItem
-        {
-            Id = sourceItem.Id,
-            PublicRef = sourceItem.PublicRef,
-            Type = sourceItem.Type,
-            Content = sourceItem.Content,
-            Description = sourceItem.Description,
-            Status = sourceItem.Status,
-            Collection = sourceItem.Collection,
-            Priority = sourceItem.Priority,
-            Tags = [.. sourceItem.Tags],
-            PlannedFor = sourceItem.PlannedFor,
-            ScheduledAt = sourceItem.ScheduledAt,
-            Version = sourceItem.Version + 1,
-            CreatedAt = sourceItem.CreatedAt,
-            UpdatedAt = now,
-            CompletedAt = sourceItem.CompletedAt,
-            CancelledAt = sourceItem.CancelledAt,
-            MigratedAt = now,
-            Migration = new StorageMigration
-            {
-                FromPeriod = previousPeriod,
-                ToPeriod = currentPeriod,
-                MigratedAt = now,
-                Reason = "automatic_month_rollover"
-            }
-        };
     }
 
     private static string ToTypeKey(ItemType type) =>

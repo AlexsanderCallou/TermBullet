@@ -19,9 +19,10 @@ public static class MigrateItemScreen
         MigrateItemViewModel viewModel,
         TuiNavigationState navigation,
         Action<MigrateItemViewModel> onViewModelChanged,
-        Action onConfirm,
+        Action<MigrateItemViewModel> onConfirm,
         Action onCancel)
     {
+        var currentViewModel = viewModel;
         var topBar = new Label($" TermBullet \u2500 Migrate {viewModel.Item.PublicRef}")
         {
             X = 0, Y = 0, Width = Dim.Fill()
@@ -46,6 +47,20 @@ public static class MigrateItemScreen
 
         var itemList = AddList(itemPanel, viewModel.ItemLines);
         var destinationList = AddList(destinationPanel, viewModel.DestinationLines);
+        var dateLabel = new Label("planned_for:")
+        {
+            X = 1,
+            Y = 5,
+            Visible = currentViewModel.DateSelected
+        };
+        var dateField = new TextField(currentViewModel.PlannedFor?.ToString("yyyy-MM-dd") ?? DateOnly.FromDateTime(DateTime.Today.AddDays(1)).ToString("yyyy-MM-dd"))
+        {
+            X = Pos.Right(dateLabel) + 1,
+            Y = 5,
+            Width = 12,
+            Visible = currentViewModel.DateSelected
+        };
+        destinationPanel.Add(dateLabel, dateField);
         var resultList = AddList(resultPanel, viewModel.ResultLines);
         var saveButton = new Button("Save")
         {
@@ -86,7 +101,14 @@ public static class MigrateItemScreen
                 case FocusArea.Destination:
                     navigation.FocusPanel(2);
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
-                    destinationList.SetFocus();
+                    if (currentViewModel.DateSelected)
+                    {
+                        dateField.SetFocus();
+                    }
+                    else
+                    {
+                        destinationList.SetFocus();
+                    }
                     break;
                 case FocusArea.Result:
                     navigation.FocusPanel(3);
@@ -130,7 +152,53 @@ public static class MigrateItemScreen
             SetFocusArea(order[index]);
         }
 
-        saveButton.Clicked += onConfirm;
+        void RefreshDestination(MigrateItemViewModel updated)
+        {
+            currentViewModel = updated;
+            TuiScreenUtilities.RefreshListView(destinationList, updated.DestinationLines);
+            TuiScreenUtilities.RefreshListView(resultList, updated.ResultLines);
+            dateLabel.Visible = updated.DateSelected;
+            dateField.Visible = updated.DateSelected;
+            if (updated.PlannedFor is not null)
+            {
+                dateField.Text = updated.PlannedFor.Value.ToString("yyyy-MM-dd");
+            }
+
+            onViewModelChanged(updated);
+        }
+
+        bool TryBuildCurrentViewModel(out MigrateItemViewModel updated)
+        {
+            if (!currentViewModel.DateSelected)
+            {
+                updated = currentViewModel;
+                return true;
+            }
+
+            if (!DateOnly.TryParse(dateField.Text?.ToString(), out var plannedFor))
+            {
+                updated = currentViewModel;
+                return false;
+            }
+
+            updated = currentViewModel.WithPlannedFor(plannedFor);
+            return true;
+        }
+
+        void Submit()
+        {
+            if (!TryBuildCurrentViewModel(out var updated))
+            {
+                TuiScreenUtilities.RefreshListView(
+                    resultList,
+                    ["status: planned_for must be yyyy-mm-dd"]);
+                return;
+            }
+
+            onConfirm(updated);
+        }
+
+        saveButton.Clicked += Submit;
         cancelButton.Clicked += onCancel;
 
         root.KeyPress += args =>
@@ -165,13 +233,13 @@ public static class MigrateItemScreen
                     args.Handled = true;
                     break;
                 case Key.Space when focusArea == FocusArea.Destination:
-                    onViewModelChanged(viewModel.ToggleDestination());
+                    RefreshDestination(currentViewModel.ToggleDestination());
                     args.Handled = true;
                     break;
                 case Key.Enter:
                     if (focusArea == FocusArea.Save)
                     {
-                        onConfirm();
+                        Submit();
                         args.Handled = true;
                     }
                     else if (focusArea == FocusArea.Cancel)

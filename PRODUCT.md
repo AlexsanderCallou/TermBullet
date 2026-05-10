@@ -96,6 +96,11 @@ Forgotten is the review area for open tasks that were planned for a previous
 day and were not done, cancelled, or marked migrate. It is derived from item
 state and dates, not a persisted item collection.
 
+Operational views stay focused on the active period: Today, Week, and Calendar
+use current-month data for execution. Forgotten and Search may read across all
+monthly files because they are review and lookup surfaces, not automatic
+planning flows.
+
 Manual migration must always declare the destination:
 
 - migrate to a specific date;

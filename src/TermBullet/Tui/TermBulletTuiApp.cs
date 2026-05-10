@@ -420,18 +420,20 @@ public sealed class TermBulletTuiApp(
                                 migrateItemVm = updated;
                                 ScheduleRender();
                             },
-                            () =>
+                            updated =>
                             {
                                 if (actionHandler is null) return;
-                                DispatchAction(
-                                    selectedItem.PublicRef,
-                                    actionHandler.HandleMigrateAsync,
-                                    () =>
+                                _ = Task.Run(async () =>
+                                {
+                                    await actionHandler.HandleMigrateAsync(
+                                        updated.BuildRequest(),
+                                        cancellationToken);
+                                    TGui.MainLoop?.Invoke(() =>
                                     {
                                         RefreshAndRender();
                                         NavigateBack();
-                                    },
-                                    cancellationToken);
+                                    });
+                                }, cancellationToken);
                             },
                             NavigateBack);
                         break;
@@ -513,7 +515,7 @@ public sealed class TermBulletTuiApp(
                     case TuiScreen.Calendar:
                         CalendarScreen.Build(
                             root,
-                            snapshot.AllItems.Select(ItemDisplayRow.From).ToArray(),
+                            snapshot.CurrentItems.Select(ItemDisplayRow.From).ToArray(),
                             item => selectedItem = item,
                             OpenItemDetail,
                             OpenMigrateItem,
@@ -706,6 +708,13 @@ public sealed class TermBulletTuiApp(
                 args.Handled = true;
             }
         };
+        contextList.KeyPress += args =>
+        {
+            if (TuiScreenUtilities.TryHandleEnter(args.KeyEvent.Key, () => NavigateFromContext(contextList.SelectedItem, onNavigate)))
+            {
+                args.Handled = true;
+            }
+        };
         dayItemsList.KeyPress += args =>
         {
             if (TuiScreenUtilities.TryHandleEnter(args.KeyEvent.Key, () => onOpenDetail(viewModel.SelectedDayItem)))
@@ -714,91 +723,107 @@ public sealed class TermBulletTuiApp(
             }
         };
 
-        root.KeyPress += args =>
+        bool HandleDashboardKey(KeyEvent keyEvent, bool includeEnter)
         {
-            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            if (TuiScreenUtilities.IsHelpKey(keyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.MainDashboard);
-                args.Handled = true;
-                return;
+                return true;
             }
 
-            if (TuiScreenUtilities.TryFocusPanelByNumber(args.KeyEvent, navigation, panels, panelTitles, focusTargets))
+            if (TuiScreenUtilities.TryFocusPanelByNumber(keyEvent, navigation, panels, panelTitles, focusTargets))
             {
-                args.Handled = true;
-                return;
+                return true;
             }
 
-            switch (args.KeyEvent.Key)
+            switch (keyEvent.Key)
             {
                 case Key.q:
                     onQuit();
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.Tab:
                     navigation.MoveNextPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.BackTab:
                     navigation.MovePreviousPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-                    args.Handled = true;
-                    break;
-                case Key.Enter:
+                    return true;
+                case Key.Enter when includeEnter:
                     if (navigation.FocusedPanelIndex == 0)
                     {
                         NavigateFromMenu(menuList.SelectedItem, onNavigate);
+                    }
+                    else if (navigation.FocusedPanelIndex == 3)
+                    {
+                        NavigateFromContext(contextList.SelectedItem, onNavigate);
                     }
                     else
                     {
                         onOpenDetail(viewModel.SelectedDayItem);
                     }
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key x when x == (Key)'/' :
                     onNavigate(TuiScreen.Search);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key x when x == (Key)'c' && createItemUseCase is not null:
                     onAdd();
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key n when n == (Key)'n' && createItemUseCase is not null:
                     onQuickTask();
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key x when x == (Key)'x' && actionHandler is not null:
                     DispatchAction(viewModel.SelectedDayItem?.PublicRef, actionHandler.HandleDoneAsync, onRefresh, cancellationToken);
-                    args.Handled = true;
-                    break;
+                    return true;
+                case Key z when z == (Key)'z' && actionHandler is not null:
+                    DispatchAction(viewModel.SelectedDayItem?.PublicRef, actionHandler.HandleCancelAsync, onRefresh, cancellationToken);
+                    return true;
                 case Key y when y == (Key)'>' && actionHandler is not null:
                     onOpenMigrate(viewModel.SelectedDayItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key z when z == (Key)'d' && actionHandler is not null:
                     DispatchAction(viewModel.SelectedDayItem?.PublicRef, actionHandler.HandleDeleteAsync, onRefresh, cancellationToken);
-                    args.Handled = true;
-                    break;
+                    return true;
+            }
+
+            return false;
+        }
+
+        root.KeyPress += args =>
+        {
+            if (HandleDashboardKey(args.KeyEvent, includeEnter: true))
+            {
+                args.Handled = true;
             }
         };
+
+        foreach (var target in focusTargets)
+        {
+            target.KeyPress += args =>
+            {
+                if (HandleDashboardKey(args.KeyEvent, includeEnter: false))
+                {
+                    args.Handled = true;
+                }
+            };
+        }
     }
 
     private static void NavigateFromMenu(int selectedIndex, Action<TuiScreen> onNavigate)
     {
-        var screen = selectedIndex switch
+        var screen = DashboardNavigationMapper.FromMenuIndex(selectedIndex);
+
+        if (screen.HasValue)
         {
-            1 => TuiScreen.Search,
-            2 => TuiScreen.Planning,
-            3 => TuiScreen.Backlog,
-            4 => TuiScreen.Forgotten,
-            5 => TuiScreen.Notes,
-            6 => TuiScreen.Calendar,
-            7 => TuiScreen.Tags,
-            _ => (TuiScreen?)null
-        };
+            onNavigate(screen.Value);
+        }
+    }
+
+    private static void NavigateFromContext(int selectedIndex, Action<TuiScreen> onNavigate)
+    {
+        var screen = DashboardNavigationMapper.FromContextIndex(selectedIndex);
 
         if (screen.HasValue)
         {

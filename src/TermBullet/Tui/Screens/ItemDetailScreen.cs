@@ -57,49 +57,63 @@ public static class ItemDetailScreen
         root.Add(topBar, identityPanel, planningPanel, contentPanel, migrationPanel, historyPanel, footer);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
 
-        root.KeyPress += args =>
+        bool HandleDetailShortcut(KeyEvent keyEvent)
         {
-            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            if (TuiScreenUtilities.IsHelpKey(keyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.ItemDetail);
-                args.Handled = true;
-                return;
+                return true;
             }
 
-            if (TuiScreenUtilities.TryFocusPanelByNumber(args.KeyEvent, navigation, panels, panelTitles, focusTargets))
+            if (TuiScreenUtilities.TryFocusPanelByNumber(keyEvent, navigation, panels, panelTitles, focusTargets))
             {
-                args.Handled = true;
-                return;
+                return true;
             }
 
-            switch (args.KeyEvent.Key)
+            switch (keyEvent.Key)
             {
                 case Key.Tab:
                     navigation.MoveNextPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.BackTab:
                     navigation.MovePreviousPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.Esc:
                     onBack();
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.q:
                     onQuit();
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key x when x == (Key)'>':
                     onMigrate();
-                    args.Handled = true;
-                    break;
+                    return true;
+            }
+
+            return false;
+        }
+
+        root.KeyPress += args =>
+        {
+            if (HandleDetailShortcut(args.KeyEvent))
+            {
+                args.Handled = true;
             }
         };
+
+        foreach (var target in focusTargets)
+        {
+            target.KeyPress += args =>
+            {
+                if (HandleDetailShortcut(args.KeyEvent))
+                {
+                    args.Handled = true;
+                }
+            };
+        }
     }
 
     private static ListView AddList(FrameView panel, IReadOnlyList<string> lines)

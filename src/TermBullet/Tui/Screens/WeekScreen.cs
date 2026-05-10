@@ -85,25 +85,23 @@ public static class WeekScreen
             };
         }
 
-        root.KeyPress += args =>
+        bool HandleWeekShortcut(KeyEvent keyEvent, bool includeEnter)
         {
-            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            if (TuiScreenUtilities.IsHelpKey(keyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.Week);
-                args.Handled = true;
-                return;
+                return true;
             }
 
-            if (TuiScreenUtilities.TryFocusPanelByNumber(args.KeyEvent, navigation, panels, panelTitles, focusTargets))
+            if (TuiScreenUtilities.TryFocusPanelByNumber(keyEvent, navigation, panels, panelTitles, focusTargets))
             {
                 selectedItem = ResolveFocusedItem(groupedRows, lists, navigation.FocusedPanelIndex) ?? selectedItem;
                 TuiScreenUtilities.RefreshListView(previewList, ItemListScreen.BuildPreviewLines(selectedItem));
                 onSelectedItemChanged(selectedItem);
-                args.Handled = true;
-                return;
+                return true;
             }
 
-            switch (args.KeyEvent.Key)
+            switch (keyEvent.Key)
             {
                 case Key.Tab:
                     navigation.MoveNextPanel();
@@ -112,8 +110,7 @@ public static class WeekScreen
                     selectedItem = ResolveFocusedItem(groupedRows, lists, navigation.FocusedPanelIndex) ?? selectedItem;
                     TuiScreenUtilities.RefreshListView(previewList, ItemListScreen.BuildPreviewLines(selectedItem));
                     onSelectedItemChanged(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.BackTab:
                     navigation.MovePreviousPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
@@ -121,38 +118,51 @@ public static class WeekScreen
                     selectedItem = ResolveFocusedItem(groupedRows, lists, navigation.FocusedPanelIndex) ?? selectedItem;
                     TuiScreenUtilities.RefreshListView(previewList, ItemListScreen.BuildPreviewLines(selectedItem));
                     onSelectedItemChanged(selectedItem);
-                    args.Handled = true;
-                    break;
-                case Key.Enter:
+                    return true;
+                case Key.Enter when includeEnter:
                     onOpenDetail(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key y when y == (Key)'>':
                     onOpenMigrate(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key x when x == (Key)'x':
                     onMarkDone(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key z when z == (Key)'z':
                     onCancelItem(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key d when d == (Key)'d':
                     onDeleteItem(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.Esc:
                     onBack();
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.q:
                     onQuit();
-                    args.Handled = true;
-                    break;
+                    return true;
+            }
+
+            return false;
+        }
+
+        root.KeyPress += args =>
+        {
+            if (HandleWeekShortcut(args.KeyEvent, includeEnter: true))
+            {
+                args.Handled = true;
             }
         };
+
+        foreach (var target in focusTargets)
+        {
+            target.KeyPress += args =>
+            {
+                if (HandleWeekShortcut(args.KeyEvent, includeEnter: false))
+                {
+                    args.Handled = true;
+                }
+            };
+        }
 
         mondayList.SetFocus();
     }

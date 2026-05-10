@@ -2,12 +2,14 @@ namespace TermBullet.Infrastructure.Persistence.JsonFiles;
 
 public sealed class MonthlyJsonFilePathResolver(string projectRootPath)
 {
+    public string ProjectRootPath { get; } = projectRootPath;
+
     public string ResolveMonthlyFilePath(int year, int month)
     {
         ValidateYear(year);
         ValidateMonth(month);
         return Path.Combine(
-            projectRootPath,
+            ProjectRootPath,
             "data",
             year.ToString(),
             $"data_{month:00}_{year:0000}.json");
@@ -18,7 +20,7 @@ public sealed class MonthlyJsonFilePathResolver(string projectRootPath)
         ValidateYear(year);
         ValidateMonth(month);
         return Path.Combine(
-            projectRootPath,
+            ProjectRootPath,
             "data",
             year.ToString(),
             $"data_{month:00}_{year:0000}.backup.json");

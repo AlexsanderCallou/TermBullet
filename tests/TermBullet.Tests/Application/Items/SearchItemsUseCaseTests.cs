@@ -40,6 +40,23 @@ public sealed class SearchItemsUseCaseTests
         Assert.Equal(["t-0426-1", "t-0426-2"], results.Select(item => item.PublicRef));
     }
 
+    [Fact]
+    public async Task Execute_uses_archive_reader_when_available()
+    {
+        var repository = new FakeArchiveItemRepository(
+            currentItems: [CreateTask(sequence: 1, "Current task", "today")],
+            archiveItems: [CreateTask(sequence: 2, "Archived jwt note", "jwt")]);
+        var useCase = new SearchItemsUseCase(repository);
+
+        var results = await useCase.ExecuteAsync(new SearchItemsRequest { Query = "jwt" });
+
+        var result = Assert.Single(results);
+        Assert.Equal("t-0426-2", result.PublicRef);
+        Assert.Equal(0, repository.ListCallCount);
+        Assert.Equal(1, repository.ListAllCallCount);
+    }
+
+
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
@@ -80,7 +97,7 @@ public sealed class SearchItemsUseCaseTests
             tags: [tag]);
     }
 
-    private sealed class FakeItemRepository(IReadOnlyCollection<Item> items) : IItemRepository
+    private class FakeItemRepository(IReadOnlyCollection<Item> items) : IItemRepository
     {
         public int ListCallCount { get; private set; }
 
@@ -134,6 +151,19 @@ public sealed class SearchItemsUseCaseTests
             CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class FakeArchiveItemRepository(
+        IReadOnlyCollection<Item> currentItems,
+        IReadOnlyCollection<Item> archiveItems) : FakeItemRepository(currentItems), IItemArchiveReader
+    {
+        public int ListAllCallCount { get; private set; }
+
+        public Task<IReadOnlyCollection<Item>> ListAllAsync(CancellationToken cancellationToken = default)
+        {
+            ListAllCallCount++;
+            return Task.FromResult(archiveItems);
         }
     }
 }

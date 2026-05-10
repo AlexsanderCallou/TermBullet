@@ -83,6 +83,11 @@ Forgotten is a derived review list for open tasks whose `planned_for` date is
 before today. Week is the V1 dated week collection; the TUI Week View groups
 week items by task `planned_for` and event `scheduled_at`.
 
+Current operational queries read the current monthly file. Archive/review
+queries may read all monthly files explicitly. Forgotten uses archive review
+semantics to find old open planned tasks, while Today, Week, and Calendar stay
+bounded to the current month unless a future period view is explicitly added.
+
 ## Identity
 
 Internal ID:
@@ -275,6 +280,12 @@ Rules:
 At startup or at the beginning of the day, the application should check open
 tasks planned before today. If a task was not done, cancelled, or marked
 migrate on its planned day, it appears in Forgotten review.
+
+Month rollover is maintenance-only in V1. On the first day of a month it ensures
+the current monthly file exists and refreshes the local index. It must not move,
+copy, mark, or automatically migrate old tasks. Old open planned tasks remain in
+their original monthly files and are surfaced through Forgotten for explicit
+human action.
 
 Recommended forgotten history event:
 

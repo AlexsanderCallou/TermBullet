@@ -106,65 +106,75 @@ public static class ItemListScreen
             }
         };
 
-        root.KeyPress += args =>
+        bool HandleListShortcut(KeyEvent keyEvent, bool includeEnter)
         {
-            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            if (TuiScreenUtilities.IsHelpKey(keyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(ResolveScreen(title));
-                args.Handled = true;
-                return;
+                return true;
             }
 
-            if (TuiScreenUtilities.TryFocusPanelByNumber(args.KeyEvent, navigation, panels, panelTitles, focusTargets))
+            if (TuiScreenUtilities.TryFocusPanelByNumber(keyEvent, navigation, panels, panelTitles, focusTargets))
             {
-                args.Handled = true;
-                return;
+                return true;
             }
 
-            switch (args.KeyEvent.Key)
+            switch (keyEvent.Key)
             {
                 case Key.Tab:
                     navigation.MoveNextPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.BackTab:
                     navigation.MovePreviousPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
-                    args.Handled = true;
-                    break;
-                case Key.Enter:
+                    return true;
+                case Key.Enter when includeEnter:
                     onOpenDetail(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key y when y == (Key)'>':
                     onOpenMigrate(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key x when x == (Key)'x':
                     onMarkDone(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key z when z == (Key)'z':
                     onCancelItem(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key d when d == (Key)'d':
                     onDeleteItem(selectedItem);
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.Esc:
                     onBack();
-                    args.Handled = true;
-                    break;
+                    return true;
                 case Key.q:
                     onQuit();
-                    args.Handled = true;
-                    break;
+                    return true;
+            }
+
+            return false;
+        }
+
+        root.KeyPress += args =>
+        {
+            if (HandleListShortcut(args.KeyEvent, includeEnter: true))
+            {
+                args.Handled = true;
             }
         };
+
+        foreach (var target in focusTargets)
+        {
+            target.KeyPress += args =>
+            {
+                if (HandleListShortcut(args.KeyEvent, includeEnter: false))
+                {
+                    args.Handled = true;
+                }
+            };
+        }
 
         itemList.SetFocus();
     }

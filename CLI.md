@@ -160,6 +160,9 @@ Search items in local data.
 termbullet search "jwt"
 ```
 
+Search may read across all monthly JSON files. It is a lookup surface and does
+not change item state.
+
 ### `delete`
 
 Remove an active item and append a `deleted` history event with a snapshot.

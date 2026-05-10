@@ -30,6 +30,40 @@ public sealed class MigrateItemViewModelTests
         Assert.Contains(vm.ResultLines, line => line.Contains("new task: open in backlog", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void WithPlannedFor_updates_date_destination()
+    {
+        var vm = MigrateItemViewModel
+            .ForDate(MakeItem(), new DateOnly(2026, 5, 12))
+            .WithPlannedFor(new DateOnly(2026, 5, 15));
+
+        Assert.Equal(new DateOnly(2026, 5, 15), vm.PlannedFor);
+        Assert.Contains(vm.ResultLines, line => line.Contains("new task: open at 2026-05-15", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildRequest_maps_date_destination_to_week_with_selected_date()
+    {
+        var request = MigrateItemViewModel
+            .ForDate(MakeItem(), new DateOnly(2026, 5, 15))
+            .BuildRequest();
+
+        Assert.Equal("t-0526-1", request.PublicRef);
+        Assert.Equal(ItemCollection.Week, request.DestinationCollection);
+        Assert.Equal(new DateOnly(2026, 5, 15), request.PlannedFor);
+    }
+
+    [Fact]
+    public void BuildRequest_maps_backlog_destination_without_date()
+    {
+        var request = MigrateItemViewModel
+            .ForBacklog(MakeItem())
+            .BuildRequest();
+
+        Assert.Equal(ItemCollection.Backlog, request.DestinationCollection);
+        Assert.Null(request.PlannedFor);
+    }
+
     private static ItemResult MakeItem() =>
         new(
             Id: Guid.NewGuid(),

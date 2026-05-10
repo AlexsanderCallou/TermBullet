@@ -81,4 +81,17 @@ public sealed class MigrateItemViewModel
 
         return ForDate(Item, PlannedFor ?? DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
     }
+
+    public MigrateItemViewModel WithPlannedFor(DateOnly plannedFor) =>
+        ForDate(Item, plannedFor);
+
+    public MigrateItemRequest BuildRequest() =>
+        new()
+        {
+            PublicRef = Item.PublicRef,
+            DestinationCollection = DateSelected
+                ? TermBullet.Core.Items.ItemCollection.Week
+                : TermBullet.Core.Items.ItemCollection.Backlog,
+            PlannedFor = DateSelected ? PlannedFor : null
+        };
 }

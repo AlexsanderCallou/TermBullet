@@ -55,6 +55,25 @@ public sealed class TuiSnapshotLoaderTests
         Assert.Equal("dark", snapshot.Configuration["theme"]);
     }
 
+    [Fact]
+    public async Task LoadAsync_keeps_current_items_separate_from_archive_items()
+    {
+        var repository = new FakeItemRepository();
+        var tagRepository = new FakeTagCatalogRepository();
+        var settingsStore = new FakeSettingsStore();
+        repository.Seed(MakeItem("t-0526-1", ItemCollection.Today, "Current task"));
+        repository.SeedArchive(MakeItem("t-0426-1", ItemCollection.Today, "Old forgotten task"));
+
+        var loader = CreateLoader(repository, tagRepository, settingsStore);
+
+        var snapshot = await loader.LoadAsync();
+
+        Assert.Contains(snapshot.CurrentItems, item => item.PublicRef == "t-0526-1");
+        Assert.DoesNotContain(snapshot.CurrentItems, item => item.PublicRef == "t-0426-1");
+        Assert.Contains(snapshot.AllItems, item => item.PublicRef == "t-0426-1");
+    }
+
+
     private static TuiSnapshotLoader CreateLoader(
         FakeItemRepository repository,
         FakeTagCatalogRepository tagRepository,
@@ -80,11 +99,14 @@ public sealed class TuiSnapshotLoaderTests
             collection,
             DateTimeOffset.UtcNow);
 
-    private sealed class FakeItemRepository : IItemRepository
+    private sealed class FakeItemRepository : IItemRepository, IItemArchiveReader
     {
         private readonly List<Item> _items = [];
+        private readonly List<Item> _archiveItems = [];
 
         public void Seed(Item item) => _items.Add(item);
+
+        public void SeedArchive(Item item) => _archiveItems.Add(item);
 
         public Task<int> GetCurrentPublicRefSequenceAsync(ItemType type, int month, int year, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
@@ -123,6 +145,9 @@ public sealed class TuiSnapshotLoaderTests
 
         public Task<Item?> FindByPublicRefAsync(string publicRef, CancellationToken cancellationToken = default)
             => Task.FromResult<Item?>(_items.FirstOrDefault(item => item.PublicRef.Value == publicRef));
+
+        public Task<IReadOnlyCollection<Item>> ListAllAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyCollection<Item>>(_items.Concat(_archiveItems).ToArray());
     }
 
     private sealed class FakeSettingsStore : ISettingsStore

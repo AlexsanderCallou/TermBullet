@@ -713,6 +713,8 @@ Notes:
 - Forgotten is a derived review list, not a persisted collection.
 - A task is forgotten when `status: open`, `planned_for` is before today, and
   the task is not already migrated.
+- Forgotten may read all monthly files so old unresolved tasks remain visible
+  without being automatically moved during month rollover.
 - Notes do not appear here because they have no `planned_for`.
 - Events may need a later overdue-events review, but this screen is task-first
   for V1.
@@ -836,6 +838,8 @@ Legend:
 Notes:
 
 - Calendar includes tasks with `planned_for` and events with `scheduled_at`.
+- Calendar uses the current monthly operational set. It must not surface old
+  unresolved tasks from previous months; those belong in Forgotten.
 - Notes do not appear because they have no calendar relation.
 - Backlog tasks do not appear until they receive a `planned_for` date.
 - Calendar must not convert tasks into events. Task and event remain distinct

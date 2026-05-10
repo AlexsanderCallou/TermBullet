@@ -12,7 +12,9 @@ public sealed class SearchItemsUseCase(IItemRepository itemRepository)
         ArgumentNullException.ThrowIfNull(request);
 
         var normalizedQuery = NormalizeQuery(request.Query);
-        var items = await itemRepository.ListAsync(cancellationToken: cancellationToken);
+        var items = itemRepository is IItemArchiveReader archiveReader
+            ? await archiveReader.ListAllAsync(cancellationToken)
+            : await itemRepository.ListAsync(cancellationToken: cancellationToken);
 
         return items
             .Where(item => Matches(item, normalizedQuery))
