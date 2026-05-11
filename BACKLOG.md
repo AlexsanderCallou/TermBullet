@@ -37,9 +37,9 @@ Complete:
 - manual TUI smoke validation;
 - baseline documentation.
 
-Still missing for the experimental MVP:
+Still missing for V1 hardening:
 
-- V1 release candidate hardening.
+- optional release hardening beyond the current offline core.
 
 ## V1 Goal
 
@@ -109,7 +109,7 @@ The current TUI visual reference is [screens.md](screens.md).
 - [ ] Expose per-item JSON history through Application contracts for Item Detail
 - [ ] JSON file backup/recovery validation
 - [ ] Cross-platform smoke testing where practical
-- [ ] Release notes draft
+- [x] Release notes draft
 - [ ] Regression tests for item lifecycle from create to done/cancel/migrate
 - [ ] Regression tests for public ref sequence behavior
 - [ ] Regression tests for CLI and Application consistency

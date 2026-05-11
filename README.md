@@ -8,10 +8,9 @@ It provides two first-class interfaces over the same Application use cases:
 - **TUI:** keyboard-first visual interface with panel-based screens.
 - **CLI:** fast capture, lookup, and item manipulation from the shell.
 
-> Status: experimental MVP. CLI and local JSON persistence are the most complete
-> areas. The active TUI MVP includes Main Dashboard, Search, Item Detail,
-> Planning placeholder, Week, Backlog, Forgotten, Notes, Calendar, Tags,
-> Migrate Item, and Add Item.
+> Status: V1 offline core. The active TUI MVP includes Main Dashboard, Search,
+> Item Detail, Planning placeholder, Week, Month, Backlog, Forgotten, Notes,
+> Calendar, Tags, Migrate Item, and Add Item.
 
 ## Repository
 
@@ -44,7 +43,7 @@ license is Apache License 2.0 in [LICENSE](LICENSE).
 Current release:
 
 ```text
-v0.1.0 - Experimental MVP
+v1.0.0 - V1 Offline Core
 ```
 
 Latest release:
@@ -74,9 +73,15 @@ termbullet --help
 Manual release artifacts:
 
 ```text
-termbullet_0.1.0_windows_x64.zip
-termbullet_0.1.0_linux_x64.tar.gz
-termbullet_0.1.0_checksums.txt
+termbullet_1.0.0_windows_x64.zip
+termbullet_1.0.0_linux_x64.tar.gz
+termbullet_1.0.0_checksums.txt
+```
+
+Build local release assets:
+
+```bash
+VERSION=1.0.0 ./publish.sh
 ```
 
 macOS binaries and package manager distribution are planned for later releases.
@@ -182,6 +187,7 @@ Architecture details are in [ARCHITECTURE.md](ARCHITECTURE.md).
 - [ARCHITECTURE.md](ARCHITECTURE.md) - module boundaries and flows.
 - [ADR.md](ADR.md) - accepted architecture decisions.
 - [BACKLOG.md](BACKLOG.md) - execution backlog and post-V1 work.
+- [RELEASE_NOTES.md](RELEASE_NOTES.md) - release notes and expected assets.
 - [AGENTS.md](AGENTS.md) - AI agent development guide.
 - [CONTRIBUTING.md](CONTRIBUTING.md) - contribution rules.
 - [TRADEMARKS.md](TRADEMARKS.md) - legal and trademark wording.
