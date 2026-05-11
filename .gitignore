@@ -27,3 +27,6 @@ artifacts/
 screens.pen
 
 /src/TermBullet/data/
+
+# Publish artifacts
+/publish/
