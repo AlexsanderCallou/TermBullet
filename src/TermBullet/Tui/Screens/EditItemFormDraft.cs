@@ -17,7 +17,7 @@ public sealed class EditItemFormDraft
 
     public Priority Priority { get; set; } = Priority.None;
 
-    public string TagsText { get; set; } = string.Empty;
+    public IReadOnlyCollection<string> SelectedTags { get; set; } = [];
 
     public string ScheduledAtText { get; set; } = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd");
 
@@ -30,7 +30,7 @@ public sealed class EditItemFormDraft
             Description = row.Description ?? string.Empty,
             Collection = ParseCollection(row.Collection),
             Priority = ParsePriority(row.Priority),
-            TagsText = string.Join(", ", row.Tags),
+            SelectedTags = row.Tags,
             ScheduledAtText = row.ScheduledAt is null
                 ? DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd")
                 : DateOnly.FromDateTime(row.ScheduledAt.Value.UtcDateTime).ToString("yyyy-MM-dd")
@@ -39,7 +39,7 @@ public sealed class EditItemFormDraft
     public EditItemRequest BuildRequest()
     {
         var content = NormalizeRequiredText(Content);
-        var tags = ParseTags(TagsText);
+        var tags = NormalizeTags(SelectedTags);
         DateTimeOffset? scheduledAt = Type == ItemType.Event ? ToUtcInstant(ParseScheduledAt()) : null;
 
         return new EditItemRequest
@@ -65,7 +65,7 @@ public sealed class EditItemFormDraft
             Type == ItemType.Task ? $"collection: {Collection.ToString().ToLowerInvariant()}" : "collection: unchanged",
             Type == ItemType.Task ? $"priority: {Priority.ToString().ToLowerInvariant()}" : "priority: none",
             Type == ItemType.Event ? $"scheduled_at: {ScheduledAtText.Trim()}" : "scheduled_at: -",
-            $"tags: {(ParseTags(TagsText).Count == 0 ? "-" : string.Join(", ", ParseTags(TagsText)))}"
+            $"tags: {FormatTags(SelectedTags)}"
         ];
     }
 
@@ -100,19 +100,26 @@ public sealed class EditItemFormDraft
     private static string? NormalizeOptionalText(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static List<string> ParseTags(string? value)
+    private static List<string> NormalizeTags(IEnumerable<string>? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (value is null)
         {
             return [];
         }
 
         return
         [
-            .. value.Split([',', ';'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .. value
+                .Select(tag => tag.Trim())
                 .Where(tag => !string.IsNullOrWhiteSpace(tag))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
         ];
+    }
+
+    private static string FormatTags(IEnumerable<string>? value)
+    {
+        var tags = NormalizeTags(value);
+        return tags.Count > 0 ? string.Join(", ", tags) : "-";
     }
 
     private static ItemType ParseType(string value) =>

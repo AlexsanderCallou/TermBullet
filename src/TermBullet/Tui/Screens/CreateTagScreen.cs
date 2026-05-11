@@ -158,6 +158,29 @@ public static class CreateTagScreen
         saveButton.Clicked += Submit;
         cancelButton.Clicked += onCancel;
 
+        void AttachTextNavigation(View view)
+        {
+            view.KeyPress += args =>
+            {
+                switch (args.KeyEvent.Key)
+                {
+                    case Key.Tab:
+                        MoveFocus(1);
+                        args.Handled = true;
+                        break;
+                    case Key.BackTab:
+                        MoveFocus(-1);
+                        args.Handled = true;
+                        break;
+                }
+
+                RefreshPreview();
+            };
+        }
+
+        AttachTextNavigation(nameField);
+        AttachTextNavigation(descriptionField);
+
         root.KeyPress += args =>
         {
             if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))

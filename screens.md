@@ -271,7 +271,7 @@ Fields:
 - `Description` optional multiline context.
 - `Timing` required: `Today`, `Week`, `Month`, or `Backlog`.
 - `Priority` required: `None`, `Low`, `Medium`, or `High`.
-- `Tags` optional comma-separated labels.
+- `Tags` optional selection from the existing tag catalog.
 
 Request mapping:
 
@@ -301,12 +301,14 @@ ASCII layout:
 | > None   Low   Medium   High                                        |
 |                                                                      |
 | Tags                                                                 |
-| auth, cli                                                            |
+| > [x] auth                                                           |
+|   [x] cli                                                            |
+|   [ ] tui                                                            |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
 | Status: task | today | priority: high                               |
-| Enter activate  Tab focus  Arrows move  Space cycle  Esc cancel  ? help |
+| Enter activate  Tab focus  Arrows move  Space toggle  Esc cancel  ? help |
 +----------------------------------------------------------------------+
 ```
 
@@ -315,6 +317,8 @@ Notes:
 - `Enter` must not submit the form unless the focused control is `Save`.
 - When focus is inside a multiline text field, `Enter` keeps its text-editing
   behavior.
+- Tags are selected from catalog entries created in the Tags screen. The Add
+  flow must not create new tag names from free text.
 
 ### Flow 03D - Add Note
 
@@ -331,7 +335,7 @@ Fields:
 
 - `Title` or short `Content` required.
 - `Description` optional multiline body.
-- `Tags` optional comma-separated labels.
+- `Tags` optional selection from the existing tag catalog.
 
 Request mapping:
 
@@ -351,7 +355,9 @@ ASCII layout:
 | error happens when token audience is empty                           |
 |                                                                      |
 | Tags                                                                 |
-| auth, incident                                                       |
+| > [x] auth                                                           |
+|   [x] incident                                                       |
+|   [ ] tui                                                            |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
@@ -365,6 +371,8 @@ Notes:
 - `Enter` must not submit the form unless the focused control is `Save`.
 - When focus is inside the multiline description, `Enter` keeps its text-editing
   behavior.
+- Tags are selected from catalog entries created in the Tags screen. The Add
+  flow must not create new tag names from free text.
 
 ### Flow 03E - Add Event
 
@@ -383,7 +391,7 @@ Fields:
 - `Scheduled for` required. Initial implementation may use `yyyy-mm-dd`; later
   versions can add time input when the TUI model supports it cleanly.
 - `Description` optional multiline context.
-- `Tags` optional comma-separated labels.
+- `Tags` optional selection from the existing tag catalog.
 
 Request mapping:
 
@@ -406,7 +414,8 @@ ASCII layout:
 | bring insurance card                                                 |
 |                                                                      |
 | Tags                                                                 |
-| health                                                               |
+| > [x] health                                                         |
+|   [ ] personal                                                       |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
@@ -420,6 +429,8 @@ Notes:
 - `Enter` must not submit the form unless the focused control is `Save`.
 - When focus is inside the multiline description, `Enter` keeps its text-editing
   behavior.
+- Tags are selected from catalog entries created in the Tags screen. The Add
+  flow must not create new tag names from free text.
 
 ## Flow 04 - Edit Item
 
@@ -465,7 +476,7 @@ Fields:
 - `Description` optional multiline context.
 - `Collection` required: `Today`, `Week`, `Month`, or `Backlog`.
 - `Priority` required: `None`, `Low`, `Medium`, or `High`.
-- `Tags` optional comma-separated labels.
+- `Tags` optional selection from the existing tag catalog.
 
 Request mapping:
 
@@ -498,12 +509,14 @@ ASCII layout:
 | > None   Low   Medium   High                                         |
 |                                                                      |
 | 5 Tags                                                               |
-| auth, cli                                                            |
+| > [x] auth                                                           |
+|   [x] cli                                                            |
+|   [ ] tui                                                            |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
 | Status: task | ref: t-0526-1 | today | priority: high                |
-| Enter activate  Tab/1-5 focus  Arrows move  Space cycle  Esc cancel  |
+| Enter activate  Tab/1-5 focus  Arrows move  Space toggle  Esc cancel |
 +----------------------------------------------------------------------+
 ```
 
@@ -513,6 +526,8 @@ Notes:
   flow. The `migrate` flow remains the deliberate Bullet Journal action for
   moving a task between collections.
 - Notes and events must not expose priority controls.
+- Tags are selected from catalog entries created in the Tags screen. Edit Item
+  must not create new tag names from free text.
 
 ### Flow 04B - Edit Note
 
@@ -527,7 +542,7 @@ Fields:
 
 - `Title` or short `Content` required.
 - `Description` optional multiline body.
-- `Tags` optional comma-separated labels.
+- `Tags` optional selection from the existing tag catalog.
 
 Request mapping:
 
@@ -550,7 +565,9 @@ ASCII layout:
 | include terminal log and repro steps                                 |
 |                                                                      |
 | 3 Tags                                                               |
-| auth, incident                                                       |
+| > [x] auth                                                           |
+|   [x] incident                                                       |
+|   [ ] tui                                                            |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
@@ -563,6 +580,7 @@ Notes:
 
 - Note editing must not expose collection, priority, or scheduled date as
   primary planning fields.
+- Tags are selected from catalog entries created in the Tags screen.
 
 ### Flow 04C - Edit Event
 
@@ -579,7 +597,7 @@ Fields:
 - `Scheduled for` required. Initial implementation may use `yyyy-mm-dd`; later
   versions can add time input when the TUI model supports it cleanly.
 - `Description` optional multiline context.
-- `Tags` optional comma-separated labels.
+- `Tags` optional selection from the existing tag catalog.
 
 Request mapping:
 
@@ -604,7 +622,8 @@ ASCII layout:
 | bring insurance card                                                 |
 |                                                                      |
 | 4 Tags                                                               |
-| health                                                               |
+| > [x] health                                                         |
+|   [ ] personal                                                       |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
@@ -618,6 +637,7 @@ Notes:
 - Event editing must require `scheduled_at`.
 - Event editing must not expose task collection or priority as primary
   planning fields.
+- Tags are selected from catalog entries created in the Tags screen.
 
 ## Screen 04 - Item Detail
 

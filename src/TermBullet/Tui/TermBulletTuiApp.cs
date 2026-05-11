@@ -369,6 +369,7 @@ public sealed class TermBulletTuiApp(
                     AddItemScreen.Build(
                         root,
                         addItemVm,
+                        snapshot.Tags.Select(tag => tag.Name).ToArray(),
                         SubmitCreateRequest,
                         () =>
                         {
@@ -385,6 +386,7 @@ public sealed class TermBulletTuiApp(
                     EditItemScreen.Build(
                         root,
                         EditItemFormDraft.FromRow(selectedItem),
+                        snapshot.Tags.Select(tag => tag.Name).ToArray(),
                         editError,
                         SubmitEditRequest,
                         () =>

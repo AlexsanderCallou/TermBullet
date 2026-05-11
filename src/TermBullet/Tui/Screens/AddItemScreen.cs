@@ -21,6 +21,7 @@ public static class AddItemScreen
     public static void Build(
         View root,
         TuiAddItemViewModel viewModel,
+        IReadOnlyCollection<string> availableTags,
         Action<CreateItemRequest> onSubmit,
         Action onCancel,
         Action onQuit)
@@ -119,7 +120,7 @@ public static class AddItemScreen
             X = 0,
             Y = Pos.Bottom(planningPanel),
             Width = Dim.Fill(),
-            Height = 6,
+            Height = 7,
             Visible = isTask
         };
         var priorityGroup = new RadioGroup(["None", "Low", "Medium", "High"], 0)
@@ -137,7 +138,7 @@ public static class AddItemScreen
             X = 0,
             Y = isTask ? Pos.Bottom(priorityPanel) : isEvent ? Pos.Bottom(planningPanel) : Pos.Bottom(contentPanel),
             Width = Dim.Fill(),
-            Height = 9
+            Height = 11
         };
         var descriptionLabel = new Label("Description:")
         {
@@ -156,13 +157,20 @@ public static class AddItemScreen
             X = 1,
             Y = 6
         };
-        var tagsField = new TextField(string.Empty)
+        var tagSelection = new TagSelectionList(availableTags);
+        var tagsList = tagSelection.View;
+        tagsList.X = Pos.Right(tagsLabel) + 1;
+        tagsList.Y = 6;
+        tagsList.Width = Dim.Fill(2);
+        tagsList.Height = 3;
+        detailsPanel.Add(descriptionLabel, descriptionField, tagsLabel, tagsList);
+        var tagsHint = new Label("Space toggle")
         {
             X = Pos.Right(tagsLabel) + 1,
-            Y = 6,
+            Y = 9,
             Width = Dim.Fill(2)
         };
-        detailsPanel.Add(descriptionLabel, descriptionField, tagsLabel, tagsField);
+        detailsPanel.Add(tagsHint);
 
         var statusLabel = new Label(viewModel.Error is null ? "Status: ready to add" : $"Status: {viewModel.Error}")
         {
@@ -264,7 +272,7 @@ public static class AddItemScreen
             draft.Priority = isTask ? selectedPriority : Priority.None;
             draft.Content = contentField.Text?.ToString() ?? string.Empty;
             draft.Description = descriptionField.Text?.ToString() ?? string.Empty;
-            draft.TagsText = tagsField.Text?.ToString() ?? string.Empty;
+            draft.SelectedTags = tagSelection.SelectedTags;
             draft.ScheduledAtText = scheduledField.Text?.ToString() ?? string.Empty;
         }
 
@@ -304,7 +312,7 @@ public static class AddItemScreen
                     descriptionField.SetFocus();
                     break;
                 case FocusArea.Tags:
-                    tagsField.SetFocus();
+                    tagsList.SetFocus();
                     break;
                 case FocusArea.Save:
                     saveButton.SetFocus();
@@ -397,6 +405,47 @@ public static class AddItemScreen
         saveButton.Clicked += Submit;
         cancelButton.Clicked += onCancel;
 
+        void AttachTextNavigation(View view)
+        {
+            view.KeyPress += args =>
+            {
+                switch (args.KeyEvent.Key)
+                {
+                    case Key.Tab:
+                        MoveFocus(1);
+                        args.Handled = true;
+                        break;
+                    case Key.BackTab:
+                        MoveFocus(-1);
+                        args.Handled = true;
+                        break;
+                }
+            };
+        }
+
+        AttachTextNavigation(contentField);
+        AttachTextNavigation(scheduledField);
+        AttachTextNavigation(descriptionField);
+        tagsList.KeyPress += args =>
+        {
+            switch (args.KeyEvent.Key)
+            {
+                case Key.Space:
+                    tagSelection.ToggleSelected();
+                    UpdateStatus();
+                    args.Handled = true;
+                    break;
+                case Key.Tab:
+                    MoveFocus(1);
+                    args.Handled = true;
+                    break;
+                case Key.BackTab:
+                    MoveFocus(-1);
+                    args.Handled = true;
+                    break;
+            }
+        };
+
         root.KeyPress += args =>
         {
             if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
@@ -438,6 +487,11 @@ public static class AddItemScreen
                     break;
                 case Key.Space when isTask && focusArea == FocusArea.Priority:
                     priorityGroup.SelectedItem = priorityGroup.SelectedItem >= 3 ? 0 : priorityGroup.SelectedItem + 1;
+                    args.Handled = true;
+                    break;
+                case Key.Space when focusArea == FocusArea.Tags:
+                    tagSelection.ToggleSelected();
+                    UpdateStatus();
                     args.Handled = true;
                     break;
                 case Key.Enter:
