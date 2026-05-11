@@ -29,7 +29,7 @@ public static class QuickTaskScreen
             Y = 1,
             Width = Dim.Fill(2)
         };
-        var plannedLabel = new Label("planned_for: today")
+        var plannedLabel = new Label("collection: today")
         {
             X = 1,
             Y = 3,

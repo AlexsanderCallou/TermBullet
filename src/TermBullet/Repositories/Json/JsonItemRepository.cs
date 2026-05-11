@@ -96,13 +96,7 @@ public sealed class JsonItemRepository(
             itemId: item.Id,
             publicRef: item.PublicRef.Value,
             eventType: GetUpdateEventType(previous, current),
-            data: new
-            {
-                status = current.Status,
-                collection = current.Collection,
-                priority = current.Priority,
-                version = current.Version
-            });
+            data: BuildUpdateHistoryData(previous, current));
 
         await WriteMonthlyDocumentAsync(year, month, document, cancellationToken);
         await RebuildIndexIfConfiguredAsync(cancellationToken);
@@ -342,12 +336,37 @@ public sealed class JsonItemRepository(
             {
                 "done" => "done",
                 "cancelled" => "cancelled",
-                "migrate" => "migrate",
                 _ => "edited"
             };
         }
 
+        if (!string.Equals(previous.Collection, current.Collection, StringComparison.Ordinal))
+        {
+            return "migrate";
+        }
+
         return "edited";
+    }
+
+    private static object BuildUpdateHistoryData(StorageItem previous, StorageItem current)
+    {
+        if (!string.Equals(previous.Collection, current.Collection, StringComparison.Ordinal))
+        {
+            return new
+            {
+                public_ref = current.PublicRef,
+                from_collection = previous.Collection,
+                to_collection = current.Collection
+            };
+        }
+
+        return new
+        {
+            status = current.Status,
+            collection = current.Collection,
+            priority = current.Priority,
+            version = current.Version
+        };
     }
 
     private static JsonElement ToJsonElement(object? value)
@@ -370,23 +389,12 @@ public sealed class JsonItemRepository(
             Collection = ToCollectionKey(item.Collection),
             Priority = ToPriorityKey(item.Priority),
             Tags = [.. item.Tags],
-            PlannedFor = item.PlannedFor,
             ScheduledAt = item.ScheduledAt,
             Version = item.Version,
             CreatedAt = item.CreatedAt,
             UpdatedAt = item.UpdatedAt,
             CompletedAt = item.CompletedAt,
-            CancelledAt = item.CancelledAt,
-            MigratedAt = item.MigratedAt,
-            Migration = item.Migration is null
-                ? null
-                : new StorageMigration
-                {
-                    FromPeriod = item.Migration.FromPeriod,
-                    ToPeriod = item.Migration.ToPeriod,
-                    MigratedAt = item.Migration.MigratedAt,
-                    Reason = item.Migration.Reason
-                }
+            CancelledAt = item.CancelledAt
         };
     }
 
@@ -416,18 +424,9 @@ public sealed class JsonItemRepository(
             item.Version,
             item.CreatedAt,
             item.UpdatedAt,
-            item.PlannedFor,
             item.ScheduledAt,
             item.CompletedAt,
-            item.CancelledAt,
-            item.MigratedAt,
-            item.Migration is null
-                ? null
-                : new MigrationInfo(
-                    item.Migration.FromPeriod,
-                    item.Migration.ToPeriod,
-                    item.Migration.MigratedAt,
-                    item.Migration.Reason));
+            item.CancelledAt);
     }
 
     private static string ToTypeKey(ItemType type) =>
@@ -454,7 +453,6 @@ public sealed class JsonItemRepository(
             ItemStatus.Open => "open",
             ItemStatus.Done => "done",
             ItemStatus.Cancelled => "cancelled",
-            ItemStatus.Migrate => "migrate",
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unsupported item status.")
         };
 
@@ -464,8 +462,6 @@ public sealed class JsonItemRepository(
             "open" => ItemStatus.Open,
             "done" => ItemStatus.Done,
             "cancelled" => ItemStatus.Cancelled,
-            "migrate" => ItemStatus.Migrate,
-            "migrated" => ItemStatus.Migrate,
             _ => throw new InvalidDataException($"Unsupported item status value: {value}.")
         };
 
@@ -474,9 +470,8 @@ public sealed class JsonItemRepository(
         {
             ItemCollection.Today => "today",
             ItemCollection.Week => "week",
+            ItemCollection.Month => "month",
             ItemCollection.Backlog => "backlog",
-            ItemCollection.Monthly => "monthly",
-            ItemCollection.Archived => "archived",
             _ => throw new ArgumentOutOfRangeException(nameof(collection), collection, "Unsupported item collection.")
         };
 
@@ -485,9 +480,8 @@ public sealed class JsonItemRepository(
         {
             "today" => ItemCollection.Today,
             "week" => ItemCollection.Week,
+            "month" => ItemCollection.Month,
             "backlog" => ItemCollection.Backlog,
-            "monthly" => ItemCollection.Monthly,
-            "archived" => ItemCollection.Archived,
             _ => throw new InvalidDataException($"Unsupported item collection value: {value}.")
         };
 

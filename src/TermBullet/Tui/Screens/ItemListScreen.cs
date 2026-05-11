@@ -12,6 +12,7 @@ public static class ItemListScreen
         IReadOnlyList<string> actions,
         Action<ItemDisplayRow?> onSelectedItemChanged,
         Action<ItemDisplayRow?> onOpenDetail,
+        Action<ItemDisplayRow?> onOpenEdit,
         Action<ItemDisplayRow?> onOpenMigrate,
         Action<ItemDisplayRow?> onMarkDone,
         Action<ItemDisplayRow?> onCancelItem,
@@ -134,6 +135,9 @@ public static class ItemListScreen
                 case Key.Enter when includeEnter:
                     onOpenDetail(selectedItem);
                     return true;
+                case Key e when e == (Key)'e':
+                    onOpenEdit(selectedItem);
+                    return true;
                 case Key y when y == (Key)'>':
                     onOpenMigrate(selectedItem);
                     return true;
@@ -204,7 +208,6 @@ public static class ItemListScreen
             $"type: {item.Type}",
             $"status: {item.Status}",
             $"collection: {item.Collection}",
-            $"planned_for: {(item.PlannedFor is null ? "-" : item.PlannedFor.Value.ToString("yyyy-MM-dd"))}",
             $"scheduled_at: {(item.ScheduledAt is null ? "-" : item.ScheduledAt.Value.ToString("yyyy-MM-dd"))}",
             $"tags: {(item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "(none)")}",
             " ",
@@ -216,11 +219,6 @@ public static class ItemListScreen
 
     internal static string FormatDate(ItemDisplayRow item)
     {
-        if (item.PlannedFor is not null)
-        {
-            return item.PlannedFor.Value.ToString("yyyy-MM-dd");
-        }
-
         return item.ScheduledAt is null
             ? string.Empty
             : DateOnly.FromDateTime(item.ScheduledAt.Value.DateTime).ToString("yyyy-MM-dd");

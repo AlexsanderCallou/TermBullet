@@ -1,9 +1,7 @@
 using TermBullet.Services.Clock;
-using TermBullet.Services.DataTransfer;
 using TermBullet.Services.History;
 using System.Text;
 using TermBullet.Application.Configuration;
-using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Repositories.Interfaces;
 using TermBullet.Cli;
@@ -63,47 +61,6 @@ public sealed class TermBulletCliAppTests
     }
 
     [Fact]
-    public async Task InvokeAsync_runs_export_and_calls_service()
-    {
-        var dependencies = CreateDependencies();
-        var app = CreateApp(dependencies);
-
-        var exitCode = await app.InvokeAsync(["export", "--output", "backup.json"]);
-
-        Assert.Equal(0, exitCode);
-        Assert.Equal("backup.json", dependencies.DataTransferService.ExportedPath);
-    }
-
-    [Fact]
-    public async Task InvokeAsync_runs_import_and_calls_service()
-    {
-        var dependencies = CreateDependencies();
-        var app = CreateApp(dependencies);
-
-        var exitCode = await app.InvokeAsync(["import", "backup.json"]);
-
-        Assert.Equal(0, exitCode);
-        Assert.Equal("backup.json", dependencies.DataTransferService.ImportedPath);
-    }
-
-    [Fact]
-    public async Task InvokeAsync_returns_parse_error_when_import_path_is_missing()
-    {
-        var dependencies = CreateDependencies();
-        var app = CreateApp(dependencies);
-
-        var exitCode = await app.InvokeAsync(["import"]);
-
-        Assert.Equal(1, exitCode);
-        var errorOutput = dependencies.Error.ToString();
-        Assert.False(string.IsNullOrWhiteSpace(errorOutput));
-        Assert.True(
-            errorOutput.Contains("required argument missing", StringComparison.OrdinalIgnoreCase)
-            || errorOutput.Contains("argumento obrigat", StringComparison.OrdinalIgnoreCase),
-            $"Unexpected error output: {errorOutput}");
-    }
-
-    [Fact]
     public async Task InvokeAsync_runs_history_clear_for_specific_month()
     {
         var dependencies = CreateDependencies();
@@ -155,7 +112,8 @@ public sealed class TermBulletCliAppTests
         Assert.Equal(0, exitCode);
         Assert.Contains("TermBullet - Local-First Terminal Planner", dependencies.Output.ToString());
         Assert.Contains("config", dependencies.Output.ToString());
-        Assert.Contains("export", dependencies.Output.ToString());
+        Assert.DoesNotContain("export", dependencies.Output.ToString());
+        Assert.DoesNotContain("import", dependencies.Output.ToString());
         Assert.DoesNotContain("Mostrar", dependencies.Output.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
@@ -223,8 +181,6 @@ public sealed class TermBulletCliAppTests
             new GetConfigurationUseCase(dependencies.SettingsStore),
             new SetConfigurationUseCase(dependencies.SettingsStore),
             new GetConfigurationPathUseCase(dependencies.SettingsStore),
-            new ExportDataUseCase(dependencies.DataTransferService),
-            new ImportDataUseCase(dependencies.DataTransferService),
             new ClearStoredHistoryUseCase(
                 dependencies.HistoryService,
                 new FixedClock(new DateTimeOffset(2026, 4, 23, 12, 0, 0, TimeSpan.Zero))),
@@ -237,7 +193,6 @@ public sealed class TermBulletCliAppTests
     {
         return new TestDependencies(
             new FakeSettingsStore(),
-            new FakeDataTransferService(),
             new FakeHistoryMaintenanceService(),
             new StringWriter(new StringBuilder()),
             new StringWriter(new StringBuilder()));
@@ -245,7 +200,6 @@ public sealed class TermBulletCliAppTests
 
     private sealed record TestDependencies(
         FakeSettingsStore SettingsStore,
-        FakeDataTransferService DataTransferService,
         FakeHistoryMaintenanceService HistoryService,
         StringWriter Output,
         StringWriter Error);
@@ -286,25 +240,6 @@ public sealed class TermBulletCliAppTests
             }
 
             values[key] = value;
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class FakeDataTransferService : IDataTransferService
-    {
-        public string? ExportedPath { get; private set; }
-
-        public string? ImportedPath { get; private set; }
-
-        public Task ExportAsync(string outputPath, CancellationToken cancellationToken = default)
-        {
-            ExportedPath = outputPath;
-            return Task.CompletedTask;
-        }
-
-        public Task ImportAsync(string inputPath, CancellationToken cancellationToken = default)
-        {
-            ImportedPath = inputPath;
             return Task.CompletedTask;
         }
     }

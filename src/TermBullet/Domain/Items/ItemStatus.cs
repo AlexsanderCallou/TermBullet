@@ -4,6 +4,5 @@ public enum ItemStatus
 {
     Open,
     Done,
-    Cancelled,
-    Migrate
+    Cancelled
 }

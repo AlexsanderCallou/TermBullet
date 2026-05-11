@@ -4,7 +4,6 @@ public enum ItemCollection
 {
     Today,
     Week,
-    Backlog,
-    Monthly,
-    Archived
+    Month,
+    Backlog
 }

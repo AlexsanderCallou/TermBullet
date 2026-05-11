@@ -16,7 +16,7 @@ public sealed class TuiScreenNavigationTests
 
     [Theory]
     [InlineData(TuiScreen.ItemDetail, 5)]
-    [InlineData(TuiScreen.MigrateItem, 3)]
+    [InlineData(TuiScreen.MigrateItem, 1)]
     public void NavigateTo_planned_screens_changes_screen(TuiScreen screen, int panelCount)
     {
         var state = new TuiNavigationState();

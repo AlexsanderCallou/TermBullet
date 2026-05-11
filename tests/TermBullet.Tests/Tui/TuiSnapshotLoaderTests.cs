@@ -83,6 +83,7 @@ public sealed class TuiSnapshotLoaderTests
         return new TuiSnapshotLoader(
             new GetTodayItemsUseCase(repository),
             new GetWeekItemsUseCase(repository),
+            new GetMonthItemsUseCase(repository),
             new GetBacklogItemsUseCase(repository),
             new ListItemsUseCase(repository),
             new ListTagsUseCase(tagRepository),

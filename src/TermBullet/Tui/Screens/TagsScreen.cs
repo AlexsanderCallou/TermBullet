@@ -22,7 +22,7 @@ public static class TagsScreen
             Y = 0,
             Width = Dim.Fill()
         };
-        var footer = new Label(" c create  Enter preview  d delete  Tab/1-3 focus  ? help  Esc back  q quit")
+        var footer = new Label(" c create  Enter preview  Tab/1-3 focus  ? help  Esc back  q quit")
         {
             X = 0,
             Y = Pos.AnchorEnd(1),
@@ -68,7 +68,7 @@ public static class TagsScreen
             Height = 7
         };
         var actionsList = new ListView(TuiScreenUtilities.SanitizeListItems(
-            ["> create tag", "  preview selected", "  remove selected from all items: unavailable"]))
+            ["> create tag", "  preview selected", "  remove selected from all items: future rule"]))
         {
             X = 0,
             Y = 0,

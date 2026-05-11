@@ -5,12 +5,12 @@ namespace TermBullet.Tests.Tui;
 public sealed class CalendarViewModelTests
 {
     [Fact]
-    public void Build_counts_tasks_and_events_for_selected_month()
+    public void Build_counts_only_events_for_selected_month()
     {
         var selectedDate = new DateOnly(2026, 5, 9);
         var rows = new[]
         {
-            MakeRow("t-0526-1", "task", plannedFor: selectedDate),
+            MakeRow("t-0526-1", "task"),
             MakeRow("e-0526-1", "event", scheduledAt: new DateTimeOffset(2026, 5, 9, 16, 0, 0, TimeSpan.Zero)),
             MakeRow("n-0526-1", "note")
         };
@@ -18,9 +18,10 @@ public sealed class CalendarViewModelTests
         var vm = CalendarViewModel.Build(rows, selectedDate);
 
         var cell = Assert.Single(vm.MonthCells, day => day.Date == selectedDate);
-        Assert.Equal(1, cell.TaskCount);
+        Assert.Equal(0, cell.TaskCount);
         Assert.Equal(1, cell.EventCount);
-        Assert.Equal(2, vm.SelectedDayItems.Count);
+        Assert.Single(vm.SelectedDayItems);
+        Assert.Equal("event", vm.SelectedDayItems[0].Type);
         Assert.DoesNotContain(vm.SelectedDayItems, item => item.Type == "note");
     }
 
@@ -43,7 +44,6 @@ public sealed class CalendarViewModelTests
     private static ItemDisplayRow MakeRow(
         string publicRef,
         string type,
-        DateOnly? plannedFor = null,
         DateTimeOffset? scheduledAt = null) =>
         new()
         {
@@ -57,7 +57,6 @@ public sealed class CalendarViewModelTests
             Priority = "none",
             Collection = "today",
             Tags = [],
-            PlannedFor = plannedFor,
             ScheduledAt = scheduledAt,
             Version = 1,
             CreatedAt = new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero),

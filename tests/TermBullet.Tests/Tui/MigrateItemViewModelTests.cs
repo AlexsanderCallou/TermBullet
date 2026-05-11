@@ -7,17 +7,15 @@ namespace TermBullet.Tests.Tui;
 public sealed class MigrateItemViewModelTests
 {
     [Fact]
-    public void ForDateDestination_shows_basic_item_data_and_date_result()
+    public void ForCollectionDestination_shows_basic_item_data_and_collection_result()
     {
-        var vm = MigrateItemViewModel.ForDate(MakeItem(), new DateOnly(2026, 5, 12));
+        var vm = MigrateItemViewModel.ForCollection(MakeItem(), ItemCollection.Month);
 
         Assert.Contains(vm.ItemLines, line => line.Contains("ref: t-0526-1", StringComparison.Ordinal));
         Assert.Contains(vm.ItemLines, line => line.Contains("content: Fix auth flow", StringComparison.Ordinal));
-        Assert.Contains(vm.ItemLines, line => line.Contains("planned_for: 2026-05-09", StringComparison.Ordinal));
-        Assert.Contains(vm.DestinationLines, line => line.Contains("(x) Date", StringComparison.Ordinal));
-        Assert.Contains(vm.DestinationLines, line => line.Contains("planned_for: 2026-05-12", StringComparison.Ordinal));
-        Assert.Contains(vm.ResultLines, line => line.Contains("original: t-0526-1 -> migrate", StringComparison.Ordinal));
-        Assert.Contains(vm.ResultLines, line => line.Contains("new task: open at 2026-05-12", StringComparison.Ordinal));
+        Assert.Contains(vm.DestinationLines, line => line.Contains("(x) month", StringComparison.Ordinal));
+        Assert.Contains(vm.ResultLines, line => line.Contains("t-0526-1: today -> month", StringComparison.Ordinal));
+        Assert.Contains(vm.ResultLines, line => line.Contains("same task, same ref", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -25,32 +23,28 @@ public sealed class MigrateItemViewModelTests
     {
         var vm = MigrateItemViewModel.ForBacklog(MakeItem());
 
-        Assert.Contains(vm.DestinationLines, line => line.Contains("(x) Backlog", StringComparison.Ordinal));
-        Assert.Contains(vm.DestinationLines, line => line.Contains("planned_for: -", StringComparison.Ordinal));
-        Assert.Contains(vm.ResultLines, line => line.Contains("new task: open in backlog", StringComparison.Ordinal));
+        Assert.Contains(vm.DestinationLines, line => line.Contains("(x) backlog", StringComparison.Ordinal));
+        Assert.Contains(vm.ResultLines, line => line.Contains("t-0526-1: today -> backlog", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void WithPlannedFor_updates_date_destination()
+    public void WithDestination_updates_collection_destination()
     {
         var vm = MigrateItemViewModel
-            .ForDate(MakeItem(), new DateOnly(2026, 5, 12))
-            .WithPlannedFor(new DateOnly(2026, 5, 15));
-
-        Assert.Equal(new DateOnly(2026, 5, 15), vm.PlannedFor);
-        Assert.Contains(vm.ResultLines, line => line.Contains("new task: open at 2026-05-15", StringComparison.Ordinal));
+            .ForCollection(MakeItem(), ItemCollection.Week)
+            .WithDestination(ItemCollection.Today);
+        Assert.Contains(vm.ResultLines, line => line.Contains("t-0526-1: today -> today", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void BuildRequest_maps_date_destination_to_week_with_selected_date()
+    public void BuildRequest_maps_collection_destination()
     {
         var request = MigrateItemViewModel
-            .ForDate(MakeItem(), new DateOnly(2026, 5, 15))
+            .ForCollection(MakeItem(), ItemCollection.Month)
             .BuildRequest();
 
         Assert.Equal("t-0526-1", request.PublicRef);
-        Assert.Equal(ItemCollection.Week, request.DestinationCollection);
-        Assert.Equal(new DateOnly(2026, 5, 15), request.PlannedFor);
+        Assert.Equal(ItemCollection.Month, request.DestinationCollection);
     }
 
     [Fact]
@@ -61,7 +55,6 @@ public sealed class MigrateItemViewModelTests
             .BuildRequest();
 
         Assert.Equal(ItemCollection.Backlog, request.DestinationCollection);
-        Assert.Null(request.PlannedFor);
     }
 
     private static ItemResult MakeItem() =>
@@ -75,7 +68,6 @@ public sealed class MigrateItemViewModelTests
             Collection: ItemCollection.Today,
             Priority: Priority.High,
             Tags: ["auth", "cli"],
-            PlannedFor: new DateOnly(2026, 5, 9),
             ScheduledAt: null,
             Version: 1,
             CreatedAt: DateTimeOffset.UtcNow,

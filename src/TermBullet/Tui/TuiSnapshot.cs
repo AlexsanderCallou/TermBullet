@@ -6,6 +6,7 @@ namespace TermBullet.Tui;
 public sealed record TuiSnapshot(
     IReadOnlyCollection<ItemResult> TodayItems,
     IReadOnlyCollection<ItemResult> WeekItems,
+    IReadOnlyCollection<ItemResult> MonthItems,
     IReadOnlyCollection<ItemResult> BacklogItems,
     IReadOnlyCollection<ItemResult> CurrentItems,
     IReadOnlyCollection<ItemResult> AllItems,

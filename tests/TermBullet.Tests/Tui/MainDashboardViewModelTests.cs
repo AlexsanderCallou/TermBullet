@@ -15,7 +15,7 @@ public sealed class MainDashboardViewModelTests
             MakeItem("n-0426-1", ItemType.Note, ItemStatus.Open, "Investigate error", Priority.None)
         };
 
-        var vm = new MainDashboardViewModel(dayItems: items, backlogItems: []);
+        var vm = new MainDashboardViewModel(dayItems: items, weekItems: [], monthItems: [], backlogItems: []);
 
         Assert.Equal(2, vm.DayItems.Count);
         Assert.Equal("t-0426-1", vm.DayItems[0].PublicRef);
@@ -30,7 +30,7 @@ public sealed class MainDashboardViewModelTests
     [Fact]
     public void DayItems_is_empty_when_no_today_items()
     {
-        var vm = new MainDashboardViewModel(dayItems: [], backlogItems: []);
+        var vm = new MainDashboardViewModel(dayItems: [], weekItems: [], monthItems: [], backlogItems: []);
 
         Assert.Empty(vm.DayItems);
     }
@@ -43,7 +43,7 @@ public sealed class MainDashboardViewModelTests
             MakeItem("t-0426-3", ItemType.Task, ItemStatus.Open, "Adjust compose", Priority.Medium)
         };
 
-        var vm = new MainDashboardViewModel(dayItems: [], backlogItems: items);
+        var vm = new MainDashboardViewModel(dayItems: [], weekItems: [], monthItems: [], backlogItems: items);
 
         Assert.Single(vm.BacklogItems);
         Assert.Equal("t-0426-3", vm.BacklogItems[0].PublicRef);
@@ -54,7 +54,7 @@ public sealed class MainDashboardViewModelTests
     public void SelectedDayItemIndex_starts_at_zero_when_there_are_items()
     {
         var items = new[] { MakeItem("t-0426-1", ItemType.Task, ItemStatus.Open, "Fix auth JWT", Priority.None) };
-        var vm = new MainDashboardViewModel(dayItems: items, backlogItems: []);
+        var vm = new MainDashboardViewModel(dayItems: items, weekItems: [], monthItems: [], backlogItems: []);
 
         Assert.Equal(0, vm.SelectedDayItemIndex);
     }
@@ -62,7 +62,7 @@ public sealed class MainDashboardViewModelTests
     [Fact]
     public void SelectedDayItemIndex_is_minus_one_when_no_items()
     {
-        var vm = new MainDashboardViewModel(dayItems: [], backlogItems: []);
+        var vm = new MainDashboardViewModel(dayItems: [], weekItems: [], monthItems: [], backlogItems: []);
 
         Assert.Equal(-1, vm.SelectedDayItemIndex);
     }
@@ -75,7 +75,7 @@ public sealed class MainDashboardViewModelTests
             MakeItem("t-0426-1", ItemType.Task, ItemStatus.Open, "First", Priority.None),
             MakeItem("t-0426-2", ItemType.Task, ItemStatus.Open, "Second", Priority.None)
         };
-        var vm = new MainDashboardViewModel(dayItems: items, backlogItems: []);
+        var vm = new MainDashboardViewModel(dayItems: items, weekItems: [], monthItems: [], backlogItems: []);
 
         vm.SelectNextDayItem();
 
@@ -89,7 +89,7 @@ public sealed class MainDashboardViewModelTests
         {
             MakeItem("t-0426-1", ItemType.Task, ItemStatus.Open, "Only", Priority.None)
         };
-        var vm = new MainDashboardViewModel(dayItems: items, backlogItems: []);
+        var vm = new MainDashboardViewModel(dayItems: items, weekItems: [], monthItems: [], backlogItems: []);
 
         vm.SelectNextDayItem();
 
@@ -104,7 +104,7 @@ public sealed class MainDashboardViewModelTests
             MakeItem("t-0426-1", ItemType.Task, ItemStatus.Open, "First", Priority.None),
             MakeItem("t-0426-2", ItemType.Task, ItemStatus.Open, "Second", Priority.None)
         };
-        var vm = new MainDashboardViewModel(dayItems: items, backlogItems: []);
+        var vm = new MainDashboardViewModel(dayItems: items, weekItems: [], monthItems: [], backlogItems: []);
         vm.SelectNextDayItem();
 
         vm.SelectPreviousDayItem();
@@ -120,7 +120,7 @@ public sealed class MainDashboardViewModelTests
             MakeItem("t-0426-1", ItemType.Task, ItemStatus.Open, "First", Priority.None),
             MakeItem("t-0426-2", ItemType.Task, ItemStatus.Open, "Second", Priority.None)
         };
-        var vm = new MainDashboardViewModel(dayItems: items, backlogItems: []);
+        var vm = new MainDashboardViewModel(dayItems: items, weekItems: [], monthItems: [], backlogItems: []);
         vm.SelectNextDayItem();
 
         Assert.Equal("t-0426-2", vm.SelectedDayItem?.PublicRef);
@@ -129,7 +129,7 @@ public sealed class MainDashboardViewModelTests
     [Fact]
     public void SelectedDayItem_is_null_when_no_items()
     {
-        var vm = new MainDashboardViewModel(dayItems: [], backlogItems: []);
+        var vm = new MainDashboardViewModel(dayItems: [], weekItems: [], monthItems: [], backlogItems: []);
 
         Assert.Null(vm.SelectedDayItem);
     }
@@ -138,13 +138,12 @@ public sealed class MainDashboardViewModelTests
     [InlineData(ItemType.Task, ItemStatus.Open, "[ ]")]
     [InlineData(ItemType.Task, ItemStatus.Done, "[x]")]
     [InlineData(ItemType.Task, ItemStatus.Cancelled, "[-]")]
-    [InlineData(ItemType.Task, ItemStatus.Migrate, "[>]")]
     [InlineData(ItemType.Note, ItemStatus.Open, "(.)")]
     [InlineData(ItemType.Event, ItemStatus.Open, "(o)")]
     public void Symbol_reflects_type_and_status(ItemType type, ItemStatus status, string expectedSymbol)
     {
         var item = MakeItem("t-0426-1", type, status, "content", Priority.None);
-        var vm = new MainDashboardViewModel(dayItems: [item], backlogItems: []);
+        var vm = new MainDashboardViewModel(dayItems: [item], weekItems: [], monthItems: [], backlogItems: []);
 
         Assert.Equal(expectedSymbol, vm.DayItems[0].Symbol);
     }
@@ -165,7 +164,6 @@ public sealed class MainDashboardViewModelTests
             Collection: ItemCollection.Today,
             Priority: priority,
             Tags: [],
-            PlannedFor: null,
             ScheduledAt: null,
             Version: 1,
             CreatedAt: DateTimeOffset.UtcNow,

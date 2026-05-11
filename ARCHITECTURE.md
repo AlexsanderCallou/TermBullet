@@ -117,7 +117,6 @@ TermBullet.Application.Items
 TermBullet.Repositories.Interfaces
 TermBullet.Repositories.Json
 TermBullet.Services.Clock
-TermBullet.Services.DataTransfer
 TermBullet.Cli
 TermBullet.Tui.Screens
 TermBullet.Tui.Navigation

@@ -1,9 +1,8 @@
-using TermBullet.Services.Clock;
-using TermBullet.Services.Ids;
 using TermBullet.Application.Items;
-using TermBullet.Repositories.Interfaces;
 using TermBullet.Domain.Items;
 using TermBullet.Domain.Refs;
+using TermBullet.Repositories.Interfaces;
+using TermBullet.Services.Clock;
 
 namespace TermBullet.Tests.Application.Items;
 
@@ -13,63 +12,68 @@ public sealed class MigrateItemUseCaseTests
     private static readonly DateTimeOffset ChangedAt = new(2026, 5, 1, 0, 5, 0, TimeSpan.Zero);
 
     [Fact]
-    public async Task Execute_sets_migrate_status_and_persists_item()
+    public async Task Execute_moves_same_task_to_destination_collection()
     {
-        var repository = new FakeItemRepository(CreateTask());
+        var repository = new FakeItemRepository(CreateTask(ItemCollection.Backlog));
         var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt));
 
-        var result = await useCase.ExecuteAsync("t-0426-1");
+        var result = await useCase.ExecuteAsync(new MigrateItemRequest
+        {
+            PublicRef = "t-0426-1",
+            DestinationCollection = ItemCollection.Today
+        });
 
-        Assert.Equal(ItemStatus.Migrate, result.Status);
+        Assert.Equal("t-0426-1", result.PublicRef);
+        Assert.Equal(ItemStatus.Open, result.Status);
+        Assert.Equal(ItemCollection.Today, result.Collection);
         Assert.Equal(2, result.Version);
         Assert.Equal(ChangedAt, result.UpdatedAt);
 
         var updatedItem = Assert.Single(repository.UpdatedItems);
-        Assert.Equal(ChangedAt, updatedItem.MigratedAt);
-        var migratedItem = Assert.Single(repository.AddedItems);
-        Assert.Equal(ItemStatus.Open, migratedItem.Status);
-        Assert.Equal(ItemCollection.Week, migratedItem.Collection);
-        Assert.Equal(DateOnly.FromDateTime(ChangedAt.UtcDateTime), migratedItem.PlannedFor);
+        Assert.Equal(Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"), updatedItem.Id);
+        Assert.Equal("t-0426-1", updatedItem.PublicRef.Value);
+        Assert.Equal(ItemCollection.Today, updatedItem.Collection);
+        Assert.Empty(repository.AddedItems);
     }
 
-    [Fact]
-    public async Task Execute_with_date_destination_creates_new_week_task_for_selected_date()
+    [Theory]
+    [InlineData(ItemCollection.Today)]
+    [InlineData(ItemCollection.Week)]
+    [InlineData(ItemCollection.Month)]
+    [InlineData(ItemCollection.Backlog)]
+    public async Task Execute_supports_all_task_collections(ItemCollection destination)
     {
-        var repository = new FakeItemRepository(CreateTask());
-        var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt), new FixedIdGenerator());
+        var repository = new FakeItemRepository(CreateTask(ItemCollection.Today));
+        var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt));
 
-        await useCase.ExecuteAsync(new MigrateItemRequest
+        var result = await useCase.ExecuteAsync(new MigrateItemRequest
         {
             PublicRef = "t-0426-1",
-            DestinationCollection = ItemCollection.Week,
-            PlannedFor = new DateOnly(2026, 5, 12)
+            DestinationCollection = destination
         });
 
-        var original = Assert.Single(repository.UpdatedItems);
-        Assert.Equal(ItemStatus.Migrate, original.Status);
-
-        var migratedItem = Assert.Single(repository.AddedItems);
-        Assert.Equal("Fix authentication flow", migratedItem.Content);
-        Assert.Equal(ItemCollection.Week, migratedItem.Collection);
-        Assert.Equal(new DateOnly(2026, 5, 12), migratedItem.PlannedFor);
-        Assert.Equal("t-0526-1", migratedItem.PublicRef.Value);
+        Assert.Equal(destination, result.Collection);
+        Assert.Equal(ItemStatus.Open, result.Status);
+        Assert.Empty(repository.AddedItems);
     }
 
-    [Fact]
-    public async Task Execute_with_backlog_destination_creates_new_backlog_task_without_date()
+    [Theory]
+    [InlineData(ItemType.Note)]
+    [InlineData(ItemType.Event)]
+    public async Task Execute_rejects_non_task_items(ItemType type)
     {
-        var repository = new FakeItemRepository(CreateTask());
-        var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt), new FixedIdGenerator());
+        var repository = new FakeItemRepository(CreateItem(type));
+        var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt));
 
-        await useCase.ExecuteAsync(new MigrateItemRequest
-        {
-            PublicRef = "t-0426-1",
-            DestinationCollection = ItemCollection.Backlog
-        });
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            useCase.ExecuteAsync(new MigrateItemRequest
+            {
+                PublicRef = type == ItemType.Note ? "n-0426-1" : "e-0426-1",
+                DestinationCollection = ItemCollection.Week
+            }));
 
-        var migratedItem = Assert.Single(repository.AddedItems);
-        Assert.Equal(ItemCollection.Backlog, migratedItem.Collection);
-        Assert.Null(migratedItem.PlannedFor);
+        Assert.Empty(repository.UpdatedItems);
+        Assert.Empty(repository.AddedItems);
     }
 
     [Fact]
@@ -88,7 +92,7 @@ public sealed class MigrateItemUseCaseTests
     [Fact]
     public async Task Execute_rejects_invalid_public_ref()
     {
-        var repository = new FakeItemRepository(CreateTask());
+        var repository = new FakeItemRepository(CreateTask(ItemCollection.Today));
         var useCase = new MigrateItemUseCase(repository, new FixedClock(ChangedAt));
 
         var exception = await Assert.ThrowsAsync<ArgumentException>(
@@ -99,14 +103,30 @@ public sealed class MigrateItemUseCaseTests
         Assert.Empty(repository.UpdatedItems);
     }
 
-    private static Item CreateTask()
-    {
-        return Item.Create(
+    private static Item CreateTask(ItemCollection collection) =>
+        Item.Create(
             Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
             PublicRef.Parse("t-0426-1"),
             ItemType.Task,
             "Fix authentication flow",
-            ItemCollection.Today,
+            collection,
+            CreatedAt);
+
+    private static Item CreateItem(ItemType type)
+    {
+        var publicRef = type switch
+        {
+            ItemType.Note => PublicRef.Parse("n-0426-1"),
+            ItemType.Event => PublicRef.Parse("e-0426-1"),
+            _ => PublicRef.Parse("t-0426-1")
+        };
+
+        return Item.Create(
+            Guid.NewGuid(),
+            publicRef,
+            type,
+            "Reference item",
+            ItemCollection.Backlog,
             CreatedAt);
     }
 
@@ -122,17 +142,13 @@ public sealed class MigrateItemUseCaseTests
             ItemType type,
             int month,
             int year,
-            CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(0);
-        }
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(0);
 
         public Task<bool> PublicRefExistsAsync(
             string publicRef,
-            CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(false);
-        }
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(false);
 
         public Task AddAsync(Item itemToAdd, CancellationToken cancellationToken = default)
         {
@@ -146,23 +162,17 @@ public sealed class MigrateItemUseCaseTests
             return Task.CompletedTask;
         }
 
-        public Task DeleteByPublicRefAsync(string publicRef, CancellationToken cancellationToken = default)
-        {
+        public Task DeleteByPublicRefAsync(string publicRef, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
-        }
 
-        public Task ClearHistoryAsync(CancellationToken cancellationToken = default)
-        {
+        public Task ClearHistoryAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
-        }
 
         public Task<IReadOnlyCollection<Item>> ListAsync(
             ItemCollection? collection = null,
             ItemStatus? status = null,
-            CancellationToken cancellationToken = default)
-        {
+            CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
-        }
 
         public Task<Item?> FindByPublicRefAsync(
             string publicRef,
@@ -176,10 +186,5 @@ public sealed class MigrateItemUseCaseTests
     private sealed class FixedClock(DateTimeOffset utcNow) : IClock
     {
         public DateTimeOffset UtcNow { get; } = utcNow;
-    }
-
-    private sealed class FixedIdGenerator : IIdGenerator
-    {
-        public Guid NewId() => Guid.Parse("11111111-1111-1111-1111-111111111111");
     }
 }

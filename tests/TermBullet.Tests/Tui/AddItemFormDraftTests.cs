@@ -27,25 +27,23 @@ public sealed class AddItemFormDraftTests
         Assert.Equal("Keep the CLI and TUI aligned.", request.Description);
         Assert.Equal(Priority.High, request.Priority);
         Assert.Equal(["auth", "cli"], request.Tags);
-        Assert.Equal(DateOnly.FromDateTime(DateTime.Today), request.PlannedFor);
         Assert.Null(request.ScheduledAt);
     }
 
     [Fact]
-    public void BuildRequest_uses_future_date_for_week_items()
+    public void BuildRequest_uses_scheduled_at_for_events()
     {
         var draft = new AddItemFormDraft
         {
             Type = ItemType.Event,
-            Timing = AddItemTimingChoice.FutureDate,
+            Timing = AddItemTimingChoice.Week,
             Content = "Team sync",
-            PlannedForText = "2026-05-12"
+            ScheduledAtText = "2026-05-12"
         };
 
         var request = draft.BuildRequest();
 
         Assert.Equal(ItemCollection.Week, request.Collection);
-        Assert.Null(request.PlannedFor);
         Assert.Equal(new DateTimeOffset(2026, 5, 12, 0, 0, 0, TimeSpan.Zero), request.ScheduledAt);
     }
 
@@ -64,7 +62,6 @@ public sealed class AddItemFormDraftTests
         Assert.Equal(ItemType.Note, request.Type);
         Assert.Equal(ItemCollection.Backlog, request.Collection);
         Assert.Equal(Priority.None, request.Priority);
-        Assert.Null(request.PlannedFor);
         Assert.Null(request.ScheduledAt);
         Assert.Equal("Terminal.Gui throws while rendering.", request.Description);
     }
@@ -78,7 +75,6 @@ public sealed class AddItemFormDraftTests
         Assert.Equal("Fix auth flow", request.Content);
         Assert.Equal(ItemCollection.Today, request.Collection);
         Assert.Equal(Priority.None, request.Priority);
-        Assert.Equal(DateOnly.FromDateTime(DateTime.Today), request.PlannedFor);
         Assert.Null(request.Description);
         Assert.Null(request.Tags);
         Assert.Null(request.ScheduledAt);
@@ -91,7 +87,7 @@ public sealed class AddItemFormDraftTests
         {
             Type = ItemType.Event,
             Content = "Team sync",
-            PlannedForText = "2026-05-12",
+            ScheduledAtText = "2026-05-12",
             Priority = Priority.High
         };
 
@@ -101,17 +97,18 @@ public sealed class AddItemFormDraftTests
     }
 
     [Fact]
-    public void BuildRequest_rejects_invalid_future_date()
+    public void BuildRequest_rejects_invalid_event_schedule()
     {
         var draft = new AddItemFormDraft
         {
-            Timing = AddItemTimingChoice.FutureDate,
+            Type = ItemType.Event,
+            Timing = AddItemTimingChoice.Week,
             Content = "Task",
-            PlannedForText = "not-a-date"
+            ScheduledAtText = "not-a-date"
         };
 
         var exception = Assert.Throws<ArgumentException>(() => draft.BuildRequest());
 
-        Assert.Equal("PlannedForText", exception.ParamName);
+        Assert.Equal("ScheduledAtText", exception.ParamName);
     }
 }

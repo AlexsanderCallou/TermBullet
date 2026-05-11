@@ -10,7 +10,7 @@ public static class AddItemScreen
     {
         Timing,
         Priority,
-        PlannedFor,
+        ScheduledAt,
         Content,
         Description,
         Tags,
@@ -83,35 +83,36 @@ public static class AddItemScreen
             Visible = isTask || isEvent
         };
         var timingGroup = new RadioGroup(
-            ["Today        planned_for: today", "Future date  planned_for: later", "Backlog      planned_for: -"],
+            ["Today", "Week", "Month", "Backlog"],
             0)
         {
             X = 1,
             Y = 1,
             Width = Dim.Fill(2),
+            Height = 4,
             Visible = isTask
         };
-        var plannedLabel = new Label(isEvent ? "Scheduled for:" : "Planned for:")
+        var scheduledLabel = new Label("Scheduled for:")
         {
             X = 1,
             Y = isTask ? 4 : 1,
             Visible = isEvent
         };
-        var plannedField = new TextField(DateOnly.FromDateTime(DateTime.Today.AddDays(1)).ToString("yyyy-MM-dd"))
+        var scheduledField = new TextField(DateOnly.FromDateTime(DateTime.Today.AddDays(1)).ToString("yyyy-MM-dd"))
         {
-            X = Pos.Right(plannedLabel) + 1,
+            X = Pos.Right(scheduledLabel) + 1,
             Y = isTask ? 4 : 1,
             Width = 12,
             Visible = isEvent
         };
-        var plannedHint = new Label("yyyy-mm-dd")
+        var scheduledHint = new Label("yyyy-mm-dd")
         {
-            X = Pos.Right(plannedField) + 1,
+            X = Pos.Right(scheduledField) + 1,
             Y = isTask ? 4 : 1,
             Width = 12,
             Visible = isEvent
         };
-        planningPanel.Add(timingGroup, plannedLabel, plannedField, plannedHint);
+        planningPanel.Add(timingGroup, scheduledLabel, scheduledField, scheduledHint);
 
         var priorityPanel = new FrameView("Priority")
         {
@@ -126,6 +127,7 @@ public static class AddItemScreen
             X = 1,
             Y = 1,
             Width = Dim.Fill(2),
+            Height = 4,
             Visible = isTask
         };
         priorityPanel.Add(priorityGroup);
@@ -134,7 +136,7 @@ public static class AddItemScreen
         {
             X = 0,
             Y = isTask ? Pos.Bottom(priorityPanel) : isEvent ? Pos.Bottom(planningPanel) : Pos.Bottom(contentPanel),
-            Width = Dim.Percent(58),
+            Width = Dim.Fill(),
             Height = 9
         };
         var descriptionLabel = new Label("Description:")
@@ -161,15 +163,6 @@ public static class AddItemScreen
             Width = Dim.Fill(2)
         };
         detailsPanel.Add(descriptionLabel, descriptionField, tagsLabel, tagsField);
-
-        var examplesPanel = new FrameView("Examples")
-        {
-            X = Pos.Right(detailsPanel),
-            Y = detailsPanel.Y,
-            Width = Dim.Fill(),
-            Height = 9
-        };
-        AddExampleLines(examplesPanel, viewModel.Examples);
 
         var statusLabel = new Label(viewModel.Error is null ? "Status: ready to add" : $"Status: {viewModel.Error}")
         {
@@ -199,15 +192,16 @@ public static class AddItemScreen
             root.Add(priorityPanel);
         }
 
-        root.Add(detailsPanel, examplesPanel, statusLabel, saveButton, cancelButton, footer);
+        root.Add(detailsPanel, statusLabel, saveButton, cancelButton, footer);
 
         void SetTiming(AddItemTimingChoice timing)
         {
             selectedTiming = timing;
             var selectedIndex = timing switch
             {
-                AddItemTimingChoice.FutureDate => 1,
-                AddItemTimingChoice.Backlog => 2,
+            AddItemTimingChoice.Week => 1,
+            AddItemTimingChoice.Month => 2,
+            AddItemTimingChoice.Backlog => 3,
                 _ => 0
             };
 
@@ -224,11 +218,11 @@ public static class AddItemScreen
                 }
             }
 
-            var showPlannedFor = isEvent || timing == AddItemTimingChoice.FutureDate;
-            plannedLabel.Visible = showPlannedFor;
-            plannedField.Visible = showPlannedFor;
-            plannedHint.Visible = showPlannedFor;
-            if (!showPlannedFor && focusArea == FocusArea.PlannedFor)
+            var showSchedule = isEvent;
+            scheduledLabel.Visible = showSchedule;
+            scheduledField.Visible = showSchedule;
+            scheduledHint.Visible = showSchedule;
+            if (!showSchedule && focusArea == FocusArea.ScheduledAt)
             {
                 SetFocusArea(FocusArea.Content);
             }
@@ -271,7 +265,7 @@ public static class AddItemScreen
             draft.Content = contentField.Text?.ToString() ?? string.Empty;
             draft.Description = descriptionField.Text?.ToString() ?? string.Empty;
             draft.TagsText = tagsField.Text?.ToString() ?? string.Empty;
-            draft.PlannedForText = plannedField.Text?.ToString() ?? string.Empty;
+            draft.ScheduledAtText = scheduledField.Text?.ToString() ?? string.Empty;
         }
 
         void UpdateStatus()
@@ -300,8 +294,8 @@ public static class AddItemScreen
                 case FocusArea.Priority:
                     priorityGroup.SetFocus();
                     break;
-                case FocusArea.PlannedFor:
-                    plannedField.SetFocus();
+                case FocusArea.ScheduledAt:
+                    scheduledField.SetFocus();
                     break;
                 case FocusArea.Content:
                     contentField.SetFocus();
@@ -325,13 +319,11 @@ public static class AddItemScreen
         {
             if (isTask)
             {
-                return selectedTiming == AddItemTimingChoice.FutureDate
-                    ? [FocusArea.Content, FocusArea.Timing, FocusArea.PlannedFor, FocusArea.Priority, FocusArea.Description, FocusArea.Tags, FocusArea.Save, FocusArea.Cancel]
-                    : [FocusArea.Content, FocusArea.Timing, FocusArea.Priority, FocusArea.Description, FocusArea.Tags, FocusArea.Save, FocusArea.Cancel];
+                return [FocusArea.Content, FocusArea.Timing, FocusArea.Priority, FocusArea.Description, FocusArea.Tags, FocusArea.Save, FocusArea.Cancel];
             }
 
             return isEvent
-                ? [FocusArea.Content, FocusArea.PlannedFor, FocusArea.Description, FocusArea.Tags, FocusArea.Save, FocusArea.Cancel]
+                ? [FocusArea.Content, FocusArea.ScheduledAt, FocusArea.Description, FocusArea.Tags, FocusArea.Save, FocusArea.Cancel]
                 : [FocusArea.Content, FocusArea.Description, FocusArea.Tags, FocusArea.Save, FocusArea.Cancel];
         }
 
@@ -379,8 +371,9 @@ public static class AddItemScreen
 
             SetTiming(timingGroup.SelectedItem switch
             {
-                1 => AddItemTimingChoice.FutureDate,
-                2 => AddItemTimingChoice.Backlog,
+                1 => AddItemTimingChoice.Week,
+                2 => AddItemTimingChoice.Month,
+                3 => AddItemTimingChoice.Backlog,
                 _ => AddItemTimingChoice.Today
             });
         };
@@ -424,15 +417,15 @@ public static class AddItemScreen
                     args.Handled = true;
                     break;
                 case Key.CursorUp when isTask && focusArea == FocusArea.Timing:
-                    timingGroup.SelectedItem = timingGroup.SelectedItem <= 0 ? 2 : timingGroup.SelectedItem - 1;
+                    timingGroup.SelectedItem = timingGroup.SelectedItem <= 0 ? 3 : timingGroup.SelectedItem - 1;
                     args.Handled = true;
                     break;
                 case Key.CursorDown when isTask && focusArea == FocusArea.Timing:
-                    timingGroup.SelectedItem = timingGroup.SelectedItem >= 2 ? 0 : timingGroup.SelectedItem + 1;
+                    timingGroup.SelectedItem = timingGroup.SelectedItem >= 3 ? 0 : timingGroup.SelectedItem + 1;
                     args.Handled = true;
                     break;
                 case Key.Space when isTask && focusArea == FocusArea.Timing:
-                    timingGroup.SelectedItem = timingGroup.SelectedItem >= 2 ? 0 : timingGroup.SelectedItem + 1;
+                    timingGroup.SelectedItem = timingGroup.SelectedItem >= 3 ? 0 : timingGroup.SelectedItem + 1;
                     args.Handled = true;
                     break;
                 case Key.CursorUp when isTask && focusArea == FocusArea.Priority:
@@ -470,29 +463,10 @@ public static class AddItemScreen
             }
         };
 
-        SetTiming(isEvent ? AddItemTimingChoice.FutureDate : AddItemTimingChoice.Today);
+        SetTiming(AddItemTimingChoice.Today);
         SetPriority(Priority.None);
         SetFocusArea(FocusArea.Content);
         UpdateStatus();
     }
 
-    private static void AddExampleLines(FrameView panel, IReadOnlyList<string> examples)
-    {
-        var header = new Label("Examples:")
-        {
-            X = 1,
-            Y = 1
-        };
-        panel.Add(header);
-
-        for (var index = 0; index < examples.Count; index++)
-        {
-            panel.Add(new Label($"  {examples[index]}")
-            {
-                X = 1,
-                Y = index + 2,
-                Width = Dim.Fill(2)
-            });
-        }
-    }
 }

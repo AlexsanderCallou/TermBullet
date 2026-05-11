@@ -9,7 +9,6 @@ public sealed record CreateItemResult(
     ItemStatus Status,
     ItemCollection Collection,
     Priority Priority,
-    DateOnly? PlannedFor,
     DateTimeOffset? ScheduledAt,
     int Version,
     DateTimeOffset CreatedAt)
@@ -23,7 +22,6 @@ public sealed record CreateItemResult(
             item.Status,
             item.Collection,
             item.Priority,
-            item.PlannedFor,
             item.ScheduledAt,
             item.Version,
             item.CreatedAt);

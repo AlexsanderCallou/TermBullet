@@ -1,10 +1,8 @@
 using TermBullet.Services.Clock;
 using TermBullet.Services.Ids;
-using TermBullet.Services.DataTransfer;
 using TermBullet.Services.History;
 using System.Text;
 using TermBullet.Application.Configuration;
-using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Repositories.Interfaces;
@@ -94,28 +92,33 @@ public sealed class TermBulletItemCommandsCliTests
     }
 
     [Fact]
-    public async Task InvokeAsync_runs_week_and_backlog_commands()
+    public async Task InvokeAsync_runs_week_month_and_backlog_commands()
     {
         var repository = new FakeItemRepository();
         repository.Seed(CreateItemResult("t-0426-1", ItemType.Task, ItemCollection.Week, ItemStatus.Open, "Week item"));
-        repository.Seed(CreateItemResult("t-0426-2", ItemType.Task, ItemCollection.Backlog, ItemStatus.Open, "Backlog item"));
+        repository.Seed(CreateItemResult("t-0426-2", ItemType.Task, ItemCollection.Month, ItemStatus.Open, "Month item"));
+        repository.Seed(CreateItemResult("t-0426-3", ItemType.Task, ItemCollection.Backlog, ItemStatus.Open, "Backlog item"));
         var weekApp = CreateApp(repository);
+        var monthApp = CreateApp(repository);
         var backlogApp = CreateApp(repository);
 
         var weekExitCode = await weekApp.App.InvokeAsync(["week"]);
+        var monthExitCode = await monthApp.App.InvokeAsync(["month"]);
         var backlogExitCode = await backlogApp.App.InvokeAsync(["backlog"]);
 
         Assert.Equal(0, weekExitCode);
+        Assert.Equal(0, monthExitCode);
         Assert.Equal(0, backlogExitCode);
         Assert.Contains("Week item", weekApp.Output.ToString());
         Assert.DoesNotContain("Backlog item", weekApp.Output.ToString());
+        Assert.Contains("Month item", monthApp.Output.ToString());
+        Assert.DoesNotContain("Week item", monthApp.Output.ToString());
         Assert.Contains("Backlog item", backlogApp.Output.ToString());
     }
 
     private static TestCliApp CreateApp(FakeItemRepository repository)
     {
         var settingsStore = new FakeSettingsStore();
-        var dataTransferService = new FakeDataTransferService();
         var historyService = new FakeHistoryMaintenanceService();
         var output = new StringWriter(new StringBuilder());
         var error = new StringWriter(new StringBuilder());
@@ -126,8 +129,6 @@ public sealed class TermBulletItemCommandsCliTests
             new GetConfigurationUseCase(settingsStore),
             new SetConfigurationUseCase(settingsStore),
             new GetConfigurationPathUseCase(settingsStore),
-            new ExportDataUseCase(dataTransferService),
-            new ImportDataUseCase(dataTransferService),
             new ClearStoredHistoryUseCase(historyService, new FixedClock(Now)),
             output,
             error,
@@ -136,6 +137,7 @@ public sealed class TermBulletItemCommandsCliTests
             new ShowItemUseCase(repository),
             new GetTodayItemsUseCase(repository),
             new GetWeekItemsUseCase(repository),
+            new GetMonthItemsUseCase(repository),
             new GetBacklogItemsUseCase(repository)),
             output,
             error);
@@ -158,7 +160,6 @@ public sealed class TermBulletItemCommandsCliTests
             collection,
             Priority.None,
             [],
-            null,
             null,
             1,
             Now,
@@ -250,13 +251,6 @@ public sealed class TermBulletItemCommandsCliTests
 
         public Task SetAsync(string key, string value, string profile = "default", CancellationToken cancellationToken = default)
             => Task.CompletedTask;
-    }
-
-    private sealed class FakeDataTransferService : IDataTransferService
-    {
-        public Task ExportAsync(string outputPath, CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task ImportAsync(string inputPath, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class FakeHistoryMaintenanceService : IHistoryMaintenanceService

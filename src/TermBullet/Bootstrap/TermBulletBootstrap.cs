@@ -1,13 +1,11 @@
 using TermBullet.Services.Clock;
 using TermBullet.Application.Configuration;
-using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Repositories.Interfaces;
 using TermBullet.Application.Startup;
 using TermBullet.Application.Tags;
 using TermBullet.Cli;
-using TermBullet.Services.DataTransfer;
 using TermBullet.Services.Ids;
 using TermBullet.Repositories.Json;
 using TermBullet.Tui;
@@ -21,7 +19,7 @@ public static class TermBulletBootstrap
         TextWriter output,
         TextWriter error)
     {
-        var (clock, itemRepository, tagCatalogRepository, dataTransferService, historyMaintenanceService, settingsStore) =
+        var (clock, itemRepository, tagCatalogRepository, historyMaintenanceService, settingsStore) =
             CreateSharedServices(projectRootPath);
         var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
 
@@ -30,8 +28,6 @@ public static class TermBulletBootstrap
             new GetConfigurationUseCase(settingsStore),
             new SetConfigurationUseCase(settingsStore),
             new GetConfigurationPathUseCase(settingsStore),
-            new ExportDataUseCase(dataTransferService),
-            new ImportDataUseCase(dataTransferService),
             new ClearStoredHistoryUseCase(historyMaintenanceService, clock),
             output,
             error,
@@ -40,6 +36,7 @@ public static class TermBulletBootstrap
             new ShowItemUseCase(itemRepository),
             new GetTodayItemsUseCase(itemRepository),
             new GetWeekItemsUseCase(itemRepository),
+            new GetMonthItemsUseCase(itemRepository),
             new GetBacklogItemsUseCase(itemRepository),
             new EditItemUseCase(itemRepository, clock),
             new MarkDoneItemUseCase(itemRepository, clock),
@@ -56,19 +53,21 @@ public static class TermBulletBootstrap
 
     public static TermBulletTuiApp CreateTuiApp(string projectRootPath)
     {
-        var (clock, itemRepository, tagCatalogRepository, _, _, settingsStore) = CreateSharedServices(projectRootPath);
+        var (clock, itemRepository, tagCatalogRepository, _, settingsStore) = CreateSharedServices(projectRootPath);
         var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
 
         return new TermBulletTuiApp(
             new GetTodayItemsUseCase(itemRepository),
             new GetBacklogItemsUseCase(itemRepository),
             new GetWeekItemsUseCase(itemRepository),
+            new GetMonthItemsUseCase(itemRepository),
             new ListItemsUseCase(itemRepository),
             new SearchItemsUseCase(itemRepository),
             new ListConfigurationUseCase(settingsStore),
             new ListTagsUseCase(tagCatalogRepository),
             new CreateTagUseCase(tagCatalogRepository, clock),
             new CreateItemUseCase(itemRepository, clock, new GuidIdGenerator()),
+            new EditItemUseCase(itemRepository, clock),
             new MarkDoneItemUseCase(itemRepository, clock),
             new CancelItemUseCase(itemRepository, clock),
             new MigrateItemUseCase(itemRepository, clock),
@@ -80,7 +79,6 @@ public static class TermBulletBootstrap
         IClock Clock,
         JsonItemRepository ItemRepository,
         JsonTagCatalogRepository TagCatalogRepository,
-        JsonDataTransferService DataTransferService,
         JsonHistoryMaintenanceService HistoryMaintenanceService,
         JsonSettingsRepository SettingsStore)
         CreateSharedServices(string projectRootPath)
@@ -91,13 +89,11 @@ public static class TermBulletBootstrap
         var indexService = new JsonIndexService(projectRootPath, fileStore);
         var itemRepository = new JsonItemRepository(clock, pathResolver, fileStore, indexService);
         var tagCatalogRepository = new JsonTagCatalogRepository(projectRootPath, fileStore);
-        var dataTransferService = new JsonDataTransferService(
-            projectRootPath, fileStore, new JsonIndexService(projectRootPath, fileStore));
         var historyMaintenanceService = new JsonHistoryMaintenanceService(
             projectRootPath, pathResolver, fileStore);
         var settingsStore = new JsonSettingsRepository(projectRootPath, fileStore);
 
-        return (clock, itemRepository, tagCatalogRepository, dataTransferService, historyMaintenanceService, settingsStore);
+        return (clock, itemRepository, tagCatalogRepository, historyMaintenanceService, settingsStore);
     }
 
     private sealed class SystemClock : IClock

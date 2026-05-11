@@ -12,9 +12,11 @@ public static class SearchScreen
         Action onBack,
         Action onQuit,
         Func<string, Task> onSearch,
+        Action<ItemDisplayRow?> onSelectedItemChanged,
+        Action<ItemDisplayRow?> onEditSelected,
         Action<ItemDisplayRow?> onOpenSelected)
     {
-        var topBar = new Label(" TermBullet \u2500 Search \u2500 data:local \u2500 ai:off \u2500 sync:idle \u2500 mode:search")
+        var topBar = new Label(" TermBullet - Search")
         {
             X = 0, Y = 0, Width = Dim.Fill()
         };
@@ -34,7 +36,7 @@ public static class SearchScreen
             X = 0, Y = 2, Width = Dim.Fill()
         };
 
-        var footer = new Label(" / search  Enter open  Ctrl+e edit  Ctrl+x done  Tab/1-2 focus  ? help  Esc back")
+        var footer = new Label(" / search  Enter open  e edit  Tab/1-2 focus  ? help  Esc back")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
@@ -75,6 +77,7 @@ public static class SearchScreen
 
         root.Add(topBar, queryLabel, queryField, separator, resultsPanel, previewPanel, footer);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
+        onSelectedItemChanged(viewModel.SelectedResult);
 
         queryField.KeyPress += args =>
         {
@@ -128,6 +131,10 @@ public static class SearchScreen
                     onOpenSelected(viewModel.SelectedResult);
                     args.Handled = true;
                     break;
+                case Key e when e == (Key)'e':
+                    onEditSelected(viewModel.SelectedResult);
+                    args.Handled = true;
+                    break;
             }
         };
 
@@ -140,6 +147,7 @@ public static class SearchScreen
                 for (var i = 0; i < -diff; i++) viewModel.SelectPreviousResult();
 
             TuiScreenUtilities.RefreshListView(previewList, BuildPreviewLines(viewModel.SelectedResult));
+            onSelectedItemChanged(viewModel.SelectedResult);
         };
         resultsList.KeyPress += args =>
         {

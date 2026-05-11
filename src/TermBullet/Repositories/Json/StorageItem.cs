@@ -31,9 +31,6 @@ internal sealed class StorageItem
     [JsonPropertyName("tags")]
     public List<string> Tags { get; set; } = [];
 
-    [JsonPropertyName("planned_for")]
-    public DateOnly? PlannedFor { get; set; }
-
     [JsonPropertyName("scheduled_at")]
     public DateTimeOffset? ScheduledAt { get; set; }
 
@@ -51,10 +48,4 @@ internal sealed class StorageItem
 
     [JsonPropertyName("cancelled_at")]
     public DateTimeOffset? CancelledAt { get; set; }
-
-    [JsonPropertyName("migrated_at")]
-    public DateTimeOffset? MigratedAt { get; set; }
-
-    [JsonPropertyName("migration")]
-    public StorageMigration? Migration { get; set; }
 }

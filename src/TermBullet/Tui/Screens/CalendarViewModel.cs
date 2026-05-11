@@ -31,7 +31,7 @@ public sealed class CalendarViewModel
             cells.Add(new CalendarDayCell
             {
                 Date = date,
-                TaskCount = rows.Count(row => IsTaskOnDate(row, date)),
+                TaskCount = 0,
                 EventCount = rows.Count(row => IsEventOnDate(row, date)),
                 IsToday = date == today,
                 IsSelected = date == selectedDate
@@ -39,7 +39,7 @@ public sealed class CalendarViewModel
         }
 
         var selectedItems = rows
-            .Where(row => IsTaskOnDate(row, selectedDate) || IsEventOnDate(row, selectedDate))
+            .Where(row => IsEventOnDate(row, selectedDate))
             .OrderBy(row => row.Type.Equals("event", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(row => row.ScheduledAt)
             .ThenBy(row => row.PublicRef)
@@ -59,10 +59,6 @@ public sealed class CalendarViewModel
 
     public static DateOnly MoveSelectedMonth(DateOnly selectedDate, int months) =>
         selectedDate.AddMonths(months);
-
-    private static bool IsTaskOnDate(ItemDisplayRow row, DateOnly date) =>
-        row.Type.Equals("task", StringComparison.OrdinalIgnoreCase)
-        && row.PlannedFor == date;
 
     private static bool IsEventOnDate(ItemDisplayRow row, DateOnly date) =>
         row.Type.Equals("event", StringComparison.OrdinalIgnoreCase)

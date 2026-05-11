@@ -19,11 +19,10 @@ Complete:
 - local JSON index rebuild and automatic update after writes;
 - local data path reporting;
 - delete and clear-history use cases;
-- export/import use cases and services;
 - data path use case;
-- CLI command flows for item lifecycle, collections, search, path, export,
-  import, and history clear;
-- migration metadata persistence;
+- CLI command flows for item lifecycle, collections, search, path, and history
+  clear;
+- simplified in-place migration between collections;
 - repository/schema conformance for optional fields;
 - TUI MVP with Main Dashboard, Search, Add Item, Notes, Calendar, Tags,
   contextual help, focus updates, search state, add flow, and dashboard
@@ -34,8 +33,7 @@ Complete:
 - TUI Week, Backlog, and Forgotten review views;
 - task, note, and event specific Add Item flows;
 - quick task capture for today's tasks;
-- official task status model aligned to `open`, `done`, `cancelled`, and
-  `migrate`;
+- official task status model aligned to `open`, `done`, and `cancelled`;
 - manual TUI smoke validation;
 - baseline documentation.
 
@@ -47,8 +45,7 @@ Still missing for the experimental MVP:
 
 Deliver a local-first offline terminal planner with CLI, TUI MVP, tasks, notes,
 events, Today, Week, Backlog, Forgotten review, monthly JSON persistence, local
-JSON index, search, editing, migration, movement, data path discovery, export,
-and import.
+JSON index, search, editing, migration, movement, and data path discovery.
 
 ## Milestone Status
 
@@ -59,7 +56,7 @@ and import.
 | 2 - Application Use Cases | Complete |
 | 3 - JSON Repositories | Complete |
 | 4 - CLI MVP | Complete |
-| 5 - Export, Import, Data Path | Complete |
+| 5 - Data Path and History | Complete |
 | 6 - TUI MVP | Complete |
 | 7 - V1 Release Candidate | Partial |
 
@@ -67,12 +64,12 @@ Milestone responsibilities:
 
 - **0 Scaffold:** solution, projects, smoke test, build/test pipeline.
 - **1 Domain:** item model, status/priority/collection rules, public refs.
-- **2 Application:** item lifecycle, collections, search, data path, export/import
-  use cases.
+- **2 Application:** item lifecycle, collections, search, and data path use
+  cases.
 - **3 Repositories:** monthly JSON files, safe writes, backup/recovery, local
-  index, data path reporting, migration metadata.
+  index, data path reporting, and in-place migration history.
 - **4 CLI:** official command tree from [CLI.md](CLI.md).
-- **5 Portability/path:** export, import, path, history clear.
+- **5 Data/path:** path and history clear.
 - **6 TUI MVP:** Main Dashboard, Search, Add Item, Item Detail, Migrate Item,
   Planning placeholder, Week, Backlog, Forgotten, Notes, Calendar, and Tags
   using [screens.md](screens.md).
@@ -110,7 +107,6 @@ The current TUI visual reference is [screens.md](screens.md).
 - [x] Implement validated Tags and Create Tag flow
 - [ ] Decide whether the CLI needs a derived `forgotten` command
 - [ ] Expose per-item JSON history through Application contracts for Item Detail
-- [ ] Import/export validation
 - [ ] JSON file backup/recovery validation
 - [ ] Cross-platform smoke testing where practical
 - [ ] Release notes draft
@@ -118,7 +114,6 @@ The current TUI visual reference is [screens.md](screens.md).
 - [ ] Regression tests for public ref sequence behavior
 - [ ] Regression tests for CLI and Application consistency
 - [ ] Regression tests for persistence round trip
-- [ ] Regression tests for export/import round trip
 
 Already done for Milestone 7:
 
@@ -132,10 +127,12 @@ Already done for Milestone 7:
 - [x] Ensure README and docs reflect actual behavior
 - [x] Add initial TUI Item Detail screen
 - [x] Add initial TUI Migrate Item flow
-- [x] Replace old task status model with `open`, `done`, `cancelled`, and
-      `migrate`
-- [x] Add task `planned_for` persistence, indexing, export, and import support
-- [x] Refactor manual migration to require `--date <yyyy-mm-dd>` or `--backlog`
+- [x] Replace old task status model with `open`, `done`, and `cancelled`
+- [x] Remove task planning dates and use task collections for Today, Week,
+      Month, and Backlog
+- [x] Refactor manual migration to require `--collection <today|week|month|backlog>`
+- [x] Refactor migrate to move the same task between collections without
+      duplicating items
 - [x] Add TUI coverage for the Forgotten review flow
 
 ## Manual TUI Smoke Checklist

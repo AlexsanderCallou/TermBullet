@@ -1,9 +1,7 @@
 using TermBullet.Services.Clock;
-using TermBullet.Services.DataTransfer;
 using TermBullet.Services.History;
 using System.Text;
 using TermBullet.Application.Configuration;
-using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Repositories.Interfaces;
@@ -47,7 +45,6 @@ public sealed class TermBulletSearchCommandCliTests
     private static TestCliApp CreateApp(FakeItemRepository repository)
     {
         var settingsStore = new FakeSettingsStore();
-        var dataTransferService = new FakeDataTransferService();
         var historyService = new FakeHistoryMaintenanceService();
         var output = new StringWriter(new StringBuilder());
         var error = new StringWriter(new StringBuilder());
@@ -58,11 +55,10 @@ public sealed class TermBulletSearchCommandCliTests
                 new GetConfigurationUseCase(settingsStore),
                 new SetConfigurationUseCase(settingsStore),
                 new GetConfigurationPathUseCase(settingsStore),
-                new ExportDataUseCase(dataTransferService),
-                new ImportDataUseCase(dataTransferService),
                 new ClearStoredHistoryUseCase(historyService, new FixedClock(Now)),
                 output,
                 error,
+                null,
                 null,
                 null,
                 null,
@@ -95,7 +91,6 @@ public sealed class TermBulletSearchCommandCliTests
             ItemCollection.Today,
             Priority.None,
             [tag],
-            null,
             null,
             1,
             Now,
@@ -162,13 +157,6 @@ public sealed class TermBulletSearchCommandCliTests
 
         public Task SetAsync(string key, string value, string profile = "default", CancellationToken cancellationToken = default)
             => Task.CompletedTask;
-    }
-
-    private sealed class FakeDataTransferService : IDataTransferService
-    {
-        public Task ExportAsync(string outputPath, CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public Task ImportAsync(string inputPath, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class FakeHistoryMaintenanceService : IHistoryMaintenanceService

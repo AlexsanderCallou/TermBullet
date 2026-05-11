@@ -1,58 +1,40 @@
 using TermBullet.Application.Items;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Tui.Screens;
 
 public sealed class MigrateItemViewModel
 {
-    private MigrateItemViewModel(
-        ItemDisplayRow item,
-        bool dateSelected,
-        DateOnly? plannedFor)
+    private MigrateItemViewModel(ItemDisplayRow item, ItemCollection destinationCollection)
     {
         Item = item;
-        DateSelected = dateSelected;
-        PlannedFor = plannedFor;
+        DestinationCollection = destinationCollection;
         ItemLines =
         [
             $"ref: {item.PublicRef}",
             $"content: {item.Content}",
             $"status: {item.Status}",
             $"collection: {item.Collection}",
-            $"planned_for: {(item.PlannedFor is null ? "-" : item.PlannedFor.Value.ToString("yyyy-MM-dd"))}",
             $"priority: {item.Priority}",
             $"tags: {(item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "-")}"
         ];
-        DestinationLines = dateSelected
-            ?
-            [
-                "(x) Date",
-                $"    planned_for: {plannedFor:yyyy-MM-dd}",
-                "( ) Backlog"
-            ]
-            :
-            [
-                "( ) Date",
-                "    planned_for: -",
-                "(x) Backlog"
-            ];
-        ResultLines = dateSelected
-            ?
-            [
-                $"original: {item.PublicRef} -> migrate",
-                $"new task: open at {plannedFor:yyyy-MM-dd}"
-            ]
-            :
-            [
-                $"original: {item.PublicRef} -> migrate",
-                "new task: open in backlog"
-            ];
+        DestinationLines =
+        [
+            FormatDestinationLine(ItemCollection.Today),
+            FormatDestinationLine(ItemCollection.Week),
+            FormatDestinationLine(ItemCollection.Month),
+            FormatDestinationLine(ItemCollection.Backlog)
+        ];
+        ResultLines =
+        [
+            $"{item.PublicRef}: {item.Collection} -> {FormatCollection(destinationCollection)}",
+            "same task, same ref"
+        ];
     }
 
     public ItemDisplayRow Item { get; }
 
-    public bool DateSelected { get; }
-
-    public DateOnly? PlannedFor { get; }
+    public ItemCollection DestinationCollection { get; }
 
     public IReadOnlyList<string> ItemLines { get; }
 
@@ -60,38 +42,34 @@ public sealed class MigrateItemViewModel
 
     public IReadOnlyList<string> ResultLines { get; }
 
-    public static MigrateItemViewModel ForDate(ItemResult item, DateOnly plannedFor) =>
-        ForDate(ItemDisplayRow.From(item), plannedFor);
+    public static MigrateItemViewModel ForCollection(ItemResult item, ItemCollection collection) =>
+        ForCollection(ItemDisplayRow.From(item), collection);
 
-    public static MigrateItemViewModel ForDate(ItemDisplayRow item, DateOnly plannedFor) =>
-        new(item, dateSelected: true, plannedFor);
+    public static MigrateItemViewModel ForCollection(ItemDisplayRow item, ItemCollection collection) =>
+        new(item, collection);
 
     public static MigrateItemViewModel ForBacklog(ItemResult item) =>
-        ForBacklog(ItemDisplayRow.From(item));
+        ForCollection(ItemDisplayRow.From(item), ItemCollection.Backlog);
 
     public static MigrateItemViewModel ForBacklog(ItemDisplayRow item) =>
-        new(item, dateSelected: false, plannedFor: null);
+        ForCollection(item, ItemCollection.Backlog);
 
-    public MigrateItemViewModel ToggleDestination()
-    {
-        if (DateSelected)
-        {
-            return ForBacklog(Item);
-        }
-
-        return ForDate(Item, PlannedFor ?? DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
-    }
-
-    public MigrateItemViewModel WithPlannedFor(DateOnly plannedFor) =>
-        ForDate(Item, plannedFor);
+    public MigrateItemViewModel WithDestination(ItemCollection collection) =>
+        ForCollection(Item, collection);
 
     public MigrateItemRequest BuildRequest() =>
         new()
         {
             PublicRef = Item.PublicRef,
-            DestinationCollection = DateSelected
-                ? TermBullet.Domain.Items.ItemCollection.Week
-                : TermBullet.Domain.Items.ItemCollection.Backlog,
-            PlannedFor = DateSelected ? PlannedFor : null
+            DestinationCollection = DestinationCollection
         };
+
+    private string FormatDestinationLine(ItemCollection collection)
+    {
+        var selected = DestinationCollection == collection ? "x" : " ";
+        return $"({selected}) {FormatCollection(collection)}";
+    }
+
+    private static string FormatCollection(ItemCollection collection) =>
+        collection.ToString().ToLowerInvariant();
 }

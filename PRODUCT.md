@@ -22,8 +22,8 @@ developers and technical users who prefer fast local tools.
 V1 delivers the offline core:
 
 - tasks, notes, and events;
-- Today, Week, and Backlog collections;
-- Forgotten as a derived review list for unresolved past planned tasks;
+- Today, Week, Month, and Backlog collections;
+- Forgotten as a derived review list for unresolved tasks from previous months;
 - CLI;
 - TUI MVP;
 - local monthly JSON persistence;
@@ -31,8 +31,7 @@ V1 delivers the offline core:
 - search;
 - basic editing;
 - item migration and movement;
-- local data path discovery;
-- basic export and import.
+- local data path discovery.
 
 V1 does not include:
 
@@ -61,7 +60,6 @@ Every relevant item has:
 - optional description;
 - status;
 - collection;
-- planned date when it is a dated task;
 - scheduled date/time when it is an event;
 - task priority;
 - tags;
@@ -83,32 +81,33 @@ Official task statuses in V1:
 - `open`
 - `done`
 - `cancelled`
-- `migrate`
 
-`migrate` means the task was intentionally moved out of its previous planned
-placement. The destination remains executable as an open task.
+`migrate` is an action, not a status. It moves the same open task to another
+collection while preserving the internal ID and public ref.
 
-Tasks created for today are planned for today by default. A task should only get
-a future planned date when the user intentionally creates or moves it to that
-date. Backlog tasks may keep `planned_for` as `null`.
+Tasks are planned by collection, not by date. Task creation chooses `today`,
+`week`, `month`, or `backlog`. Dates belong only to events through
+`scheduled_at`.
 
-Forgotten is the review area for open tasks that were planned for a previous
-day and were not done, cancelled, or marked migrate. It is derived from item
-state and dates, not a persisted item collection.
+Forgotten is the review area for open tasks from previous monthly files that
+were not done or cancelled. It is derived from item state and
+public-ref/monthly-file history, not a persisted item collection.
 
-Operational views stay focused on the active period: Today, Week, and Calendar
+Operational views stay focused on the active period: Today, Week, Month, and Calendar
 use current-month data for execution. Forgotten and Search may read across all
 monthly files because they are review and lookup surfaces, not automatic
 planning flows.
 
 Manual migration must always declare the destination:
 
-- migrate to a specific date;
-- migrate to Backlog.
+- `today`;
+- `week`;
+- `month`;
+- `backlog`.
 
-When a task is moved by migration, the original item stays in the JSON with status
-`migrate`. A new open task is created at the destination and records which item
-it came from.
+When a task is migrated, the same item changes `collection`, remains `open`,
+and keeps the same internal ID and public ref. History records only the
+collection change.
 
 ## Public Refs
 
@@ -138,11 +137,8 @@ Rules:
 
 - sequence is independent by type and month/year;
 - public refs are persisted and never reused inside the same period;
-- migration source items preserve their public ref;
-- new migration destination items get their own public ref and record the source
-  ref;
-- internal ID remains the real identity for persistence, import/export, and
-  future sync.
+- migrated items preserve their public ref;
+- internal ID remains the real identity for persistence and future sync.
 
 ## Interfaces
 
@@ -155,6 +151,7 @@ The TUI is documented in [screens.md](screens.md). The active MVP scope is:
 - Item Detail;
 - Planning placeholder;
 - Week View;
+- Month View;
 - Backlog Triage;
 - Forgotten Review;
 - Notes;
@@ -176,17 +173,12 @@ Deferred TUI screens:
 
 - CLI and TUI MVP;
 - tasks, notes, and events;
-- Today, Week, and Backlog collections;
+- Today, Week, Month, and Backlog collections;
 - Forgotten review;
 - Week view;
 - monthly JSON files;
 - local JSON index;
-- export/import;
 - readable public refs.
-
-Import is for restoring or moving existing TermBullet JSON files into a new
-installation. It is not a merge feature and must not import over an active local
-data set.
 
 ### V2 - AI Planning
 
@@ -234,6 +226,5 @@ V1 is adequate when:
 3. CLI manipulates items without opening the TUI;
 4. tasks, notes, and events can be created, listed, edited, and changed;
 5. public refs follow the official format;
-6. basic export and import work;
-7. architecture is ready for optional AI, calendar, and sync;
-8. documentation is English-first and open-source ready.
+6. architecture is ready for optional AI, calendar, and sync;
+7. documentation is English-first and open-source ready.

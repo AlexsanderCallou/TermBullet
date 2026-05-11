@@ -42,7 +42,6 @@ public sealed class ItemDetailViewModel
     public static ItemDetailViewModel FromRow(ItemDisplayRow item)
     {
         var tags = item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "-";
-        var plannedFor = item.PlannedFor is null ? "-" : item.PlannedFor.Value.ToString("yyyy-MM-dd");
         var scheduledAt = item.ScheduledAt is null ? "-" : FormatInstant(item.ScheduledAt.Value);
         return new ItemDetailViewModel(
             item.PublicRef,
@@ -58,18 +57,14 @@ public sealed class ItemDetailViewModel
             ],
             [
                 $"collection: {item.Collection}",
-                $"planned_for: {plannedFor}",
                 $"scheduled_at: {scheduledAt}",
                 $"priority: {item.Priority}",
                 $"tags: {tags}"
             ],
             BuildContentLines(item),
             [
-                "migrated_from_ref: -",
-                "migrated_from_id: -",
-                "migrated_to_ref: -",
-                "migrated_to_id: -",
-                "migrated_at: -"
+                "migrate changes this task's collection in place",
+                "id and public ref stay the same"
             ],
             [
                 "history not loaded by the current Application contracts",

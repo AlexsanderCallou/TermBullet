@@ -120,7 +120,7 @@ The full command tree is documented in [CLI.md](CLI.md).
 V1 delivers:
 
 - tasks, notes, and events;
-- Today, Week, and Backlog collections;
+- Today, Week, Month, and Backlog collections;
 - Forgotten review;
 - Week View;
 - Notes, Calendar, and Tags views;
@@ -130,8 +130,7 @@ V1 delivers:
 - search;
 - basic editing;
 - migration and movement;
-- local data path discovery;
-- export and import.
+- local data path discovery.
 
 V1 does not include AI execution, Google Calendar, machine sync, cloud accounts,
 or a PostgreSQL runtime dependency.

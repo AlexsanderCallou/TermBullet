@@ -63,7 +63,6 @@ public sealed class TagsViewModelTests
             Priority = "none",
             Collection = "today",
             Tags = tags,
-            PlannedFor = null,
             ScheduledAt = null,
             Version = 1,
             CreatedAt = new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero),

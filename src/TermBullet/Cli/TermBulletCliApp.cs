@@ -1,6 +1,5 @@
 using System.CommandLine;
 using TermBullet.Application.Configuration;
-using TermBullet.Application.DataTransfer;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Application.Startup;
@@ -13,8 +12,6 @@ public sealed class TermBulletCliApp(
     GetConfigurationUseCase getConfigurationUseCase,
     SetConfigurationUseCase setConfigurationUseCase,
     GetConfigurationPathUseCase getConfigurationPathUseCase,
-    ExportDataUseCase exportDataUseCase,
-    ImportDataUseCase importDataUseCase,
     ClearStoredHistoryUseCase clearStoredHistoryUseCase,
     TextWriter output,
     TextWriter error,
@@ -23,6 +20,7 @@ public sealed class TermBulletCliApp(
     ShowItemUseCase? showItemUseCase = null,
     GetTodayItemsUseCase? getTodayItemsUseCase = null,
     GetWeekItemsUseCase? getWeekItemsUseCase = null,
+    GetMonthItemsUseCase? getMonthItemsUseCase = null,
     GetBacklogItemsUseCase? getBacklogItemsUseCase = null,
     EditItemUseCase? editItemUseCase = null,
     MarkDoneItemUseCase? markDoneItemUseCase = null,
@@ -122,6 +120,17 @@ public sealed class TermBulletCliApp(
                 cancellationToken));
         }
 
+        if (getMonthItemsUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildCollectionCommand(
+                "month",
+                "Show month items.",
+                getMonthItemsUseCase.ExecuteAsync,
+                standardOutput,
+                standardError,
+                cancellationToken));
+        }
+
         if (getBacklogItemsUseCase is not null)
         {
             rootCommand.Subcommands.Add(BuildCollectionCommand(
@@ -195,59 +204,10 @@ public sealed class TermBulletCliApp(
             rootCommand.Subcommands.Add(BuildSearchCommand(standardOutput, standardError, cancellationToken));
         }
 
-        rootCommand.Subcommands.Add(BuildExportCommand(standardOutput, standardError, cancellationToken));
-        rootCommand.Subcommands.Add(BuildImportCommand(standardOutput, standardError, cancellationToken));
         rootCommand.Subcommands.Add(BuildConfigCommand(standardOutput, standardError, cancellationToken));
         rootCommand.Subcommands.Add(BuildHistoryCommand(standardOutput, standardError, cancellationToken));
 
         return rootCommand;
-    }
-
-    private Command BuildExportCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken)
-    {
-        var formatOption = new Option<string>("--format")
-        {
-            Description = "Format: json",
-            DefaultValueFactory = _ => "json"
-        };
-        var outputOption = new Option<string>("--output")
-        {
-            Description = "Output file or directory",
-            Required = true
-        };
-
-        var command = new Command("export", "Export local data.")
-        {
-            formatOption,
-            outputOption
-        };
-
-        command.SetAction(async parseResult =>
-        {
-            try
-            {
-                var format = parseResult.GetValue(formatOption) ?? "json";
-                var outputPath = parseResult.GetValue(outputOption)
-                    ?? throw new InvalidOperationException("Output path is required.");
-
-                await exportDataUseCase.ExecuteAsync(
-                    new ExportDataRequest(outputPath, format),
-                    cancellationToken);
-
-                await standardOutput.WriteLineAsync(outputPath);
-                return 0;
-            }
-            catch (Exception exception)
-            {
-                await standardError.WriteLineAsync(exception.Message);
-                return 1;
-            }
-        });
-
-        return command;
     }
 
     private Command BuildAddCommand(
@@ -277,7 +237,7 @@ public sealed class TermBulletCliApp(
         };
         var collectionOption = new Option<string?>("--collection")
         {
-            Description = "Collection: today, week, backlog, monthly, archived"
+            Description = "Collection: today, week, month, backlog"
         };
         var tagOption = new Option<string[]>("--tag")
         {
@@ -625,20 +585,15 @@ public sealed class TermBulletCliApp(
         CancellationToken cancellationToken)
     {
         var publicRefArgument = new Argument<string>("ref") { Description = "Public ref" };
-        var dateOption = new Option<string?>("--date")
+        var collectionOption = new Option<string?>("--collection")
         {
-            Description = "Destination planned date in yyyy-mm-dd format"
-        };
-        var backlogOption = new Option<bool>("--backlog")
-        {
-            Description = "Migrate the task to Backlog"
+            Description = "Destination collection: today, week, month, or backlog"
         };
 
-        var command = new Command("migrate", "Migrate a task to a date or Backlog")
+        var command = new Command("migrate", "Migrate a task to a collection")
         {
             publicRefArgument,
-            dateOption,
-            backlogOption
+            collectionOption
         };
 
         command.SetAction(async parseResult =>
@@ -647,37 +602,16 @@ public sealed class TermBulletCliApp(
             {
                 var publicRef = parseResult.GetValue(publicRefArgument)
                     ?? throw new InvalidOperationException("Public ref is required.");
-                var dateValue = parseResult.GetValue(dateOption);
-                var backlog = parseResult.GetValue(backlogOption);
-                var hasDate = !string.IsNullOrWhiteSpace(dateValue);
-
-                if (hasDate == backlog)
-                {
-                    throw new InvalidOperationException(
-                        "Migration requires exactly one destination: --date <yyyy-mm-dd> or --backlog.");
-                }
+                var destination = parseResult.GetValue(collectionOption)
+                    ?? throw new InvalidOperationException("Migration requires --collection <today|week|month|backlog>.");
+                var destinationCollection = ParseCollection(destination)
+                    ?? throw new InvalidOperationException($"Unsupported collection: {destination}.");
 
                 var request = new MigrateItemRequest
                 {
                     PublicRef = publicRef,
-                    DestinationCollection = backlog ? ItemCollection.Backlog : ItemCollection.Week,
-                    PlannedFor = null
+                    DestinationCollection = destinationCollection
                 };
-
-                if (hasDate)
-                {
-                    if (!DateOnly.TryParse(dateValue, out var plannedFor))
-                    {
-                        throw new InvalidOperationException("Date must be in yyyy-mm-dd format.");
-                    }
-
-                    request = new MigrateItemRequest
-                    {
-                        PublicRef = publicRef,
-                        DestinationCollection = ItemCollection.Week,
-                        PlannedFor = plannedFor
-                    };
-                }
 
                 var item = await migrateItemUseCase!.ExecuteAsync(request, cancellationToken);
                 await WriteItemDetailAsync(item, standardOutput);
@@ -787,52 +721,6 @@ public sealed class TermBulletCliApp(
             {
                 var items = await query(cancellationToken);
                 await WriteItemsAsync(items, standardOutput);
-                return 0;
-            }
-            catch (Exception exception)
-            {
-                await standardError.WriteLineAsync(exception.Message);
-                return 1;
-            }
-        });
-
-        return command;
-    }
-
-    private Command BuildImportCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken)
-    {
-        var formatOption = new Option<string>("--format")
-        {
-            Description = "Format: json",
-            DefaultValueFactory = _ => "json"
-        };
-        var inputArgument = new Argument<string>("path")
-        {
-            Description = "Input file"
-        };
-
-        var command = new Command("import", "Import data into the local data directory.")
-        {
-            formatOption,
-            inputArgument
-        };
-
-        command.SetAction(async parseResult =>
-        {
-            try
-            {
-                var format = parseResult.GetValue(formatOption) ?? "json";
-                var inputPath = parseResult.GetValue(inputArgument)
-                    ?? throw new InvalidOperationException("Input path is required.");
-
-                await importDataUseCase.ExecuteAsync(
-                    new ImportDataRequest(inputPath, format),
-                    cancellationToken);
-
-                await standardOutput.WriteLineAsync(inputPath);
                 return 0;
             }
             catch (Exception exception)
@@ -1257,9 +1145,8 @@ public sealed class TermBulletCliApp(
         {
             "today" => ItemCollection.Today,
             "week" => ItemCollection.Week,
+            "month" => ItemCollection.Month,
             "backlog" => ItemCollection.Backlog,
-            "monthly" => ItemCollection.Monthly,
-            "archived" => ItemCollection.Archived,
             _ => throw new ArgumentException($"Unsupported collection: {value}.")
         };
     }
@@ -1276,7 +1163,6 @@ public sealed class TermBulletCliApp(
             "open" => ItemStatus.Open,
             "done" => ItemStatus.Done,
             "cancelled" => ItemStatus.Cancelled,
-            "migrate" => ItemStatus.Migrate,
             _ => throw new ArgumentException($"Unsupported status: {value}.")
         };
     }
