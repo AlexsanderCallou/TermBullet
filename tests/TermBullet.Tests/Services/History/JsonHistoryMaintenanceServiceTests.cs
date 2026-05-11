@@ -99,8 +99,7 @@ public sealed class JsonHistoryMaintenanceServiceTests
                 "content": "Fix authentication flow"
               }
             }
-          ],
-          "settings": {}
+          ]
         }
         """;
 }

@@ -1,65 +1,13 @@
 using TermBullet.Services.Clock;
 using TermBullet.Services.History;
 using System.Text;
-using TermBullet.Application.Configuration;
 using TermBullet.Application.History;
-using TermBullet.Repositories.Interfaces;
 using TermBullet.Cli;
 
 namespace TermBullet.Tests.Cli;
 
 public sealed class TermBulletCliAppTests
 {
-    [Fact]
-    public async Task InvokeAsync_runs_config_list_and_writes_settings()
-    {
-        var dependencies = CreateDependencies();
-        await dependencies.SettingsStore.SetAsync("theme", "dark", "work");
-        var app = CreateApp(dependencies);
-
-        var exitCode = await app.InvokeAsync(["config", "list", "--profile", "work"]);
-
-        Assert.Equal(0, exitCode);
-        Assert.Contains("theme=dark", dependencies.Output.ToString());
-    }
-
-    [Fact]
-    public async Task InvokeAsync_runs_config_get_and_writes_value()
-    {
-        var dependencies = CreateDependencies();
-        await dependencies.SettingsStore.SetAsync("theme", "dark");
-        var app = CreateApp(dependencies);
-
-        var exitCode = await app.InvokeAsync(["config", "get", "theme"]);
-
-        Assert.Equal(0, exitCode);
-        Assert.Contains("dark", dependencies.Output.ToString());
-    }
-
-    [Fact]
-    public async Task InvokeAsync_runs_config_set_and_persists_value()
-    {
-        var dependencies = CreateDependencies();
-        var app = CreateApp(dependencies);
-
-        var exitCode = await app.InvokeAsync(["config", "set", "theme", "dark", "--profile", "work"]);
-
-        Assert.Equal(0, exitCode);
-        Assert.Equal("dark", await dependencies.SettingsStore.GetAsync("theme", "work"));
-    }
-
-    [Fact]
-    public async Task InvokeAsync_runs_config_path_and_writes_store_path()
-    {
-        var dependencies = CreateDependencies();
-        var app = CreateApp(dependencies);
-
-        var exitCode = await app.InvokeAsync(["config", "path"]);
-
-        Assert.Equal(0, exitCode);
-        Assert.Contains(dependencies.SettingsStore.SettingsPath, dependencies.Output.ToString());
-    }
-
     [Fact]
     public async Task InvokeAsync_runs_history_clear_for_specific_month()
     {
@@ -95,7 +43,7 @@ public sealed class TermBulletCliAppTests
             return Task.CompletedTask;
         });
 
-        var exitCode = await app.InvokeAsync(["config", "path"]);
+        var exitCode = await app.InvokeAsync(["history", "clear", "--month", "04_2026", "--force"]);
 
         Assert.Equal(0, exitCode);
         Assert.True(startupCalled);
@@ -111,7 +59,7 @@ public sealed class TermBulletCliAppTests
 
         Assert.Equal(0, exitCode);
         Assert.Contains("TermBullet - Local-First Terminal Planner", dependencies.Output.ToString());
-        Assert.Contains("config", dependencies.Output.ToString());
+        Assert.DoesNotContain("config", dependencies.Output.ToString());
         Assert.DoesNotContain("export", dependencies.Output.ToString());
         Assert.DoesNotContain("import", dependencies.Output.ToString());
         Assert.DoesNotContain("Mostrar", dependencies.Output.ToString(), StringComparison.OrdinalIgnoreCase);
@@ -177,10 +125,6 @@ public sealed class TermBulletCliAppTests
         Func<CancellationToken, Task>? startupAction = null)
     {
         return new TermBulletCliApp(
-            new ListConfigurationUseCase(dependencies.SettingsStore),
-            new GetConfigurationUseCase(dependencies.SettingsStore),
-            new SetConfigurationUseCase(dependencies.SettingsStore),
-            new GetConfigurationPathUseCase(dependencies.SettingsStore),
             new ClearStoredHistoryUseCase(
                 dependencies.HistoryService,
                 new FixedClock(new DateTimeOffset(2026, 4, 23, 12, 0, 0, TimeSpan.Zero))),
@@ -192,57 +136,15 @@ public sealed class TermBulletCliAppTests
     private static TestDependencies CreateDependencies()
     {
         return new TestDependencies(
-            new FakeSettingsStore(),
             new FakeHistoryMaintenanceService(),
             new StringWriter(new StringBuilder()),
             new StringWriter(new StringBuilder()));
     }
 
     private sealed record TestDependencies(
-        FakeSettingsStore SettingsStore,
         FakeHistoryMaintenanceService HistoryService,
         StringWriter Output,
         StringWriter Error);
-
-    private sealed class FakeSettingsStore : ISettingsRepository
-    {
-        private readonly Dictionary<string, Dictionary<string, string>> _profiles =
-            new(StringComparer.OrdinalIgnoreCase)
-            {
-                ["default"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            };
-
-        public string SettingsPath => "C:\\term\\data\\settings.json";
-
-        public Task<string?> GetAsync(string key, string profile = "default", CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(
-                _profiles.TryGetValue(profile, out var values) && values.TryGetValue(key, out var value)
-                    ? value
-                    : null);
-        }
-
-        public Task<IReadOnlyDictionary<string, string>> ListAsync(string profile = "default", CancellationToken cancellationToken = default)
-        {
-            IReadOnlyDictionary<string, string> values =
-                _profiles.TryGetValue(profile, out var profileValues)
-                    ? new Dictionary<string, string>(profileValues, StringComparer.OrdinalIgnoreCase)
-                    : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            return Task.FromResult(values);
-        }
-
-        public Task SetAsync(string key, string value, string profile = "default", CancellationToken cancellationToken = default)
-        {
-            if (!_profiles.TryGetValue(profile, out var values))
-            {
-                values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                _profiles[profile] = values;
-            }
-
-            values[key] = value;
-            return Task.CompletedTask;
-        }
-    }
 
     private sealed class FakeHistoryMaintenanceService : IHistoryMaintenanceService
     {

@@ -1,4 +1,3 @@
-using TermBullet.Application.Configuration;
 using TermBullet.Application.Items;
 using TermBullet.Application.Tags;
 using TermBullet.Repositories.Interfaces;
@@ -12,7 +11,6 @@ public sealed class TuiSnapshotLoader(
     GetBacklogItemsUseCase getBacklogItemsUseCase,
     ListItemsUseCase? listItemsUseCase = null,
     ListTagsUseCase? listTagsUseCase = null,
-    ListConfigurationUseCase? listConfigurationUseCase = null,
     Func<CancellationToken, Task>? startupAction = null)
 {
     private bool _startupCompleted;
@@ -43,13 +41,7 @@ public sealed class TuiSnapshotLoader(
         var tags = listTagsUseCase is not null
             ? await listTagsUseCase.ExecuteAsync(cancellationToken)
             : Array.Empty<TagCatalogResult>();
-        IReadOnlyDictionary<string, string> configuration = new Dictionary<string, string>();
 
-        if (listConfigurationUseCase is not null)
-        {
-            configuration = await listConfigurationUseCase.ExecuteAsync("default", cancellationToken);
-        }
-
-        return new TuiSnapshot(todayItems, weekItems, monthItems, backlogItems, currentItems, allItems, tags, configuration);
+        return new TuiSnapshot(todayItems, weekItems, monthItems, backlogItems, currentItems, allItems, tags);
     }
 }

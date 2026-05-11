@@ -143,8 +143,7 @@ public sealed class JsonItemRepositoryTests
                   "cancelled_at": null
                 }
               ],
-              "history": [],
-              "settings": {}
+              "history": []
             }
             """);
         await repository.AddAsync(CreateItem(
@@ -189,8 +188,7 @@ public sealed class JsonItemRepositoryTests
                   "cancelled_at": null
                 }
               ],
-              "history": [],
-              "settings": {}
+              "history": []
             }
             """);
 
@@ -437,8 +435,7 @@ public sealed class JsonItemRepositoryTests
                   "cancelled_at": null
                 }
               ],
-              "history": [],
-              "settings": {}
+              "history": []
             }
             """);
 
@@ -493,8 +490,7 @@ public sealed class JsonItemRepositoryTests
                   "cancelled_at": null
                 }
               ],
-              "history": [],
-              "settings": {}
+              "history": []
             }
             """);
 

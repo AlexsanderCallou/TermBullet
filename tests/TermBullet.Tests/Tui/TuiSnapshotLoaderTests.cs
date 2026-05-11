@@ -1,4 +1,3 @@
-using TermBullet.Application.Configuration;
 using TermBullet.Application.Items;
 using TermBullet.Repositories.Interfaces;
 using TermBullet.Application.Tags;
@@ -15,12 +14,10 @@ public sealed class TuiSnapshotLoaderTests
     {
         var repository = new FakeItemRepository();
         var tagRepository = new FakeTagCatalogRepository();
-        var settingsStore = new FakeSettingsStore();
         var startupCalls = 0;
         var loader = CreateLoader(
             repository,
             tagRepository,
-            settingsStore,
             _ =>
             {
                 startupCalls++;
@@ -34,7 +31,7 @@ public sealed class TuiSnapshotLoaderTests
     }
 
     [Fact]
-    public async Task LoadAsync_returns_today_backlog_and_config_state()
+    public async Task LoadAsync_returns_today_backlog_and_tags()
     {
         var repository = new FakeItemRepository();
         var tagRepository = new FakeTagCatalogRepository();
@@ -42,17 +39,13 @@ public sealed class TuiSnapshotLoaderTests
         repository.Seed(MakeItem("t-0426-2", ItemCollection.Backlog, "Review migrations"));
         await tagRepository.AddAsync(TagCatalogEntry.Create("auth", null, DateTimeOffset.UtcNow));
 
-        var settingsStore = new FakeSettingsStore();
-        await settingsStore.SetAsync("theme", "dark");
-
-        var loader = CreateLoader(repository, tagRepository, settingsStore);
+        var loader = CreateLoader(repository, tagRepository);
 
         var snapshot = await loader.LoadAsync();
 
         Assert.Single(snapshot.TodayItems);
         Assert.Single(snapshot.BacklogItems);
         Assert.Single(snapshot.Tags);
-        Assert.Equal("dark", snapshot.Configuration["theme"]);
     }
 
     [Fact]
@@ -60,11 +53,10 @@ public sealed class TuiSnapshotLoaderTests
     {
         var repository = new FakeItemRepository();
         var tagRepository = new FakeTagCatalogRepository();
-        var settingsStore = new FakeSettingsStore();
         repository.Seed(MakeItem("t-0526-1", ItemCollection.Today, "Current task"));
         repository.SeedArchive(MakeItem("t-0426-1", ItemCollection.Today, "Old forgotten task"));
 
-        var loader = CreateLoader(repository, tagRepository, settingsStore);
+        var loader = CreateLoader(repository, tagRepository);
 
         var snapshot = await loader.LoadAsync();
 
@@ -77,7 +69,6 @@ public sealed class TuiSnapshotLoaderTests
     private static TuiSnapshotLoader CreateLoader(
         FakeItemRepository repository,
         FakeTagCatalogRepository tagRepository,
-        FakeSettingsStore settingsStore,
         Func<CancellationToken, Task>? startupAction = null)
     {
         return new TuiSnapshotLoader(
@@ -87,7 +78,6 @@ public sealed class TuiSnapshotLoaderTests
             new GetBacklogItemsUseCase(repository),
             new ListItemsUseCase(repository),
             new ListTagsUseCase(tagRepository),
-            new ListConfigurationUseCase(settingsStore),
             startupAction);
     }
 
@@ -149,25 +139,6 @@ public sealed class TuiSnapshotLoaderTests
 
         public Task<IReadOnlyCollection<Item>> ListAllAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyCollection<Item>>(_items.Concat(_archiveItems).ToArray());
-    }
-
-    private sealed class FakeSettingsStore : ISettingsRepository
-    {
-        private readonly Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
-
-        public string SettingsPath => "settings.json";
-
-        public Task<string?> GetAsync(string key, string profile = "default", CancellationToken cancellationToken = default)
-            => Task.FromResult<string?>(_values.TryGetValue(key, out var value) ? value : null);
-
-        public Task<IReadOnlyDictionary<string, string>> ListAsync(string profile = "default", CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyDictionary<string, string>>(new Dictionary<string, string>(_values, StringComparer.OrdinalIgnoreCase));
-
-        public Task SetAsync(string key, string value, string profile = "default", CancellationToken cancellationToken = default)
-        {
-            _values[key] = value;
-            return Task.CompletedTask;
-        }
     }
 
     private sealed class FakeTagCatalogRepository : ITagCatalogRepository
