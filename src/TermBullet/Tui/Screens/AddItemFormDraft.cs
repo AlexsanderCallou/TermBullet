@@ -15,7 +15,7 @@ public sealed class AddItemFormDraft
 
     public Priority Priority { get; set; } = TermBullet.Domain.Items.Priority.None;
 
-    public string TagsText { get; set; } = string.Empty;
+    public IReadOnlyCollection<string> SelectedTags { get; set; } = [];
 
     public string ScheduledAtText { get; set; } = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd");
 
@@ -33,7 +33,7 @@ public sealed class AddItemFormDraft
     {
         var content = NormalizeRequiredText(Content, nameof(Content));
         var description = NormalizeOptionalText(Description);
-        var tags = ParseTags(TagsText);
+        var tags = NormalizeTags(SelectedTags);
         var collection = ResolveCollection();
         var scheduledAt = ResolveScheduledDate();
 
@@ -68,7 +68,7 @@ public sealed class AddItemFormDraft
             $"description: {description}",
             Type == ItemType.Task ? $"priority: {FormatPriority(Priority)}" : "priority: none",
             planningLine,
-            $"tags: {FormatTags(TagsText)}"
+            $"tags: {FormatTags(SelectedTags)}"
         ];
     }
 
@@ -134,24 +134,25 @@ public sealed class AddItemFormDraft
         return value.Trim();
     }
 
-    private static List<string> ParseTags(string? value)
+    private static List<string> NormalizeTags(IEnumerable<string>? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (value is null)
         {
             return [];
         }
 
         return
         [
-            .. value.Split([',', ';'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .. value
+                .Select(tag => tag.Trim())
                 .Where(tag => !string.IsNullOrWhiteSpace(tag))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
         ];
     }
 
-    private static string FormatTags(string? value)
+    private static string FormatTags(IEnumerable<string>? value)
     {
-        var tags = ParseTags(value);
+        var tags = NormalizeTags(value);
         return tags.Count > 0 ? string.Join(", ", tags) : "-";
     }
 

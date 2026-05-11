@@ -16,7 +16,7 @@ public sealed class AddItemFormDraftTests
             Content = "  Fix authentication flow  ",
             Description = "  Keep the CLI and TUI aligned.  ",
             Priority = Priority.High,
-            TagsText = " auth, cli ; auth "
+            SelectedTags = ["auth", "cli", "auth"]
         };
 
         var request = draft.BuildRequest();

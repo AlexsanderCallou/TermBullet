@@ -88,6 +88,20 @@ public static class SearchScreen
                 _ = Task.Run(() => onSearch(query));
                 args.Handled = true;
             }
+            else if (args.KeyEvent.Key == Key.Tab)
+            {
+                navigation.MoveNextPanel();
+                TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
+                TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
+                args.Handled = true;
+            }
+            else if (args.KeyEvent.Key == Key.BackTab)
+            {
+                navigation.MovePreviousPanel();
+                TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
+                TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
+                args.Handled = true;
+            }
         };
 
         root.KeyPress += args =>

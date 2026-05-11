@@ -69,10 +69,50 @@ public static class QuickTaskScreen
         saveButton.Clicked += Submit;
         cancelButton.Clicked += onCancel;
 
+        void MoveFocus(int delta)
+        {
+            var focusTargets = new View[] { taskField, saveButton, cancelButton };
+            var currentIndex = Array.FindIndex(focusTargets, view => view.HasFocus);
+            var nextIndex = currentIndex < 0 ? 0 : currentIndex + delta;
+            if (nextIndex < 0)
+            {
+                nextIndex = focusTargets.Length - 1;
+            }
+            else if (nextIndex >= focusTargets.Length)
+            {
+                nextIndex = 0;
+            }
+
+            focusTargets[nextIndex].SetFocus();
+        }
+
+        taskField.KeyPress += args =>
+        {
+            switch (args.KeyEvent.Key)
+            {
+                case Key.Tab:
+                    MoveFocus(1);
+                    args.Handled = true;
+                    break;
+                case Key.BackTab:
+                    MoveFocus(-1);
+                    args.Handled = true;
+                    break;
+            }
+        };
+
         root.KeyPress += args =>
         {
             switch (args.KeyEvent.Key)
             {
+                case Key.Tab:
+                    MoveFocus(1);
+                    args.Handled = true;
+                    break;
+                case Key.BackTab:
+                    MoveFocus(-1);
+                    args.Handled = true;
+                    break;
                 case Key.Enter:
                     if (saveButton.HasFocus)
                     {
