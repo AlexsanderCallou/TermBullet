@@ -1,5 +1,4 @@
 using System.CommandLine;
-using TermBullet.Application.Configuration;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Application.Startup;
@@ -8,10 +7,6 @@ using TermBullet.Domain.Items;
 namespace TermBullet.Cli;
 
 public sealed class TermBulletCliApp(
-    ListConfigurationUseCase listConfigurationUseCase,
-    GetConfigurationUseCase getConfigurationUseCase,
-    SetConfigurationUseCase setConfigurationUseCase,
-    GetConfigurationPathUseCase getConfigurationPathUseCase,
     ClearStoredHistoryUseCase clearStoredHistoryUseCase,
     TextWriter output,
     TextWriter error,
@@ -204,7 +199,6 @@ public sealed class TermBulletCliApp(
             rootCommand.Subcommands.Add(BuildSearchCommand(standardOutput, standardError, cancellationToken));
         }
 
-        rootCommand.Subcommands.Add(BuildConfigCommand(standardOutput, standardError, cancellationToken));
         rootCommand.Subcommands.Add(BuildHistoryCommand(standardOutput, standardError, cancellationToken));
 
         return rootCommand;
@@ -733,149 +727,6 @@ public sealed class TermBulletCliApp(
         return command;
     }
 
-    private Command BuildConfigCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken)
-    {
-        var command = new Command("config", "Manage local application configuration.");
-        command.Subcommands.Add(BuildConfigListCommand(standardOutput, standardError, cancellationToken));
-        command.Subcommands.Add(BuildConfigGetCommand(standardOutput, standardError, cancellationToken));
-        command.Subcommands.Add(BuildConfigSetCommand(standardOutput, standardError, cancellationToken));
-        command.Subcommands.Add(BuildConfigPathCommand(standardOutput));
-        return command;
-    }
-
-    private Command BuildConfigListCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken)
-    {
-        var profileOption = CreateProfileOption();
-        var command = new Command("list", "List configuration values")
-        {
-            profileOption
-        };
-
-        command.SetAction(async parseResult =>
-        {
-            try
-            {
-                var profile = parseResult.GetValue(profileOption) ?? "default";
-                var settings = await listConfigurationUseCase.ExecuteAsync(profile, cancellationToken);
-                foreach (var entry in settings.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
-                {
-                    await standardOutput.WriteLineAsync($"{entry.Key}={entry.Value}");
-                }
-
-                return 0;
-            }
-            catch (Exception exception)
-            {
-                await standardError.WriteLineAsync(exception.Message);
-                return 1;
-            }
-        });
-
-        return command;
-    }
-
-    private Command BuildConfigGetCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken)
-    {
-        var profileOption = CreateProfileOption();
-        var keyArgument = new Argument<string>("key")
-        {
-            Description = "Show a configuration value"
-        };
-
-        var command = new Command("get", "Show a configuration value")
-        {
-            profileOption,
-            keyArgument
-        };
-
-        command.SetAction(async parseResult =>
-        {
-            try
-            {
-                var profile = parseResult.GetValue(profileOption) ?? "default";
-                var key = parseResult.GetValue(keyArgument)
-                    ?? throw new InvalidOperationException("Configuration key is required.");
-                var value = await getConfigurationUseCase.ExecuteAsync(key, profile, cancellationToken);
-                await standardOutput.WriteLineAsync(value);
-                return 0;
-            }
-            catch (Exception exception)
-            {
-                await standardError.WriteLineAsync(exception.Message);
-                return 1;
-            }
-        });
-
-        return command;
-    }
-
-    private Command BuildConfigSetCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken)
-    {
-        var profileOption = CreateProfileOption();
-        var keyArgument = new Argument<string>("key")
-        {
-            Description = "Configuration key"
-        };
-        var valueArgument = new Argument<string>("value")
-        {
-            Description = "Configuration value"
-        };
-
-        var command = new Command("set", "Set a configuration value")
-        {
-            profileOption,
-            keyArgument,
-            valueArgument
-        };
-
-        command.SetAction(async parseResult =>
-        {
-            try
-            {
-                var profile = parseResult.GetValue(profileOption) ?? "default";
-                var key = parseResult.GetValue(keyArgument)
-                    ?? throw new InvalidOperationException("Configuration key is required.");
-                var value = parseResult.GetValue(valueArgument)
-                    ?? throw new InvalidOperationException("Configuration value is required.");
-
-                await setConfigurationUseCase.ExecuteAsync(key, value, profile, cancellationToken);
-                await standardOutput.WriteLineAsync($"{key}={value}");
-                return 0;
-            }
-            catch (Exception exception)
-            {
-                await standardError.WriteLineAsync(exception.Message);
-                return 1;
-            }
-        });
-
-        return command;
-    }
-
-    private Command BuildConfigPathCommand(TextWriter standardOutput)
-    {
-        var command = new Command("path", "Show paths used by the application");
-        command.SetAction(_ =>
-        {
-            standardOutput.WriteLine(getConfigurationPathUseCase.Execute());
-            return 0;
-        });
-
-        return command;
-    }
-
     private Command BuildHistoryCommand(
         TextWriter standardOutput,
         TextWriter standardError,
@@ -946,13 +797,6 @@ public sealed class TermBulletCliApp(
 
         return command;
     }
-
-    private static Option<string> CreateProfileOption() =>
-        new("--profile")
-        {
-            Description = "Configuration profile to use",
-            DefaultValueFactory = _ => "default"
-        };
 
     private static bool TryParseMonthScope(string? value, out int month, out int year)
     {

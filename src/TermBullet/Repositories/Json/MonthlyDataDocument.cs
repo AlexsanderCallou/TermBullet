@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace TermBullet.Repositories.Json;
@@ -19,9 +18,6 @@ internal sealed class MonthlyDataDocument
 
     [JsonPropertyName("history")]
     public List<HistoryEntry> History { get; set; } = [];
-
-    [JsonPropertyName("settings")]
-    public Dictionary<string, JsonElement> Settings { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public static MonthlyDataDocument CreateEmpty(int year, int month)
     {

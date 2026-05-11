@@ -1,5 +1,4 @@
 using TermBullet.Services.Clock;
-using TermBullet.Application.Configuration;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Repositories.Interfaces;
@@ -19,15 +18,11 @@ public static class TermBulletBootstrap
         TextWriter output,
         TextWriter error)
     {
-        var (clock, itemRepository, tagCatalogRepository, historyMaintenanceService, settingsStore) =
+        var (clock, itemRepository, tagCatalogRepository, historyMaintenanceService) =
             CreateSharedServices(projectRootPath);
         var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
 
         return new TermBulletCliApp(
-            new ListConfigurationUseCase(settingsStore),
-            new GetConfigurationUseCase(settingsStore),
-            new SetConfigurationUseCase(settingsStore),
-            new GetConfigurationPathUseCase(settingsStore),
             new ClearStoredHistoryUseCase(historyMaintenanceService, clock),
             output,
             error,
@@ -53,7 +48,7 @@ public static class TermBulletBootstrap
 
     public static TermBulletTuiApp CreateTuiApp(string projectRootPath)
     {
-        var (clock, itemRepository, tagCatalogRepository, _, settingsStore) = CreateSharedServices(projectRootPath);
+        var (clock, itemRepository, tagCatalogRepository, _) = CreateSharedServices(projectRootPath);
         var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
 
         return new TermBulletTuiApp(
@@ -63,7 +58,6 @@ public static class TermBulletBootstrap
             new GetMonthItemsUseCase(itemRepository),
             new ListItemsUseCase(itemRepository),
             new SearchItemsUseCase(itemRepository),
-            new ListConfigurationUseCase(settingsStore),
             new ListTagsUseCase(tagCatalogRepository),
             new CreateTagUseCase(tagCatalogRepository, clock),
             new CreateItemUseCase(itemRepository, clock, new GuidIdGenerator()),
@@ -79,8 +73,7 @@ public static class TermBulletBootstrap
         IClock Clock,
         JsonItemRepository ItemRepository,
         JsonTagCatalogRepository TagCatalogRepository,
-        JsonHistoryMaintenanceService HistoryMaintenanceService,
-        JsonSettingsRepository SettingsStore)
+        JsonHistoryMaintenanceService HistoryMaintenanceService)
         CreateSharedServices(string projectRootPath)
     {
         var fileStore = new JsonFileStore();
@@ -91,9 +84,8 @@ public static class TermBulletBootstrap
         var tagCatalogRepository = new JsonTagCatalogRepository(projectRootPath, fileStore);
         var historyMaintenanceService = new JsonHistoryMaintenanceService(
             projectRootPath, pathResolver, fileStore);
-        var settingsStore = new JsonSettingsRepository(projectRootPath, fileStore);
 
-        return (clock, itemRepository, tagCatalogRepository, historyMaintenanceService, settingsStore);
+        return (clock, itemRepository, tagCatalogRepository, historyMaintenanceService);
     }
 
     private sealed class SystemClock : IClock

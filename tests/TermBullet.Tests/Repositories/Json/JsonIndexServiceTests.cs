@@ -36,8 +36,7 @@ public sealed class JsonIndexServiceTests
                   "updated_at": "2026-04-23T10:30:00Z"
                 }
               ],
-              "history": [],
-              "settings": {}
+              "history": []
             }
             """);
 

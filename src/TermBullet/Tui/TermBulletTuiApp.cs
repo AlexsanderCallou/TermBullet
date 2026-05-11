@@ -1,5 +1,4 @@
 using Terminal.Gui;
-using TermBullet.Application.Configuration;
 using TermBullet.Application.Items;
 using TermBullet.Application.Tags;
 using TermBullet.Domain.Items;
@@ -16,7 +15,6 @@ public sealed class TermBulletTuiApp(
     GetMonthItemsUseCase? getMonthItemsUseCase = null,
     ListItemsUseCase? listItemsUseCase = null,
     SearchItemsUseCase? searchItemsUseCase = null,
-    ListConfigurationUseCase? listConfigurationUseCase = null,
     ListTagsUseCase? listTagsUseCase = null,
     CreateTagUseCase? createTagUseCase = null,
     CreateItemUseCase? createItemUseCase = null,
@@ -36,7 +34,6 @@ public sealed class TermBulletTuiApp(
             getBacklogItemsUseCase,
             listItemsUseCase,
             listTagsUseCase,
-            listConfigurationUseCase,
             startupAction);
         var snapshot = await snapshotLoader.LoadAsync(cancellationToken);
         var searchVm = new SearchViewModel();

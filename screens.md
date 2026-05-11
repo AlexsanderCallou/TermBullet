@@ -848,7 +848,7 @@ Target ASCII layout:
 ```text
 + TermBullet - Backlog ------------------------------------------------------------------+
 | 1 Backlog                                        | 2 Preview                           |
-| > [ ] t-0526-12 Refactor settings store         | ref: t-0526-12                      |
+| > [ ] t-0526-12 Refactor tag selector           | ref: t-0526-12                      |
 |   [ ] t-0526-13 Review CLI help                 | type: task                          |
 |   (.) n-0526-2  OAuth notes                     | status: open                        |
 |   (.) n-0526-3  Terminal.Gui research           | collection: backlog                 |

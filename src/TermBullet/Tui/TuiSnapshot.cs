@@ -10,5 +10,4 @@ public sealed record TuiSnapshot(
     IReadOnlyCollection<ItemResult> BacklogItems,
     IReadOnlyCollection<ItemResult> CurrentItems,
     IReadOnlyCollection<ItemResult> AllItems,
-    IReadOnlyCollection<TagCatalogResult> Tags,
-    IReadOnlyDictionary<string, string> Configuration);
+    IReadOnlyCollection<TagCatalogResult> Tags);

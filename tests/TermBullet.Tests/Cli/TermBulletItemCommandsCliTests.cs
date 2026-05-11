@@ -2,7 +2,6 @@ using TermBullet.Services.Clock;
 using TermBullet.Services.Ids;
 using TermBullet.Services.History;
 using System.Text;
-using TermBullet.Application.Configuration;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Repositories.Interfaces;
@@ -118,17 +117,12 @@ public sealed class TermBulletItemCommandsCliTests
 
     private static TestCliApp CreateApp(FakeItemRepository repository)
     {
-        var settingsStore = new FakeSettingsStore();
         var historyService = new FakeHistoryMaintenanceService();
         var output = new StringWriter(new StringBuilder());
         var error = new StringWriter(new StringBuilder());
 
         return new TestCliApp(
             new TermBulletCliApp(
-            new ListConfigurationUseCase(settingsStore),
-            new GetConfigurationUseCase(settingsStore),
-            new SetConfigurationUseCase(settingsStore),
-            new GetConfigurationPathUseCase(settingsStore),
             new ClearStoredHistoryUseCase(historyService, new FixedClock(Now)),
             output,
             error,
@@ -237,20 +231,6 @@ public sealed class TermBulletItemCommandsCliTests
 
         public Task<Item?> FindByPublicRefAsync(string publicRef, CancellationToken cancellationToken = default)
             => Task.FromResult(_items.FirstOrDefault(item => string.Equals(item.PublicRef.Value, publicRef, StringComparison.Ordinal)));
-    }
-
-    private sealed class FakeSettingsStore : ISettingsRepository
-    {
-        public string SettingsPath => "C:\\term\\data\\settings.json";
-
-        public Task<string?> GetAsync(string key, string profile = "default", CancellationToken cancellationToken = default)
-            => Task.FromResult<string?>(null);
-
-        public Task<IReadOnlyDictionary<string, string>> ListAsync(string profile = "default", CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyDictionary<string, string>>(new Dictionary<string, string>());
-
-        public Task SetAsync(string key, string value, string profile = "default", CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
     }
 
     private sealed class FakeHistoryMaintenanceService : IHistoryMaintenanceService

@@ -95,12 +95,12 @@ public sealed class AddItemFormDraft
             "yyyy-MM-dd",
             System.Globalization.CultureInfo.InvariantCulture,
             System.Globalization.DateTimeStyles.None,
-            out var plannedFor))
+            out var scheduledAt))
         {
             throw new ArgumentException("Scheduled at must use yyyy-MM-dd.", nameof(ScheduledAtText));
         }
 
-        return plannedFor;
+        return scheduledAt;
     }
 
     private DateOnly? ResolveScheduledDate() =>

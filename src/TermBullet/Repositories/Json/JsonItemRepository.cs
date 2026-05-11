@@ -236,8 +236,6 @@ public sealed class JsonItemRepository(
         document.Period ??= $"{year:0000}-{month:00}";
         document.FileName ??= $"data_{month:00}_{year:0000}.json";
         document.History ??= [];
-        document.Settings ??= new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
-
         return document;
     }
 
