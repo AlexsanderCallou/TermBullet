@@ -1,5 +1,33 @@
 # TermBullet Release Notes
 
+## v1.1.1 - Readable JSON Storage
+
+TermBullet V1.1.1 keeps the first-run data directory setup and improves local
+file readability.
+
+### Added
+
+- README uninstall instructions for safely removing the executable while
+  preserving local data.
+
+### Changed
+
+- Monthly JSON files are now written with indentation.
+- The local `index.json` file is now written with indentation.
+
+### Release Assets
+
+Expected assets:
+
+```text
+termbullet_1.1.1_windows_x64.zip
+termbullet_1.1.1_linux_x64.tar.gz
+termbullet_1.1.1_checksums.txt
+```
+
+Publishing `v1.1.1` as the latest GitHub release makes the documented install
+commands resolve to these assets.
+
 ## v1.1.0 - First-Run Data Directory Setup
 
 TermBullet V1.1 keeps the offline core and adds first-run data directory setup.

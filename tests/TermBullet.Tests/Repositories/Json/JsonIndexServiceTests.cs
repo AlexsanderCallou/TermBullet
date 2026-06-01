@@ -48,6 +48,9 @@ public sealed class JsonIndexServiceTests
         Assert.True(File.Exists(indexPath));
 
         var indexJson = await File.ReadAllTextAsync(indexPath);
+        Assert.Contains(Environment.NewLine, indexJson);
+        Assert.Contains("  \"generated_at\":", indexJson);
+
         using var doc = JsonDocument.Parse(indexJson);
         var items = doc.RootElement.GetProperty("items").EnumerateArray().ToArray();
         var item = Assert.Single(items);

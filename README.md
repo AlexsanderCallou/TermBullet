@@ -43,7 +43,7 @@ license is Apache License 2.0 in [LICENSE](LICENSE).
 Current release:
 
 ```text
-v1.1.0 - V1 Offline Core with First-Run Data Directory Setup
+v1.1.1 - V1 Offline Core with Readable JSON Storage
 ```
 
 Latest release:
@@ -70,24 +70,65 @@ After installing, open a new terminal and run:
 termbullet --help
 ```
 
+## Uninstall
+
+TermBullet does not currently include an uninstall command. To remove the
+application safely, delete only the installed executable first and keep your
+data directory unless you are sure you no longer need it.
+
+Windows default install location:
+
+```powershell
+Remove-Item "$env:LOCALAPPDATA\TermBullet\bin\termbullet.exe"
+```
+
+If the installer added TermBullet to your user `PATH`, remove this entry from
+your user environment variables:
+
+```text
+%LOCALAPPDATA%\TermBullet\bin
+```
+
+Linux default install location:
+
+```bash
+rm "$HOME/.local/bin/termbullet"
+```
+
+The runtime config is stored beside the installed executable:
+
+```text
+<install-dir>/conf.json
+```
+
+That config points to your selected `data_root`, where TermBullet stores
+operational data under:
+
+```text
+<data_root>/data
+```
+
+Delete `conf.json` and `<data_root>/data` only when you intentionally want to
+remove local TermBullet data.
+
 Manual release artifacts:
 
 ```text
-termbullet_1.1.0_windows_x64.zip
-termbullet_1.1.0_linux_x64.tar.gz
-termbullet_1.1.0_checksums.txt
+termbullet_1.1.1_windows_x64.zip
+termbullet_1.1.1_linux_x64.tar.gz
+termbullet_1.1.1_checksums.txt
 ```
 
 Build local release assets:
 
 ```bash
-VERSION=1.1.0 ./publish.sh
+VERSION=1.1.1 ./publish.sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\publish.ps1 -Version 1.1.0
+.\publish.ps1 -Version 1.1.1
 ```
 
 macOS binaries and package manager distribution are planned for later releases.

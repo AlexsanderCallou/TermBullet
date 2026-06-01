@@ -16,7 +16,8 @@ public sealed class JsonItemRepository(
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true
     };
 
     public async Task<int> GetCurrentPublicRefSequenceAsync(

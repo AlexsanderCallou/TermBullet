@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>termbullet</AssemblyName>
     <RootNamespace>TermBullet</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>

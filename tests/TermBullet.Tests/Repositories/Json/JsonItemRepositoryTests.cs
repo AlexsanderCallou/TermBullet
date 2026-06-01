@@ -38,6 +38,10 @@ public sealed class JsonItemRepositoryTests
         Assert.Equal(ItemCollection.Today, found.Collection);
         Assert.True(File.Exists(context.MonthlyFilePath));
         Assert.True(File.Exists(context.IndexFilePath));
+
+        var json = await File.ReadAllTextAsync(context.MonthlyFilePath);
+        Assert.Contains(Environment.NewLine, json);
+        Assert.Contains("  \"period\":", json);
     }
 
     [Fact]
