@@ -2,14 +2,8 @@ using TermBullet.Bootstrap;
 
 namespace TermBullet.Tests.Bootstrap;
 
-public sealed class SmokeTests
+public sealed class TermBulletBootstrapTests
 {
-    [Fact]
-    public void Test_project_is_configured()
-    {
-        Assert.True(true);
-    }
-
     [Theory]
     [InlineData("--help")]
     [InlineData("-h")]
