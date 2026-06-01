@@ -80,6 +80,7 @@ public sealed class JsonIndexService(
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
+        WriteIndented = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
