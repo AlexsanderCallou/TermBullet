@@ -43,7 +43,7 @@ license is Apache License 2.0 in [LICENSE](LICENSE).
 Current release:
 
 ```text
-v1.0.0 - V1 Offline Core
+v1.1.0 - V1 Offline Core with First-Run Data Directory Setup
 ```
 
 Latest release:
@@ -73,31 +73,58 @@ termbullet --help
 Manual release artifacts:
 
 ```text
-termbullet_1.0.0_windows_x64.zip
-termbullet_1.0.0_linux_x64.tar.gz
-termbullet_1.0.0_checksums.txt
+termbullet_1.1.0_windows_x64.zip
+termbullet_1.1.0_linux_x64.tar.gz
+termbullet_1.1.0_checksums.txt
 ```
 
 Build local release assets:
 
 ```bash
-VERSION=1.0.0 ./publish.sh
+VERSION=1.1.0 ./publish.sh
+```
+
+Windows PowerShell:
+
+```powershell
+.\publish.ps1 -Version 1.1.0
 ```
 
 macOS binaries and package manager distribution are planned for later releases.
 
 ## Data Location
 
-TermBullet stores local monthly JSON files outside the executable directory.
+On first execution, TermBullet asks where local data should be stored. The
+choice is saved in:
 
 ```text
-Windows: %APPDATA%\TermBullet\data
-macOS:   ~/Library/Application Support/TermBullet/data
-Linux:   ~/.local/share/termbullet/data
+<install-dir>/conf.json
 ```
 
-Custom data directory support is planned after the first MVP. For now,
-TermBullet uses the platform default data directory.
+Example:
+
+```json
+{
+  "data_root": "C:\\Users\\Alexsander\\Documents\\TermBullet"
+}
+```
+
+TermBullet validates that it can create, read, and write the selected data
+directory before saving the config. Operational files are stored under:
+
+```text
+<data_root>/data
+```
+
+The install directory must allow writing `conf.json`. If it does not,
+TermBullet exits with a clear permission error so the user can adjust
+permissions or reinstall into a writable directory.
+
+Show the active paths:
+
+```bash
+termbullet path
+```
 
 ## Quick Use
 
@@ -165,6 +192,10 @@ dotnet build
 dotnet test
 dotnet run --project src/TermBullet -- [command] [arguments] [options]
 ```
+
+When running from source, `conf.json` is created beside the built executable
+under `src/TermBullet/bin/...`, not in the directory where the command was
+started.
 
 TermBullet uses one production project with clear folders:
 

@@ -30,3 +30,8 @@ screens.pen
 
 # Publish artifacts
 publish/
+
+# Local runtime configuration when running unpacked binaries from the repo root
+conf.json
+
+data/

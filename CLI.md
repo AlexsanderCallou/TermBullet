@@ -187,10 +187,19 @@ termbullet history clear
 termbullet path
 ```
 
-Show the active local data directory where TermBullet stores JSON files.
+Show the active local config and data paths.
 
-V1 only supports data path reporting/selection. There are no user-editable
-product keys.
+Example output:
+
+```text
+config: C:\Users\Alexsander\AppData\Local\TermBullet\bin\conf.json
+data_root: C:\Users\Alexsander\Documents\TermBullet
+data: C:\Users\Alexsander\Documents\TermBullet\data
+```
+
+On first execution, TermBullet asks for the base data directory, validates
+read/write permissions, and saves the selection in `<install-dir>/conf.json`.
+There are no user-editable product keys.
 
 ## CLI Rules
 

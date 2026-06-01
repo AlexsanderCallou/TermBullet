@@ -24,6 +24,7 @@ Long-form ADRs may be split into `docs/adr/` later if more detail is needed.
 | 0013 | Accepted | V1 uses a modular monolith. |
 | 0014 | Accepted | V1 stores operational data in monthly JSON files. |
 | 0015 | Accepted | License is Apache-2.0. |
+| 0016 | Accepted | First run stores `conf.json` in the install directory. |
 
 ## ADR-0001 - Local-First Product
 
@@ -253,6 +254,35 @@ Copyright (c) 2026 TermBullet contributors
 ```
 
 Rejected: MIT, GPL-family licenses, and no license.
+
+## ADR-0016 - Install Directory Configuration
+
+TermBullet stores its runtime configuration in:
+
+```text
+<install-dir>/conf.json
+```
+
+The first execution asks the user to choose the base data directory. The
+selected path is stored as `data_root` in `conf.json`. TermBullet then stores
+operational data under:
+
+```text
+<data_root>/data
+```
+
+Consequences:
+
+- the data directory no longer depends on the shell's current working directory;
+- CLI and TUI startup use the same configuration flow;
+- the install directory must be writable so `conf.json` can be created;
+- if `conf.json` cannot be written, TermBullet fails with a clear permission
+  error instead of falling back to another location;
+- the selected data root is validated before it is saved.
+
+Rejected: storing operational data relative to the current working directory,
+and silently falling back to a user-profile config file when the install
+directory is not writable.
 
 ## Future ADR Candidates
 

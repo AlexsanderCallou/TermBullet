@@ -3,6 +3,7 @@ using TermBullet.Services.History;
 using System.Text;
 using TermBullet.Application.History;
 using TermBullet.Cli;
+using TermBullet.Services.Configuration;
 
 namespace TermBullet.Tests.Cli;
 
@@ -88,7 +89,7 @@ public sealed class TermBulletCliAppTests
         var exitCode = await app.InvokeAsync(["--version"]);
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("1.0.0", dependencies.Output.ToString());
+        Assert.Contains("1.1.0", dependencies.Output.ToString());
     }
 
     [Fact]
@@ -100,7 +101,26 @@ public sealed class TermBulletCliAppTests
         var exitCode = await app.InvokeAsync(["-v"]);
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("1.0.0", dependencies.Output.ToString());
+        Assert.Contains("1.1.0", dependencies.Output.ToString());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_runs_path_command_when_runtime_paths_are_available()
+    {
+        var dependencies = CreateDependencies();
+        var runtimePaths = new TermBulletRuntimePaths(
+            @"C:\TermBullet\conf.json",
+            @"C:\TermBulletData",
+            @"C:\TermBulletData\data");
+        var app = CreateApp(dependencies, runtimePaths: runtimePaths);
+
+        var exitCode = await app.InvokeAsync(["path"]);
+
+        Assert.Equal(0, exitCode);
+        var output = dependencies.Output.ToString();
+        Assert.Contains("config: C:\\TermBullet\\conf.json", output);
+        Assert.Contains("data_root: C:\\TermBulletData", output);
+        Assert.Contains("data: C:\\TermBulletData\\data", output);
     }
 
     [Fact]
@@ -122,7 +142,8 @@ public sealed class TermBulletCliAppTests
 
     private static TermBulletCliApp CreateApp(
         TestDependencies dependencies,
-        Func<CancellationToken, Task>? startupAction = null)
+        Func<CancellationToken, Task>? startupAction = null,
+        TermBulletRuntimePaths? runtimePaths = null)
     {
         return new TermBulletCliApp(
             new ClearStoredHistoryUseCase(
@@ -130,6 +151,7 @@ public sealed class TermBulletCliAppTests
                 new FixedClock(new DateTimeOffset(2026, 4, 23, 12, 0, 0, TimeSpan.Zero))),
             dependencies.Output,
             dependencies.Error,
+            runtimePaths: runtimePaths,
             startupAction: startupAction);
     }
 

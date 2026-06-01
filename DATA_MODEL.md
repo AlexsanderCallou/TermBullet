@@ -4,6 +4,24 @@ V1 uses monthly local JSON files as the operational data store. PostgreSQL is
 reserved for the optional V4 sync/cloud backend and must not be required for
 local usage.
 
+The data root is selected on first execution and saved in:
+
+```text
+<install-dir>/conf.json
+```
+
+Config shape:
+
+```json
+{
+  "data_root": "C:\\Users\\Alexsander\\Documents\\TermBullet"
+}
+```
+
+The install directory must be writable. If TermBullet cannot write
+`conf.json`, startup fails with a clear permission error. There is no automatic
+fallback config location in V1.
+
 ## Principles
 
 - Local JSON files are the source of truth in V1.
@@ -22,19 +40,19 @@ local usage.
 Data files:
 
 ```text
-data/<year>/data_<month>_<year>.json
+<data_root>/data/<year>/data_<month>_<year>.json
 ```
 
 Example:
 
 ```text
-data/2026/data_04_2026.json
+<data_root>/data/2026/data_04_2026.json
 ```
 
 Backup files:
 
 ```text
-data/<year>/data_<month>_<year>.backup.json
+<data_root>/data/<year>/data_<month>_<year>.backup.json
 ```
 
 Only one backup per monthly file is kept.
@@ -42,8 +60,8 @@ Only one backup per monthly file is kept.
 Tag catalog files:
 
 ```text
-data/tags.json
-data/tags.backup.json
+<data_root>/data/tags.json
+<data_root>/data/tags.backup.json
 ```
 
 The tag catalog is global local metadata. Item `tags` arrays remain the source
@@ -53,7 +71,7 @@ descriptions and allows tags to exist before any item uses them.
 The local index is derived data and can be rebuilt:
 
 ```text
-data/index.json
+<data_root>/data/index.json
 ```
 
 The index may include ID, public ref, type, status, collection, task priority,
