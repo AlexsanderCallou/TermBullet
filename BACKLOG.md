@@ -107,7 +107,7 @@ The current TUI visual reference is [screens.md](screens.md).
 - [x] Implement validated Calendar screen
 - [x] Implement validated Tags and Create Tag flow
 - [ ] Decide whether the CLI needs a derived `forgotten` command
-- [ ] Expose per-item JSON history through Application contracts for Item Detail
+- [x] Expose per-item JSON history through Application contracts for Item Detail
 - [ ] JSON file backup/recovery validation
 - [ ] Cross-platform smoke testing where practical
 - [x] Release notes draft

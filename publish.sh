@@ -3,7 +3,7 @@
 set -euo pipefail
 
 PROJECT="src/TermBullet/TermBullet.csproj"
-VERSION="${VERSION:-1.1.1}"
+VERSION="${VERSION:-1.1.2}"
 OUT_BASE="publish"
 DIST_DIR="$OUT_BASE/dist"
 

@@ -12,7 +12,7 @@ public sealed class JsonItemRepository(
     IClock clock,
     MonthlyJsonPathResolver pathResolver,
     JsonFileStore fileStore,
-    JsonIndexService? indexService = null) : IItemRepository, IItemArchiveReader, IMonthRolloverService
+    JsonIndexService? indexService = null) : IItemRepository, IItemArchiveReader, IItemHistoryReader, IMonthRolloverService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -65,6 +65,7 @@ public sealed class JsonItemRepository(
             itemId: item.Id,
             publicRef: item.PublicRef.Value,
             eventType: "created",
+            occurredAt: clock.UtcNow,
             data: new
             {
                 content = item.Content,
@@ -97,6 +98,7 @@ public sealed class JsonItemRepository(
             itemId: item.Id,
             publicRef: item.PublicRef.Value,
             eventType: GetUpdateEventType(previous, current),
+            occurredAt: clock.UtcNow,
             data: BuildUpdateHistoryData(previous, current));
 
         await WriteMonthlyDocumentAsync(year, month, document, cancellationToken);
@@ -126,6 +128,7 @@ public sealed class JsonItemRepository(
             itemId: deleted.Id,
             publicRef: deleted.PublicRef,
             eventType: "deleted",
+            occurredAt: clock.UtcNow,
             data: new
             {
                 snapshot = deleted
@@ -199,6 +202,30 @@ public sealed class JsonItemRepository(
         return items
             .OrderBy(item => item.CreatedAt)
             .ThenBy(item => item.PublicRef.Value, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    public async Task<IReadOnlyCollection<ItemHistoryEntry>> ListHistoryByPublicRefAsync(
+        string publicRef,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicRef);
+        var parsedPublicRef = PublicRef.Parse(publicRef);
+        var (year, month) = GetPeriodFromPublicRef(parsedPublicRef);
+        var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
+
+        return document.History
+            .Where(entry => string.Equals(entry.PublicRef, parsedPublicRef.Value, StringComparison.Ordinal))
+            .OrderBy(entry => entry.OccurredAt)
+            .Select(entry => new ItemHistoryEntry(
+                entry.Id,
+                entry.ItemId,
+                entry.PublicRef,
+                entry.EventType,
+                entry.OccurredAt,
+                entry.Data.ValueKind == JsonValueKind.Undefined
+                    ? "{}"
+                    : entry.Data.GetRawText()))
             .ToArray();
     }
 
@@ -314,6 +341,7 @@ public sealed class JsonItemRepository(
         Guid itemId,
         string publicRef,
         string eventType,
+        DateTimeOffset occurredAt,
         object? data = null)
     {
         document.History.Add(new HistoryEntry
@@ -322,7 +350,7 @@ public sealed class JsonItemRepository(
             ItemId = itemId,
             PublicRef = publicRef,
             EventType = eventType,
-            OccurredAt = DateTimeOffset.UtcNow,
+            OccurredAt = occurredAt,
             Data = ToJsonElement(data)
         });
     }

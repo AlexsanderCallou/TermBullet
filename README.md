@@ -43,7 +43,7 @@ license is Apache License 2.0 in [LICENSE](LICENSE).
 Current release:
 
 ```text
-v1.1.1 - V1 Offline Core with Readable JSON Storage
+v1.1.2 - V1 Offline Core Hardening
 ```
 
 Latest release:
@@ -114,21 +114,21 @@ remove local TermBullet data.
 Manual release artifacts:
 
 ```text
-termbullet_1.1.1_windows_x64.zip
-termbullet_1.1.1_linux_x64.tar.gz
-termbullet_1.1.1_checksums.txt
+termbullet_1.1.2_windows_x64.zip
+termbullet_1.1.2_linux_x64.tar.gz
+termbullet_1.1.2_checksums.txt
 ```
 
 Build local release assets:
 
 ```bash
-VERSION=1.1.1 ./publish.sh
+VERSION=1.1.2 ./publish.sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\publish.ps1 -Version 1.1.1
+.\publish.ps1 -Version 1.1.2
 ```
 
 macOS binaries and package manager distribution are planned for later releases.

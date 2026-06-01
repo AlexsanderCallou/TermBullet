@@ -242,6 +242,7 @@ public sealed class JsonItemRepositoryTests
         var entry = Assert.Single(history.EnumerateArray());
         Assert.Equal("created", entry.GetProperty("event_type").GetString());
         Assert.Equal("t-0426-1", entry.GetProperty("public_ref").GetString());
+        Assert.Equal(CreatedAt, entry.GetProperty("occurred_at").GetDateTimeOffset());
     }
 
     [Fact]
@@ -314,6 +315,30 @@ public sealed class JsonItemRepositoryTests
         Assert.Equal("t-0426-1", data.GetProperty("public_ref").GetString());
         Assert.Equal("today", data.GetProperty("from_collection").GetString());
         Assert.Equal("week", data.GetProperty("to_collection").GetString());
+    }
+
+    [Fact]
+    public async Task ListHistoryByPublicRefAsync_returns_history_for_item()
+    {
+        var context = CreateContext();
+        var repository = CreateRepository(context);
+        var item = CreateItem(
+            id: Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
+            publicRef: "t-0426-1",
+            collection: ItemCollection.Today);
+        await repository.AddAsync(item);
+        item.MoveTo(ItemCollection.Week, ChangedAt);
+        await repository.UpdateAsync(item);
+
+        var history = await repository.ListHistoryByPublicRefAsync("t-0426-1");
+
+        var entries = history.ToArray();
+        Assert.Equal(2, entries.Length);
+        Assert.Equal("created", entries[0].EventType);
+        Assert.Equal("migrate", entries[1].EventType);
+        Assert.Equal(CreatedAt, entries[0].OccurredAt);
+        using var data = JsonDocument.Parse(entries[1].DataJson);
+        Assert.Equal("week", data.RootElement.GetProperty("to_collection").GetString());
     }
 
     [Fact]

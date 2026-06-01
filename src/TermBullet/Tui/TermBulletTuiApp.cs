@@ -23,6 +23,7 @@ public sealed class TermBulletTuiApp(
     CancelItemUseCase? cancelItemUseCase = null,
     MigrateItemUseCase? migrateItemUseCase = null,
     DeleteItemUseCase? deleteItemUseCase = null,
+    ShowItemHistoryUseCase? showItemHistoryUseCase = null,
     Func<CancellationToken, Task>? startupAction = null)
 {
     public async Task RunAsync(CancellationToken cancellationToken = default)
@@ -41,6 +42,7 @@ public sealed class TermBulletTuiApp(
         var auxiliaryFlow = TuiAuxiliaryFlow.None;
         var addItemType = ItemType.Task;
         ItemDisplayRow? selectedItem = null;
+        IReadOnlyCollection<ItemHistoryEntryResult> selectedItemHistory = [];
         MigrateItemViewModel? migrateItemVm = null;
         string? addError = null;
         string? editError = null;
@@ -122,7 +124,22 @@ public sealed class TermBulletTuiApp(
             {
                 if (item is null) return;
                 selectedItem = item;
+                selectedItemHistory = [];
                 NavigateTo(TuiScreen.ItemDetail, GetPanelCount(TuiScreen.ItemDetail));
+                if (showItemHistoryUseCase is null)
+                {
+                    return;
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    var history = await showItemHistoryUseCase.ExecuteAsync(item.PublicRef, cancellationToken);
+                    TGui.MainLoop?.Invoke(() =>
+                    {
+                        selectedItemHistory = history;
+                        ScheduleRender();
+                    });
+                }, cancellationToken);
             }
 
             void OpenMigrateItem(ItemDisplayRow? item)
@@ -476,7 +493,7 @@ public sealed class TermBulletTuiApp(
                     case TuiScreen.ItemDetail when selectedItem is not null:
                         ItemDetailScreen.Build(
                             root,
-                            ItemDetailViewModel.FromRow(selectedItem),
+                            ItemDetailViewModel.FromRow(selectedItem, selectedItemHistory),
                             navigation,
                             NavigateBack,
                             () => OpenEditItem(selectedItem),

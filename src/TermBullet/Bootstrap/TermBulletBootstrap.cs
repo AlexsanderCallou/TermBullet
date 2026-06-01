@@ -14,10 +14,29 @@ namespace TermBullet.Bootstrap;
 
 public static class TermBulletBootstrap
 {
+    public static bool IsInformationalCliRequest(string[] args)
+    {
+        return args.Any(arg =>
+            string.Equals(arg, "-h", StringComparison.Ordinal)
+            || string.Equals(arg, "--help", StringComparison.Ordinal)
+            || string.Equals(arg, "-v", StringComparison.Ordinal)
+            || string.Equals(arg, "--version", StringComparison.Ordinal));
+    }
+
+    public static TermBulletCliApp CreateInformationalCliApp(TextWriter output, TextWriter error)
+    {
+        var runtimePaths = new TermBulletRuntimePaths(
+            Path.Combine(AppContext.BaseDirectory, "conf.json"),
+            AppContext.BaseDirectory,
+            Path.Combine(AppContext.BaseDirectory, "data"));
+        return CreateCliApp(runtimePaths, output, error, startupAction: _ => Task.CompletedTask);
+    }
+
     public static TermBulletCliApp CreateCliApp(
         TermBulletRuntimePaths runtimePaths,
         TextWriter output,
-        TextWriter error)
+        TextWriter error,
+        Func<CancellationToken, Task>? startupAction = null)
     {
         var (clock, itemRepository, tagCatalogRepository, historyMaintenanceService) =
             CreateSharedServices(runtimePaths.DataRoot);
@@ -45,7 +64,7 @@ public static class TermBulletBootstrap
             new DeleteItemUseCase(itemRepository),
             new SearchItemsUseCase(itemRepository),
             runtimePaths,
-            startupAction: startupMaintenanceUseCase.ExecuteAsync);
+            startupAction: startupAction ?? startupMaintenanceUseCase.ExecuteAsync);
     }
 
     public static TermBulletTuiApp CreateTuiApp(TermBulletRuntimePaths runtimePaths)
@@ -68,6 +87,7 @@ public static class TermBulletBootstrap
             new CancelItemUseCase(itemRepository, clock),
             new MigrateItemUseCase(itemRepository, clock),
             new DeleteItemUseCase(itemRepository),
+            new ShowItemHistoryUseCase(itemRepository),
             startupAction: startupMaintenanceUseCase.ExecuteAsync);
     }
 
