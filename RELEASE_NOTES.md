@@ -14,16 +14,6 @@ after the readable JSON release.
 - JSON history timestamps now use the injected application clock.
 - Item Detail now reads and displays real per-item JSON history.
 
-### Release Assets
-
-Expected assets:
-
-```text
-termbullet_1.1.2_windows_x64.zip
-termbullet_1.1.2_linux_x64.tar.gz
-termbullet_1.1.2_checksums.txt
-```
-
 ## v1.1.1 - Readable JSON Storage
 
 TermBullet V1.1.1 keeps the first-run data directory setup and improves local
@@ -38,19 +28,6 @@ file readability.
 
 - Monthly JSON files are now written with indentation.
 - The local `index.json` file is now written with indentation.
-
-### Release Assets
-
-Expected assets:
-
-```text
-termbullet_1.1.1_windows_x64.zip
-termbullet_1.1.1_linux_x64.tar.gz
-termbullet_1.1.1_checksums.txt
-```
-
-Publishing `v1.1.1` as the latest GitHub release makes the documented install
-commands resolve to these assets.
 
 ## v1.1.0 - First-Run Data Directory Setup
 
@@ -69,19 +46,6 @@ TermBullet V1.1 keeps the offline core and adds first-run data directory setup.
 - Operational data no longer depends on the current working directory.
 - Monthly JSON, tags, and index files now live under `<data_root>/data`.
 - Windows release publishing can be run with `publish.ps1`.
-
-### Release Assets
-
-Expected assets:
-
-```text
-termbullet_1.1.0_windows_x64.zip
-termbullet_1.1.0_linux_x64.tar.gz
-termbullet_1.1.0_checksums.txt
-```
-
-Publishing `v1.1.0` as the latest GitHub release makes the documented install
-commands resolve to these assets.
 
 ## v1.0.0 - V1 Offline Core
 
@@ -114,16 +78,3 @@ terminal planner for tasks, notes, events, and review workflows.
 - PostgreSQL runtime dependency.
 - Export/import commands.
 
-### Release Assets
-
-Expected assets:
-
-```text
-termbullet_1.0.0_windows_x64.zip
-termbullet_1.0.0_linux_x64.tar.gz
-termbullet_1.0.0_checksums.txt
-```
-
-The install scripts read the latest GitHub release by default, so publishing
-`v1.0.0` as the latest release makes the documented install commands resolve to
-these assets.

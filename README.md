@@ -111,26 +111,6 @@ operational data under:
 Delete `conf.json` and `<data_root>/data` only when you intentionally want to
 remove local TermBullet data.
 
-Manual release artifacts:
-
-```text
-termbullet_1.1.2_windows_x64.zip
-termbullet_1.1.2_linux_x64.tar.gz
-termbullet_1.1.2_checksums.txt
-```
-
-Build local release assets:
-
-```bash
-VERSION=1.1.2 ./publish.sh
-```
-
-Windows PowerShell:
-
-```powershell
-.\publish.ps1 -Version 1.1.2
-```
-
 macOS binaries and package manager distribution are planned for later releases.
 
 ## Data Location
@@ -232,6 +212,18 @@ dotnet restore
 dotnet build
 dotnet test
 dotnet run --project src/TermBullet -- [command] [arguments] [options]
+```
+
+Build local release assets:
+
+```bash
+VERSION=1.1.2 ./publish.sh
+```
+
+Windows PowerShell:
+
+```powershell
+.\publish.ps1 -Version 1.1.2
 ```
 
 When running from source, `conf.json` is created beside the built executable

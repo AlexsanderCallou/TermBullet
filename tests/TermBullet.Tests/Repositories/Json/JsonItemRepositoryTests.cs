@@ -430,7 +430,7 @@ public sealed class JsonItemRepositoryTests
     }
 
     [Fact]
-    public async Task RunAutomaticMonthRolloverAsync_creates_current_month_without_migrating_previous_tasks()
+    public async Task RunAutomaticMonthRolloverAsync_creates_empty_current_month_and_keeps_previous_items_in_place()
     {
         var context = CreateContext(now: new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero));
         var repository = CreateRepository(context);
