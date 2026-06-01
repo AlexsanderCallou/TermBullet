@@ -24,7 +24,6 @@ If no command is provided, the main TUI is opened.
 
 ```text
 termbullet
-├── tui
 ├── add
 ├── list
 ├── today
@@ -53,6 +52,17 @@ termbullet
 - `-v`, `--version`: show version.
 
 ## Core Commands
+
+### TUI
+
+Open the TUI by running TermBullet without a command:
+
+```bash
+termbullet
+```
+
+There is no separate `tui` command in V1. The shortest command opens the main
+terminal interface.
 
 ### `add`
 

@@ -1,5 +1,29 @@
 # TermBullet Release Notes
 
+## v1.1.2 - Offline Core Hardening
+
+TermBullet V1.1.2 resolves documentation and runtime integrity gaps found
+after the readable JSON release.
+
+### Changed
+
+- The CLI documentation now makes the no-command TUI startup explicit and no
+  longer documents a separate `tui` command.
+- `--help`, `-h`, `--version`, and `-v` can run without first creating
+  `conf.json`.
+- JSON history timestamps now use the injected application clock.
+- Item Detail now reads and displays real per-item JSON history.
+
+### Release Assets
+
+Expected assets:
+
+```text
+termbullet_1.1.2_windows_x64.zip
+termbullet_1.1.2_linux_x64.tar.gz
+termbullet_1.1.2_checksums.txt
+```
+
 ## v1.1.1 - Readable JSON Storage
 
 TermBullet V1.1.1 keeps the first-run data directory setup and improves local

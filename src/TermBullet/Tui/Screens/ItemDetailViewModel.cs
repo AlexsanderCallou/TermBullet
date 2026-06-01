@@ -36,10 +36,14 @@ public sealed class ItemDetailViewModel
 
     public IReadOnlyList<string> HistoryLines { get; }
 
-    public static ItemDetailViewModel FromItem(ItemResult item) =>
-        FromRow(ItemDisplayRow.From(item));
+    public static ItemDetailViewModel FromItem(
+        ItemResult item,
+        IReadOnlyCollection<ItemHistoryEntryResult>? history = null) =>
+        FromRow(ItemDisplayRow.From(item), history);
 
-    public static ItemDetailViewModel FromRow(ItemDisplayRow item)
+    public static ItemDetailViewModel FromRow(
+        ItemDisplayRow item,
+        IReadOnlyCollection<ItemHistoryEntryResult>? history = null)
     {
         var tags = item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "-";
         var scheduledAt = item.ScheduledAt is null ? "-" : FormatInstant(item.ScheduledAt.Value);
@@ -66,10 +70,7 @@ public sealed class ItemDetailViewModel
                 "migrate changes this task's collection in place",
                 "id and public ref stay the same"
             ],
-            [
-                "history not loaded by the current Application contracts",
-                "pending: expose per-item history from monthly JSON"
-            ]);
+            BuildHistoryLines(history));
     }
 
     private static string[] BuildContentLines(ItemDisplayRow item)
@@ -82,6 +83,21 @@ public sealed class ItemDetailViewModel
         };
         lines.Add(string.IsNullOrWhiteSpace(item.Description) ? "-" : item.Description);
         return [.. lines];
+    }
+
+    private static string[] BuildHistoryLines(IReadOnlyCollection<ItemHistoryEntryResult>? history)
+    {
+        if (history is null || history.Count == 0)
+        {
+            return ["no history entries found"];
+        }
+
+        return
+        [
+            .. history
+                .OrderBy(entry => entry.OccurredAt)
+                .Select(entry => $"{FormatInstant(entry.OccurredAt)} {entry.Summary}")
+        ];
     }
 
     private static string FormatInstant(DateTimeOffset value) =>

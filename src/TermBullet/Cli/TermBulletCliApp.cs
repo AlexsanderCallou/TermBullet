@@ -36,7 +36,7 @@ public sealed class TermBulletCliApp(
         return InvokeInternalAsync(args, cancellationToken);
     }
 
-    public const string Version = "1.1.1";
+    public const string Version = "1.1.2";
 
     private async Task<int> InvokeInternalAsync(string[] args, CancellationToken cancellationToken)
     {

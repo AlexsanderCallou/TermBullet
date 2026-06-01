@@ -1,6 +1,13 @@
 using TermBullet.Bootstrap;
 using TermBullet.Services.Configuration;
 
+if (TermBulletBootstrap.IsInformationalCliRequest(args))
+{
+    return await TermBulletBootstrap
+        .CreateInformationalCliApp(Console.Out, Console.Error)
+        .InvokeAsync(args);
+}
+
 var setupService = new DataDirectorySetupService(
     new TermBulletConfigService(AppContext.BaseDirectory),
     new DataDirectoryValidator());

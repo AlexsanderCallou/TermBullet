@@ -29,11 +29,26 @@ public sealed class ItemDetailViewModelTests
     }
 
     [Fact]
-    public void History_lines_explain_current_limitation_when_history_is_not_loaded()
+    public void History_lines_show_item_history_entries()
+    {
+        var vm = ItemDetailViewModel.FromItem(
+            MakeItem(),
+            [
+                new ItemHistoryEntryResult(
+                    new DateTimeOffset(2026, 5, 9, 10, 45, 0, TimeSpan.Zero),
+                    "migrate",
+                    "migrate: today -> week")
+            ]);
+
+        Assert.Contains(vm.HistoryLines, line => line.Contains("2026-05-09T10:45:00Z migrate: today -> week", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void History_lines_show_empty_state_when_no_history_entries_exist()
     {
         var vm = ItemDetailViewModel.FromItem(MakeItem());
 
-        Assert.Contains(vm.HistoryLines, line => line.Contains("history not loaded", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(vm.HistoryLines, line => line.Contains("no history entries", StringComparison.OrdinalIgnoreCase));
     }
 
     private static ItemResult MakeItem() =>
