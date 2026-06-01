@@ -3,6 +3,7 @@ using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Application.Startup;
 using TermBullet.Domain.Items;
+using TermBullet.Services.Configuration;
 
 namespace TermBullet.Cli;
 
@@ -27,6 +28,7 @@ public sealed class TermBulletCliApp(
     MigrateItemUseCase? migrateItemUseCase = null,
     DeleteItemUseCase? deleteItemUseCase = null,
     SearchItemsUseCase? searchItemsUseCase = null,
+    TermBulletRuntimePaths? runtimePaths = null,
     Func<CancellationToken, Task>? startupAction = null)
 {
     public Task<int> InvokeAsync(string[] args, CancellationToken cancellationToken = default)
@@ -34,7 +36,7 @@ public sealed class TermBulletCliApp(
         return InvokeInternalAsync(args, cancellationToken);
     }
 
-    public const string Version = "1.0.0";
+    public const string Version = "1.1.0";
 
     private async Task<int> InvokeInternalAsync(string[] args, CancellationToken cancellationToken)
     {
@@ -197,6 +199,11 @@ public sealed class TermBulletCliApp(
         if (searchItemsUseCase is not null)
         {
             rootCommand.Subcommands.Add(BuildSearchCommand(standardOutput, standardError, cancellationToken));
+        }
+
+        if (runtimePaths is not null)
+        {
+            rootCommand.Subcommands.Add(BuildPathCommand(standardOutput));
         }
 
         rootCommand.Subcommands.Add(BuildHistoryCommand(standardOutput, standardError, cancellationToken));
@@ -695,6 +702,20 @@ public sealed class TermBulletCliApp(
                 await standardError.WriteLineAsync(exception.Message);
                 return 1;
             }
+        });
+
+        return command;
+    }
+
+    private Command BuildPathCommand(TextWriter standardOutput)
+    {
+        var command = new Command("path", "Show local configuration and data paths");
+        command.SetAction(async _ =>
+        {
+            await standardOutput.WriteLineAsync($"config: {runtimePaths!.ConfigPath}");
+            await standardOutput.WriteLineAsync($"data_root: {runtimePaths.DataRoot}");
+            await standardOutput.WriteLineAsync($"data: {runtimePaths.DataPath}");
+            return 0;
         });
 
         return command;

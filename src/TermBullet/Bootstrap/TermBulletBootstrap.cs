@@ -7,6 +7,7 @@ using TermBullet.Application.Tags;
 using TermBullet.Cli;
 using TermBullet.Services.Ids;
 using TermBullet.Repositories.Json;
+using TermBullet.Services.Configuration;
 using TermBullet.Tui;
 
 namespace TermBullet.Bootstrap;
@@ -14,12 +15,12 @@ namespace TermBullet.Bootstrap;
 public static class TermBulletBootstrap
 {
     public static TermBulletCliApp CreateCliApp(
-        string projectRootPath,
+        TermBulletRuntimePaths runtimePaths,
         TextWriter output,
         TextWriter error)
     {
         var (clock, itemRepository, tagCatalogRepository, historyMaintenanceService) =
-            CreateSharedServices(projectRootPath);
+            CreateSharedServices(runtimePaths.DataRoot);
         var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
 
         return new TermBulletCliApp(
@@ -43,12 +44,13 @@ public static class TermBulletBootstrap
             new MigrateItemUseCase(itemRepository, clock),
             new DeleteItemUseCase(itemRepository),
             new SearchItemsUseCase(itemRepository),
+            runtimePaths,
             startupAction: startupMaintenanceUseCase.ExecuteAsync);
     }
 
-    public static TermBulletTuiApp CreateTuiApp(string projectRootPath)
+    public static TermBulletTuiApp CreateTuiApp(TermBulletRuntimePaths runtimePaths)
     {
-        var (clock, itemRepository, tagCatalogRepository, _) = CreateSharedServices(projectRootPath);
+        var (clock, itemRepository, tagCatalogRepository, _) = CreateSharedServices(runtimePaths.DataRoot);
         var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
 
         return new TermBulletTuiApp(

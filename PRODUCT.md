@@ -31,6 +31,7 @@ V1 delivers the offline core:
 - search;
 - basic editing;
 - item migration and movement;
+- first-run local data directory selection;
 - local data path discovery.
 
 V1 does not include:
@@ -108,6 +109,28 @@ Manual migration must always declare the destination:
 When a task is migrated, the same item changes `collection`, remains `open`,
 and keeps the same internal ID and public ref. History records only the
 collection change.
+
+## Local Configuration
+
+On first execution, TermBullet asks where local operational data should be
+stored. The selected base directory is saved in:
+
+```text
+<install-dir>/conf.json
+```
+
+The config contains:
+
+```json
+{
+  "data_root": "/path/to/TermBullet"
+}
+```
+
+TermBullet stores monthly JSON, tags, and index files under
+`<data_root>/data`. Startup validates that the selected directory is readable
+and writable. If the install directory cannot write `conf.json`, TermBullet
+fails with a clear permission error instead of using a fallback location.
 
 ## Public Refs
 

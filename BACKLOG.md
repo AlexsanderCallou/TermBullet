@@ -18,6 +18,7 @@ Complete:
 - root-level history for create/update/delete;
 - local JSON index rebuild and automatic update after writes;
 - local data path reporting;
+- first-run data directory selection persisted in install-directory `conf.json`;
 - delete and clear-history use cases;
 - data path use case;
 - CLI command flows for item lifecycle, collections, search, path, and history
@@ -114,6 +115,8 @@ The current TUI visual reference is [screens.md](screens.md).
 - [ ] Regression tests for public ref sequence behavior
 - [ ] Regression tests for CLI and Application consistency
 - [ ] Regression tests for persistence round trip
+- [x] Replace current-working-directory data storage with first-run data root
+      configuration
 
 Already done for Milestone 7:
 
