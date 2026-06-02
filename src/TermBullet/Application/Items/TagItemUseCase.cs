@@ -18,7 +18,7 @@ public sealed class TagItemUseCase(
             request.PublicRef,
             cancellationToken);
 
-        item.AddTag(request.Tag, clock.UtcNow);
+        item.SetTag(request.Tag, clock.UtcNow);
 
         await itemRepository.UpdateAsync(item, cancellationToken);
 

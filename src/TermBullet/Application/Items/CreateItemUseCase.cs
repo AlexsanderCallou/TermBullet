@@ -44,7 +44,7 @@ public sealed class CreateItemUseCase(
             now,
             request.Description,
             ResolvePriority(request),
-            request.Tags,
+            request.Tag,
             request.ScheduledAt);
 
         await itemRepository.AddAsync(item, cancellationToken);

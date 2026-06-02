@@ -13,6 +13,7 @@ public static class TuiContextHelp
                 "Enter: open selected dashboard option",
                 "c: choose item type to add",
                 "n: quick task for today",
+                "t: open tags",
                 "x: mark selected item done",
                 "z: cancel selected item",
                 ">: migrate selected item",
@@ -91,10 +92,20 @@ public static class TuiContextHelp
             ],
             TuiScreen.Tags =>
             [
-                "Tab / Shift+Tab or 1-9: move between Tags, Preview, and Actions",
-                "Enter: preview selected tag",
-                "c: open Create Tag flow",
-                "Tags are derived from item metadata in V1",
+                "Tab / Shift+Tab or 1-4: move between Search, Tags, Preview, and Actions",
+                "Enter: open selected tag detail",
+                "n: open Create Tag flow",
+                "Search filters only tags in this screen",
+                "Default is protected and always available",
+                "Esc: return to previous screen"
+            ],
+            TuiScreen.TagDetail =>
+            [
+                "Tab / Shift+Tab or 1-5: move between Summary, Timeline, Tasks, Notes, and Events",
+                "Enter: open selected item detail",
+                "c: create item with this tag",
+                "n: quick task with this tag",
+                "e: edit selected item",
                 "Esc: return to previous screen"
             ],
             _ => ["No contextual help available."]

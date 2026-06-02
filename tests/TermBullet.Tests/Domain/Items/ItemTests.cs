@@ -10,10 +10,13 @@ public sealed class ItemTests
     private static readonly DateTimeOffset ChangedAt = new(2026, 4, 23, 11, 45, 0, TimeSpan.Zero);
 
     [Theory]
-    [InlineData(ItemType.Task, "t-0426-1")]
-    [InlineData(ItemType.Note, "n-0426-1")]
-    [InlineData(ItemType.Event, "e-0426-1")]
-    public void Create_returns_open_item_with_defaults(ItemType itemType, string publicRefValue)
+    [InlineData(ItemType.Task, "t-0426-1", ItemCollection.Today)]
+    [InlineData(ItemType.Note, "n-0426-1", ItemCollection.Notes)]
+    [InlineData(ItemType.Event, "e-0426-1", ItemCollection.Events)]
+    public void Create_returns_open_item_with_defaults(
+        ItemType itemType,
+        string publicRefValue,
+        ItemCollection expectedCollection)
     {
         var publicRef = PublicRef.Parse(publicRefValue);
 
@@ -25,7 +28,7 @@ public sealed class ItemTests
             ItemCollection.Today,
             CreatedAt,
             description: "  Keep CLI and TUI behavior aligned.  ",
-            tags: ["auth", "cli"]);
+            tag: " auth ");
 
         Assert.Equal(ItemId, item.Id);
         Assert.Same(publicRef, item.PublicRef);
@@ -33,9 +36,9 @@ public sealed class ItemTests
         Assert.Equal("Fix authentication flow", item.Content);
         Assert.Equal("Keep CLI and TUI behavior aligned.", item.Description);
         Assert.Equal(ItemStatus.Open, item.Status);
-        Assert.Equal(ItemCollection.Today, item.Collection);
+        Assert.Equal(expectedCollection, item.Collection);
         Assert.Equal(Priority.None, item.Priority);
-        Assert.Equal(["auth", "cli"], item.Tags);
+        Assert.Equal("auth", item.Tag);
         Assert.Equal(1, item.Version);
         Assert.Equal(CreatedAt, item.CreatedAt);
         Assert.Equal(CreatedAt, item.UpdatedAt);
@@ -248,6 +251,17 @@ public sealed class ItemTests
 
         var exception = Assert.Throws<ArgumentOutOfRangeException>(
             () => item.MoveTo((ItemCollection)99, ChangedAt));
+
+        Assert.Equal("collection", exception.ParamName);
+    }
+
+    [Fact]
+    public void Move_to_collection_rejects_non_task_collections()
+    {
+        var item = CreateTask();
+
+        var exception = Assert.Throws<ArgumentException>(
+            () => item.MoveTo(ItemCollection.Notes, ChangedAt));
 
         Assert.Equal("collection", exception.ParamName);
     }

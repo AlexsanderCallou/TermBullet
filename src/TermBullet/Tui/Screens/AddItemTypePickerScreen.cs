@@ -17,7 +17,7 @@ public static class AddItemTypePickerScreen
             Y = 0,
             Width = Dim.Fill()
         };
-        var panel = new FrameView("What do you want to add?")
+        var panel = new FrameView("1 What do you want to add?")
         {
             X = Pos.Center() - 32,
             Y = Pos.Center() - 5,

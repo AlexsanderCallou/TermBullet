@@ -43,7 +43,7 @@ license is Apache License 2.0 in [LICENSE](LICENSE).
 Current release:
 
 ```text
-v1.1.2 - V1 Offline Core Hardening
+v1.2.0 - Tags and Monthly Carry-Over
 ```
 
 Latest release:
@@ -173,7 +173,7 @@ The full command tree is documented in [CLI.md](CLI.md).
 V1 delivers:
 
 - tasks, notes, and events;
-- Today, Week, Month, and Backlog collections;
+- Today, Week, Month, Backlog, Notes, and Events collections;
 - Forgotten review;
 - Week View;
 - Notes, Calendar, and Tags views;
@@ -217,13 +217,13 @@ dotnet run --project src/TermBullet -- [command] [arguments] [options]
 Build local release assets:
 
 ```bash
-VERSION=1.1.2 ./publish.sh
+VERSION=1.2.0 ./publish.sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\publish.ps1 -Version 1.1.2
+.\publish.ps1 -Version 1.2.0
 ```
 
 When running from source, `conf.json` is created beside the built executable

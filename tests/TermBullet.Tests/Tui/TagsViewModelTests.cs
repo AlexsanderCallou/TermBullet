@@ -10,10 +10,10 @@ public sealed class TagsViewModelTests
     {
         var rows = new[]
         {
-            MakeRow("t-0526-1", "task", "open", ["auth", "cli"]),
-            MakeRow("t-0526-2", "task", "done", ["auth"]),
-            MakeRow("n-0526-1", "note", "open", ["auth"]),
-            MakeRow("e-0526-1", "event", "open", ["calendar"])
+            MakeRow("t-0526-1", "task", "open", "auth"),
+            MakeRow("t-0526-2", "task", "done", "auth"),
+            MakeRow("n-0526-1", "note", "open", "auth"),
+            MakeRow("e-0526-1", "event", "open", "calendar")
         };
 
         var vm = TagsViewModel.Build([], rows);
@@ -50,7 +50,7 @@ public sealed class TagsViewModelTests
         string publicRef,
         string type,
         string status,
-        string[] tags) =>
+        string tag) =>
         new()
         {
             Id = Guid.NewGuid(),
@@ -62,7 +62,7 @@ public sealed class TagsViewModelTests
             Description = null,
             Priority = "none",
             Collection = "today",
-            Tags = tags,
+            Tag = tag,
             ScheduledAt = null,
             Version = 1,
             CreatedAt = new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero),

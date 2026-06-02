@@ -5,5 +5,7 @@ public enum ItemCollection
     Today,
     Week,
     Month,
-    Backlog
+    Backlog,
+    Notes,
+    Events
 }

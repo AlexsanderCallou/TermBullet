@@ -16,7 +16,7 @@ public sealed class MigrateItemViewModel
             $"status: {item.Status}",
             $"collection: {item.Collection}",
             $"priority: {item.Priority}",
-            $"tags: {(item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "-")}"
+            $"tag: {item.Tag}"
         ];
         DestinationLines =
         [

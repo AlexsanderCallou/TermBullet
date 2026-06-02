@@ -56,7 +56,7 @@ public sealed class CalendarViewModelTests
             Description = null,
             Priority = "none",
             Collection = "today",
-            Tags = [],
+            Tag = TermBullet.Domain.Items.Item.DefaultTag,
             ScheduledAt = scheduledAt,
             Version = 1,
             CreatedAt = new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero),

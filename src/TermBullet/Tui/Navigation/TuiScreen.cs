@@ -13,5 +13,6 @@ public enum TuiScreen
     Forgotten,
     Notes,
     Calendar,
-    Tags
+    Tags,
+    TagDetail
 }

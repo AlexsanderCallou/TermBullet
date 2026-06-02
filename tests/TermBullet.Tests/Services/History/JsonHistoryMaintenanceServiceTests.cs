@@ -82,7 +82,7 @@ public sealed class JsonHistoryMaintenanceServiceTests
               "status": "open",
               "collection": "today",
               "priority": "none",
-              "tags": [],
+              "tag": "default",
               "version": 1,
               "created_at": "2026-04-23T10:30:00Z",
               "updated_at": "2026-04-23T10:30:00Z"

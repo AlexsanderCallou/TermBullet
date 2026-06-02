@@ -82,7 +82,7 @@ public sealed class SearchItemsUseCaseTests
             content,
             ItemCollection.Today,
             Now,
-            tags: [tag]);
+            tag: tag);
     }
 
     private static Item CreateNote(int sequence, string content, string tag)
@@ -94,7 +94,7 @@ public sealed class SearchItemsUseCaseTests
             content,
             ItemCollection.Today,
             Now,
-            tags: [tag]);
+            tag: tag);
     }
 
     private class FakeItemRepository(IReadOnlyCollection<Item> items) : IItemRepository

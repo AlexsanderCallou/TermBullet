@@ -25,6 +25,7 @@ Long-form ADRs may be split into `docs/adr/` later if more detail is needed.
 | 0014 | Accepted | V1 stores operational data in monthly JSON files. |
 | 0015 | Accepted | License is Apache-2.0. |
 | 0016 | Accepted | First run stores `conf.json` in the install directory. |
+| 0017 | Accepted | Items have one tag, and non-default tagged work carries into the current month. |
 
 ## ADR-0001 - Local-First Product
 
@@ -103,9 +104,12 @@ Required initial collections:
 - Today;
 - Week;
 - Month;
-- Backlog.
+- Backlog;
+- Notes;
+- Events.
 
-Week and Month are task collections, not dated task schedules. Events use
+Today, Week, Month, and Backlog are task collections, not dated task schedules.
+Notes use the Notes collection. Events use the Events collection and
 `scheduled_at`.
 
 Forgotten is a derived review list for unresolved open tasks from previous
@@ -120,9 +124,9 @@ Official task statuses are `open`, `done`, and `cancelled`.
 collection. It is not a status. The task keeps its internal ID and public ref.
 
 Tasks are planned by collection. Quick Task creates a task in Today, and normal
-task creation chooses Today, Week, Month, or Backlog. Dates belong to events,
-not tasks. Open tasks from previous monthly files appear in Forgotten for manual
-review.
+task creation chooses Today, Week, Month, or Backlog. Notes are stored in Notes.
+Events are stored in Events. Dates belong to events, not tasks. Open tasks from
+previous monthly files appear in Forgotten for manual review.
 
 Rejected: generic-only item model and many V1 item types.
 
@@ -283,6 +287,31 @@ Consequences:
 Rejected: storing operational data relative to the current working directory,
 and silently falling back to a user-profile config file when the install
 directory is not writable.
+
+## ADR-0017 - Single Tag and Monthly Carry-Over
+
+Each item has exactly one normalized tag stored as `tag`. When no tag is chosen,
+the item uses the protected `default` tag.
+
+Rationale:
+
+- tags represent the planning context or long-running project for an item;
+- an item belonging to multiple planning contexts would make monthly carry-over
+  ambiguous;
+- `default` is reserved for quick work that should be reviewed manually instead
+  of silently continuing month after month.
+
+Month rollover copies open tasks and notes with `tag != "default"` into the
+current monthly file while preserving internal ID, public ref, type, collection,
+content, description, priority, and tag. The copied current-month item increments
+version, updates `updated_at`, and records a `carried_over` history event.
+
+Events do not carry over. Open `default` tasks remain in their original monthly
+file and appear in Forgotten. `default` notes remain searchable in archive data
+but do not appear in Forgotten.
+
+Rejected: item `tags` arrays, automatic carry-over for all open work, and event
+carry-over.
 
 ## Future ADR Candidates
 

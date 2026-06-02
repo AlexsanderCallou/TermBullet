@@ -146,7 +146,7 @@ public sealed class SearchViewModelTests
             Status: status,
             Collection: ItemCollection.Today,
             Priority: Priority.None,
-            Tags: [],
+            Tag: Item.DefaultTag,
             ScheduledAt: null,
             Version: 1,
             CreatedAt: DateTimeOffset.UtcNow,

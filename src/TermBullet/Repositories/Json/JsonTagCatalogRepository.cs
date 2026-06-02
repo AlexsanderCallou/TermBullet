@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TermBullet.Repositories.Interfaces;
+using TermBullet.Domain.Items;
 using TermBullet.Domain.Tags;
 
 namespace TermBullet.Repositories.Json;
@@ -20,9 +21,12 @@ public sealed class JsonTagCatalogRepository(
     public async Task<IReadOnlyCollection<TagCatalogEntry>> ListAsync(CancellationToken cancellationToken = default)
     {
         var document = await ReadAsync(cancellationToken);
+        EnsureDefaultTag(document);
+        await WriteAsync(document, cancellationToken);
         return document.Tags
             .Select(tag => TagCatalogEntry.Restore(tag.Name, tag.Description, tag.CreatedAt, tag.UpdatedAt))
-            .OrderBy(tag => tag.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(tag => tag.CreatedAt)
+            .ThenBy(tag => tag.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
@@ -32,6 +36,7 @@ public sealed class JsonTagCatalogRepository(
     {
         var normalizedName = TagCatalogEntry.Create(name, null, DateTimeOffset.UnixEpoch).Name;
         var document = await ReadAsync(cancellationToken);
+        EnsureDefaultTag(document);
         var tag = document.Tags.FirstOrDefault(existing =>
             string.Equals(existing.Name, normalizedName, StringComparison.OrdinalIgnoreCase));
 
@@ -45,6 +50,7 @@ public sealed class JsonTagCatalogRepository(
         ArgumentNullException.ThrowIfNull(tag);
 
         var document = await ReadAsync(cancellationToken);
+        EnsureDefaultTag(document);
         if (document.Tags.Any(existing => string.Equals(existing.Name, tag.Name, StringComparison.OrdinalIgnoreCase)))
         {
             throw new InvalidOperationException($"Tag already exists: {tag.Name}.");
@@ -52,6 +58,22 @@ public sealed class JsonTagCatalogRepository(
 
         document.Tags.Add(ToStorageTag(tag));
         await WriteAsync(document, cancellationToken);
+    }
+
+    private static void EnsureDefaultTag(TagCatalogDocument document)
+    {
+        if (document.Tags.Any(tag => string.Equals(tag.Name, Item.DefaultTag, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        document.Tags.Add(new StorageTag
+        {
+            Name = Item.DefaultTag,
+            Description = "Default capture tag",
+            CreatedAt = DateTimeOffset.UnixEpoch,
+            UpdatedAt = DateTimeOffset.UnixEpoch
+        });
     }
 
     private async Task<TagCatalogDocument> ReadAsync(CancellationToken cancellationToken)
@@ -72,7 +94,8 @@ public sealed class JsonTagCatalogRepository(
     private async Task WriteAsync(TagCatalogDocument document, CancellationToken cancellationToken)
     {
         document.Tags = document.Tags
-            .OrderBy(tag => tag.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(tag => tag.CreatedAt)
+            .ThenBy(tag => tag.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         var json = JsonSerializer.Serialize(document, JsonOptions);

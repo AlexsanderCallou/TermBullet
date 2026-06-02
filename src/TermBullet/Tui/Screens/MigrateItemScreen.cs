@@ -26,7 +26,7 @@ public static class MigrateItemScreen
         var focusArea = FocusArea.Destination;
         var syncingDestinationSelection = false;
 
-        var screen = new FrameView($"TermBullet - Migrate {viewModel.Item.PublicRef}")
+        var screen = new FrameView($"1 Item / Migrate {viewModel.Item.PublicRef}")
         {
             X = 0,
             Y = 0,
@@ -43,7 +43,7 @@ public static class MigrateItemScreen
         AddLines(screen, 1, ["Item", .. viewModel.ItemLines]);
         AddSeparator(screen, 8);
 
-        var destinationTitle = new Label("Destination")
+        var destinationTitle = new Label("2 Destination")
         {
             X = 1,
             Y = 9,
@@ -56,7 +56,7 @@ public static class MigrateItemScreen
             Width = Dim.Fill(2)
         };
 
-        var resultTitle = new Label("Result")
+        var resultTitle = new Label("3 Result")
         {
             X = 1,
             Y = 16,
@@ -161,6 +161,23 @@ public static class MigrateItemScreen
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.MigrateItem);
                 args.Handled = true;
                 return;
+            }
+
+            var digit = TuiScreenUtilities.GetDigit(args.KeyEvent);
+            if (digit is not null)
+            {
+                var target = digit.Value switch
+                {
+                    2 => FocusArea.Destination,
+                    _ => (FocusArea?)null
+                };
+
+                if (target is not null)
+                {
+                    SetFocusArea(target.Value);
+                    args.Handled = true;
+                    return;
+                }
             }
 
             switch (args.KeyEvent.Key)

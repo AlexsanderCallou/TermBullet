@@ -1,5 +1,23 @@
 # TermBullet Release Notes
 
+## v1.2.0 - Tags and Monthly Carry-Over
+
+TermBullet V1.2.0 makes tags a first-class planning surface and finalizes the
+current alpha JSON shape for item tagging.
+
+### Added
+
+- Tags dashboard shortcut and searchable Tags screen.
+- Tag Detail screen with tasks, notes, events, timeline, and tag-scoped create
+  shortcuts.
+- Monthly carry-over for open non-default tagged tasks and notes.
+
+### Changed
+
+- Items now store one `tag` instead of a `tags` array.
+- Untagging returns an item to the protected `default` tag.
+- Open `default` tasks from previous months stay in Forgotten for manual review.
+
 ## v1.1.2 - Offline Core Hardening
 
 TermBullet V1.1.2 resolves documentation and runtime integrity gaps found

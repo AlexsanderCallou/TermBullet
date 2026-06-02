@@ -19,7 +19,7 @@ public sealed class ShowItemUseCaseTests
             "Fix authentication flow",
             ItemCollection.Today,
             Now,
-            tags: ["auth"]);
+            tag: "auth");
         var repository = new FakeItemRepository(item);
         var useCase = new ShowItemUseCase(repository);
 
@@ -30,7 +30,7 @@ public sealed class ShowItemUseCaseTests
         Assert.Equal(ItemType.Task, result.Type);
         Assert.Equal("Fix authentication flow", result.Content);
         Assert.Equal(ItemStatus.Open, result.Status);
-        Assert.Equal(["auth"], result.Tags);
+        Assert.Equal("auth", result.Tag);
         Assert.Equal("t-0426-1", repository.LastPublicRef);
     }
 

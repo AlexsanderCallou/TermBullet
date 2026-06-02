@@ -7,7 +7,7 @@ namespace TermBullet.Tests.Tui;
 public sealed class AddItemFormDraftTests
 {
     [Fact]
-    public void BuildRequest_creates_today_task_with_description_and_tags()
+    public void BuildRequest_creates_today_task_with_description_and_tag()
     {
         var draft = new AddItemFormDraft
         {
@@ -16,7 +16,7 @@ public sealed class AddItemFormDraftTests
             Content = "  Fix authentication flow  ",
             Description = "  Keep the CLI and TUI aligned.  ",
             Priority = Priority.High,
-            SelectedTags = ["auth", "cli", "auth"]
+            SelectedTag = "auth"
         };
 
         var request = draft.BuildRequest();
@@ -26,7 +26,7 @@ public sealed class AddItemFormDraftTests
         Assert.Equal(ItemCollection.Today, request.Collection);
         Assert.Equal("Keep the CLI and TUI aligned.", request.Description);
         Assert.Equal(Priority.High, request.Priority);
-        Assert.Equal(["auth", "cli"], request.Tags);
+        Assert.Equal("auth", request.Tag);
         Assert.Null(request.ScheduledAt);
     }
 
@@ -43,7 +43,7 @@ public sealed class AddItemFormDraftTests
 
         var request = draft.BuildRequest();
 
-        Assert.Equal(ItemCollection.Week, request.Collection);
+        Assert.Equal(ItemCollection.Events, request.Collection);
         Assert.Equal(new DateTimeOffset(2026, 5, 12, 0, 0, 0, TimeSpan.Zero), request.ScheduledAt);
     }
 
@@ -60,7 +60,7 @@ public sealed class AddItemFormDraftTests
         var request = draft.BuildRequest();
 
         Assert.Equal(ItemType.Note, request.Type);
-        Assert.Equal(ItemCollection.Backlog, request.Collection);
+        Assert.Equal(ItemCollection.Notes, request.Collection);
         Assert.Equal(Priority.None, request.Priority);
         Assert.Null(request.ScheduledAt);
         Assert.Equal("Terminal.Gui throws while rendering.", request.Description);
@@ -76,7 +76,7 @@ public sealed class AddItemFormDraftTests
         Assert.Equal(ItemCollection.Today, request.Collection);
         Assert.Equal(Priority.None, request.Priority);
         Assert.Null(request.Description);
-        Assert.Null(request.Tags);
+        Assert.Equal(Item.DefaultTag, request.Tag);
         Assert.Null(request.ScheduledAt);
     }
 
@@ -110,5 +110,40 @@ public sealed class AddItemFormDraftTests
         var exception = Assert.Throws<ArgumentException>(() => draft.BuildRequest());
 
         Assert.Equal("ScheduledAtText", exception.ParamName);
+    }
+
+    [Fact]
+    public void BuildPreviewLines_omits_note_collection_priority_and_schedule_noise()
+    {
+        var draft = new AddItemFormDraft
+        {
+            Type = ItemType.Note,
+            Content = "OAuth notes",
+            SelectedTag = "auth"
+        };
+
+        var lines = draft.BuildPreviewLines();
+
+        Assert.DoesNotContain(lines, line => line.Contains("collection:", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("priority:", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("scheduled_at:", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("tag: auth", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildPreviewLines_omits_event_collection_and_priority_noise()
+    {
+        var draft = new AddItemFormDraft
+        {
+            Type = ItemType.Event,
+            Content = "Dentist appointment",
+            ScheduledAtText = "2026-05-12"
+        };
+
+        var lines = draft.BuildPreviewLines();
+
+        Assert.Contains(lines, line => line.Contains("scheduled_at: 2026-05-12", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("collection:", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("priority:", StringComparison.Ordinal));
     }
 }

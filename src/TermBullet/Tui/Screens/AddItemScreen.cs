@@ -22,11 +22,16 @@ public static class AddItemScreen
         View root,
         TuiAddItemViewModel viewModel,
         IReadOnlyCollection<string> availableTags,
+        string? initialTag,
         Action<CreateItemRequest> onSubmit,
         Action onCancel,
         Action onQuit)
     {
-        var draft = new AddItemFormDraft { Type = viewModel.Type };
+        var draft = new AddItemFormDraft
+        {
+            Type = viewModel.Type,
+            SelectedTag = string.IsNullOrWhiteSpace(initialTag) ? Item.DefaultTag : initialTag
+        };
         var focusArea = FocusArea.Content;
         var selectedTiming = AddItemTimingChoice.Today;
         var selectedPriority = Priority.None;
@@ -55,7 +60,7 @@ public static class AddItemScreen
             Width = Dim.Fill()
         };
 
-        var contentPanel = new FrameView(isTask ? "Content" : "Title")
+        var contentPanel = new FrameView(isTask ? "1 Content" : "1 Title")
         {
             X = 0,
             Y = 1,
@@ -75,7 +80,7 @@ public static class AddItemScreen
         };
         contentPanel.Add(contentLabel, contentField);
 
-        var planningPanel = new FrameView(isTask ? "Timing" : isEvent ? "Scheduled for" : "Planning")
+        var planningPanel = new FrameView(isTask ? "2 Timing" : isEvent ? "2 Scheduled for" : "2 Planning")
         {
             X = 0,
             Y = Pos.Bottom(contentPanel),
@@ -115,7 +120,7 @@ public static class AddItemScreen
         };
         planningPanel.Add(timingGroup, scheduledLabel, scheduledField, scheduledHint);
 
-        var priorityPanel = new FrameView("Priority")
+        var priorityPanel = new FrameView("3 Priority")
         {
             X = 0,
             Y = Pos.Bottom(planningPanel),
@@ -133,7 +138,7 @@ public static class AddItemScreen
         };
         priorityPanel.Add(priorityGroup);
 
-        var detailsPanel = new FrameView("Details")
+        var detailsPanel = new FrameView(isTask ? "4 Details" : isEvent ? "3 Details" : "2 Details")
         {
             X = 0,
             Y = isTask ? Pos.Bottom(priorityPanel) : isEvent ? Pos.Bottom(planningPanel) : Pos.Bottom(contentPanel),
@@ -152,19 +157,19 @@ public static class AddItemScreen
             Width = Dim.Fill(2),
             Height = 3
         };
-        var tagsLabel = new Label("Tags:")
+        var tagsLabel = new Label("Tag:")
         {
             X = 1,
             Y = 6
         };
-        var tagSelection = new TagSelectionList(availableTags);
+        var tagSelection = new TagSelectionList(availableTags, draft.SelectedTag);
         var tagsList = tagSelection.View;
         tagsList.X = Pos.Right(tagsLabel) + 1;
         tagsList.Y = 6;
         tagsList.Width = Dim.Fill(2);
         tagsList.Height = 3;
         detailsPanel.Add(descriptionLabel, descriptionField, tagsLabel, tagsList);
-        var tagsHint = new Label("Space toggle")
+        var tagsHint = new Label("Space select")
         {
             X = Pos.Right(tagsLabel) + 1,
             Y = 9,
@@ -272,7 +277,7 @@ public static class AddItemScreen
             draft.Priority = isTask ? selectedPriority : Priority.None;
             draft.Content = contentField.Text?.ToString() ?? string.Empty;
             draft.Description = descriptionField.Text?.ToString() ?? string.Empty;
-            draft.SelectedTags = tagSelection.SelectedTags;
+            draft.SelectedTag = tagSelection.SelectedTag;
             draft.ScheduledAtText = scheduledField.Text?.ToString() ?? string.Empty;
         }
 
@@ -455,6 +460,18 @@ public static class AddItemScreen
                 return;
             }
 
+            var digit = TuiScreenUtilities.GetDigit(args.KeyEvent);
+            if (digit is not null)
+            {
+                var panelFocus = ResolvePanelFocus(digit.Value);
+                if (panelFocus is not null)
+                {
+                    SetFocusArea(panelFocus.Value);
+                    args.Handled = true;
+                    return;
+                }
+            }
+
             switch (args.KeyEvent.Key)
             {
                 case Key.Tab:
@@ -521,6 +538,37 @@ public static class AddItemScreen
         SetPriority(Priority.None);
         SetFocusArea(FocusArea.Content);
         UpdateStatus();
+
+        FocusArea? ResolvePanelFocus(int panelNumber)
+        {
+            if (panelNumber == 1)
+            {
+                return FocusArea.Content;
+            }
+
+            if (isTask)
+            {
+                return panelNumber switch
+                {
+                    2 => FocusArea.Timing,
+                    3 => FocusArea.Priority,
+                    4 => FocusArea.Description,
+                    _ => null
+                };
+            }
+
+            if (isEvent)
+            {
+                return panelNumber switch
+                {
+                    2 => FocusArea.ScheduledAt,
+                    3 => FocusArea.Description,
+                    _ => null
+                };
+            }
+
+            return panelNumber == 2 ? FocusArea.Description : null;
+        }
     }
 
 }

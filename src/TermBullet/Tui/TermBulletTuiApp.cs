@@ -41,6 +41,8 @@ public sealed class TermBulletTuiApp(
         var navigation = new TuiNavigationState(panelCount: 5);
         var auxiliaryFlow = TuiAuxiliaryFlow.None;
         var addItemType = ItemType.Task;
+        string? addItemInitialTag = null;
+        string? selectedTagName = null;
         ItemDisplayRow? selectedItem = null;
         IReadOnlyCollection<ItemHistoryEntryResult> selectedItemHistory = [];
         MigrateItemViewModel? migrateItemVm = null;
@@ -85,6 +87,7 @@ public sealed class TermBulletTuiApp(
             void OpenAddItem()
             {
                 addError = null;
+                addItemInitialTag = null;
                 auxiliaryFlow = TuiAuxiliaryFlow.AddItemTypePicker;
                 ScheduleRender();
             }
@@ -100,8 +103,32 @@ public sealed class TermBulletTuiApp(
             void OpenQuickTask()
             {
                 addError = null;
+                addItemInitialTag = null;
                 auxiliaryFlow = TuiAuxiliaryFlow.QuickTask;
                 ScheduleRender();
+            }
+
+            void OpenAddItemForTag(string tag)
+            {
+                addError = null;
+                addItemInitialTag = tag;
+                auxiliaryFlow = TuiAuxiliaryFlow.AddItemTypePicker;
+                ScheduleRender();
+            }
+
+            void OpenQuickTaskForTag(string tag)
+            {
+                addError = null;
+                addItemInitialTag = tag;
+                auxiliaryFlow = TuiAuxiliaryFlow.QuickTask;
+                ScheduleRender();
+            }
+
+            void OpenTagDetail(string tag)
+            {
+                selectedTagName = tag;
+                selectedItem = null;
+                NavigateTo(TuiScreen.TagDetail, GetPanelCount(TuiScreen.TagDetail));
             }
 
             void OpenEditItem(ItemDisplayRow? item)
@@ -299,6 +326,12 @@ public sealed class TermBulletTuiApp(
                     return true;
                 }
 
+                if (keyEvent.Key == (Key)'t' && navigation.CurrentScreen == TuiScreen.MainDashboard)
+                {
+                    NavigateTo(TuiScreen.Tags, GetPanelCount(TuiScreen.Tags));
+                    return true;
+                }
+
                 if (keyEvent.Key == (Key)'e' && selectedItem is not null && editItemUseCase is not null)
                 {
                     OpenEditItem(selectedItem);
@@ -362,6 +395,7 @@ public sealed class TermBulletTuiApp(
                     QuickTaskScreen.Build(
                         root,
                         addError,
+                        addItemInitialTag,
                         SubmitCreateRequest,
                         () =>
                         {
@@ -384,6 +418,7 @@ public sealed class TermBulletTuiApp(
                         root,
                         addItemVm,
                         snapshot.Tags.Select(tag => tag.Name).ToArray(),
+                        addItemInitialTag,
                         SubmitCreateRequest,
                         () =>
                         {
@@ -497,7 +532,6 @@ public sealed class TermBulletTuiApp(
                             navigation,
                             NavigateBack,
                             () => OpenEditItem(selectedItem),
-                            () => OpenMigrateItem(selectedItem),
                             Quit);
                         break;
 
@@ -655,6 +689,22 @@ public sealed class TermBulletTuiApp(
                                 snapshot.Tags,
                                 snapshot.AllItems.Select(ItemDisplayRow.From).ToArray()),
                             OpenCreateTag,
+                            OpenTagDetail,
+                            NavigateBack,
+                            Quit);
+                        break;
+
+                    case TuiScreen.TagDetail when selectedTagName is not null:
+                        TagDetailScreen.Build(
+                            root,
+                            TagDetailViewModel.Build(
+                                selectedTagName,
+                                snapshot.AllItems.Select(ItemDisplayRow.From).ToArray()),
+                            navigation,
+                            OpenItemDetail,
+                            OpenEditItem,
+                            OpenAddItemForTag,
+                            OpenQuickTaskForTag,
                             NavigateBack,
                             Quit);
                         break;
@@ -715,7 +765,7 @@ public sealed class TermBulletTuiApp(
             X = 0, Y = 0, Width = Dim.Fill()
         };
 
-        var footer = new Label(" / filter  c add  n quick task  e edit  x done  z cancel  > migrate  d delete  Enter open  Tab/1-5 focus  ? help  q quit")
+        var footer = new Label(" / filter  c add  n quick task  t tags  e edit  x done  z cancel  > migrate  d delete  Enter open  Tab/1-5 focus  ? help  q quit")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
@@ -727,7 +777,7 @@ public sealed class TermBulletTuiApp(
         };
         var menuEntries = new[]
         {
-            "> Dashboard",
+            "  Dashboard",
             "  Search",
             "  Planning",
             "  Month",
@@ -960,7 +1010,7 @@ public sealed class TermBulletTuiApp(
         screen switch
         {
             TuiScreen.Search => 2,
-            TuiScreen.ItemDetail => 5,
+            TuiScreen.ItemDetail => 3,
             TuiScreen.MigrateItem => 1,
             TuiScreen.Planning => 1,
             TuiScreen.Week => 3,
@@ -969,7 +1019,8 @@ public sealed class TermBulletTuiApp(
             TuiScreen.Forgotten => 3,
             TuiScreen.Notes => 3,
             TuiScreen.Calendar => 4,
-            TuiScreen.Tags => 3,
+            TuiScreen.Tags => 4,
+            TuiScreen.TagDetail => 5,
             _ => 5
         };
 
@@ -1030,7 +1081,7 @@ public sealed class TermBulletTuiApp(
                 $"status: {item.Status}",
                 $"priority: {item.Priority}",
                 $"collection: {item.Collection}",
-                $"tags: {(item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "(none)")}"
+                $"tag: {item.Tag}"
             ]
             : ["(nothing selected)"];
 
@@ -1044,7 +1095,7 @@ public sealed class TermBulletTuiApp(
             $"  month      {viewModel.MonthItems.Count}",
             $"  backlog    {viewModel.BacklogItems.Count}",
             $"  forgotten  {forgottenCount}",
-            "tags"
+            "tag"
         };
 
         if (viewModel.ProjectOrTagRows.Count == 0)

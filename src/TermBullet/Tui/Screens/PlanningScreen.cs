@@ -16,7 +16,7 @@ public static class PlanningScreen
             Width = Dim.Fill()
         };
 
-        var panel = new FrameView("Future AI Planning")
+        var panel = new FrameView("1 Future AI Planning")
         {
             X = 0,
             Y = 1,

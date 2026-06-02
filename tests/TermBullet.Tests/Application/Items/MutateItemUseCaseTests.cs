@@ -36,9 +36,9 @@ public sealed class MutateItemUseCaseTests
     }
 
     [Fact]
-    public async Task Edit_updates_task_collection_priority_and_tags()
+    public async Task Edit_updates_task_collection_priority_and_tag()
     {
-        var repository = new FakeItemRepository(CreateTask(["auth"]));
+        var repository = new FakeItemRepository(CreateTask("auth"));
         var useCase = new EditItemUseCase(repository, new FixedClock(ChangedAt));
 
         var result = await useCase.ExecuteAsync(new EditItemRequest
@@ -47,12 +47,12 @@ public sealed class MutateItemUseCaseTests
             Content = "Fix auth refresh flow",
             Collection = ItemCollection.Week,
             Priority = Priority.High,
-            Tags = ["auth", "cli"]
+            Tag = "cli"
         });
 
         Assert.Equal(ItemCollection.Week, result.Collection);
         Assert.Equal(Priority.High, result.Priority);
-        Assert.Equal(["auth", "cli"], result.Tags);
+        Assert.Equal("cli", result.Tag);
         Assert.Null(result.ScheduledAt);
         Assert.Equal(2, result.Version);
     }
@@ -70,13 +70,13 @@ public sealed class MutateItemUseCaseTests
             Content = "Dentist appointment",
             Priority = Priority.High,
             ScheduledAt = scheduledAt,
-            Tags = ["health"]
+            Tag = "health"
         });
 
         Assert.Equal(ItemType.Event, result.Type);
         Assert.Equal(scheduledAt, result.ScheduledAt);
         Assert.Equal(Priority.None, result.Priority);
-        Assert.Equal(["health"], result.Tags);
+        Assert.Equal("health", result.Tag);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class MutateItemUseCaseTests
             Tag = "  Auth  "
         });
 
-        Assert.Equal(["Auth"], result.Tags);
+        Assert.Equal("auth", result.Tag);
         Assert.Equal(2, result.Version);
         Assert.Equal(ChangedAt, result.UpdatedAt);
         Assert.Single(repository.UpdatedItems);
@@ -168,7 +168,7 @@ public sealed class MutateItemUseCaseTests
     [Fact]
     public async Task Untag_removes_existing_tag_and_persists_item()
     {
-        var repository = new FakeItemRepository(CreateTask(tags: ["auth", "cli"]));
+        var repository = new FakeItemRepository(CreateTask("auth"));
         var useCase = new UntagItemUseCase(repository, new FixedClock(ChangedAt));
 
         var result = await useCase.ExecuteAsync(new UntagItemRequest
@@ -177,7 +177,7 @@ public sealed class MutateItemUseCaseTests
             Tag = "AUTH"
         });
 
-        Assert.Equal(["cli"], result.Tags);
+        Assert.Equal(Item.DefaultTag, result.Tag);
         Assert.Equal(2, result.Version);
         Assert.Equal(ChangedAt, result.UpdatedAt);
         Assert.Single(repository.UpdatedItems);
@@ -310,7 +310,7 @@ public sealed class MutateItemUseCaseTests
         Assert.Empty(repository.UpdatedItems);
     }
 
-    private static Item CreateTask(IReadOnlyCollection<string>? tags = null)
+    private static Item CreateTask(string? tag = null)
     {
         return Item.Create(
             Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
@@ -319,7 +319,7 @@ public sealed class MutateItemUseCaseTests
             "Fix authentication flow",
             ItemCollection.Today,
             CreatedAt,
-            tags: tags);
+            tag: tag);
     }
 
     private static Item CreateNote()

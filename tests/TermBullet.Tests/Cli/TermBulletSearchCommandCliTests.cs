@@ -84,7 +84,7 @@ public sealed class TermBulletSearchCommandCliTests
             ItemStatus.Open,
             ItemCollection.Today,
             Priority.None,
-            [tag],
+            tag,
             null,
             1,
             Now,
@@ -108,7 +108,7 @@ public sealed class TermBulletSearchCommandCliTests
                 itemResult.Status,
                 itemResult.Collection,
                 itemResult.Priority,
-                itemResult.Tags,
+                itemResult.Tag,
                 itemResult.Version,
                 itemResult.CreatedAt,
                 itemResult.UpdatedAt));

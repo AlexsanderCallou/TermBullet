@@ -14,7 +14,7 @@ public sealed class EditItemRequest
 
     public Priority? Priority { get; init; }
 
-    public IReadOnlyCollection<string>? Tags { get; init; }
+    public string? Tag { get; init; }
 
     public DateTimeOffset? ScheduledAt { get; init; }
 }

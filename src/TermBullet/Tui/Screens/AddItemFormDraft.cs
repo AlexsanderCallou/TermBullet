@@ -15,17 +15,18 @@ public sealed class AddItemFormDraft
 
     public Priority Priority { get; set; } = TermBullet.Domain.Items.Priority.None;
 
-    public IReadOnlyCollection<string> SelectedTags { get; set; } = [];
+    public string SelectedTag { get; set; } = Item.DefaultTag;
 
     public string ScheduledAtText { get; set; } = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd");
 
-    public static CreateItemRequest BuildQuickTaskRequest(string content)
+    public static CreateItemRequest BuildQuickTaskRequest(string content, string? tag = null)
     {
         return new CreateItemRequest
         {
             Type = ItemType.Task,
             Content = NormalizeRequiredText(content, nameof(content)),
-            Collection = ItemCollection.Today
+            Collection = ItemCollection.Today,
+            Tag = NormalizeTagOrDefault(tag)
         };
     }
 
@@ -33,7 +34,6 @@ public sealed class AddItemFormDraft
     {
         var content = NormalizeRequiredText(Content, nameof(Content));
         var description = NormalizeOptionalText(Description);
-        var tags = NormalizeTags(SelectedTags);
         var collection = ResolveCollection();
         var scheduledAt = ResolveScheduledDate();
 
@@ -44,39 +44,42 @@ public sealed class AddItemFormDraft
             Collection = collection,
             Description = description,
             Priority = Type == ItemType.Task ? Priority : TermBullet.Domain.Items.Priority.None,
-            Tags = tags.Count > 0 ? tags : null,
+            Tag = NormalizeTagOrDefault(SelectedTag),
             ScheduledAt = Type == ItemType.Event ? ToUtcInstant(scheduledAt!.Value) : null
         };
     }
 
     public IReadOnlyList<string> BuildPreviewLines()
     {
-        var scheduledAt = ResolveScheduledDate();
-        var planningLine = Type == ItemType.Event
-            ? scheduledAt is null
-                ? "scheduled_at: -"
-                : $"scheduled_at: {scheduledAt.Value:yyyy-MM-dd}"
-            : $"collection: {ResolveCollection().ToString().ToLowerInvariant()}";
         var content = string.IsNullOrWhiteSpace(Content) ? "(required)" : Content.Trim();
         var description = string.IsNullOrWhiteSpace(Description) ? "-" : Description.Trim();
-
-        return
-        [
+        var lines = new List<string>
+        {
             $"type: {Type.ToString().ToLowerInvariant()}",
-            $"collection: {ResolveCollection().ToString().ToLowerInvariant()}",
             $"content: {content}",
-            $"description: {description}",
-            Type == ItemType.Task ? $"priority: {FormatPriority(Priority)}" : "priority: none",
-            planningLine,
-            $"tags: {FormatTags(SelectedTags)}"
-        ];
+            $"description: {description}"
+        };
+
+        if (Type == ItemType.Task)
+        {
+            lines.Add($"collection: {ResolveCollection().ToString().ToLowerInvariant()}");
+            lines.Add($"priority: {FormatPriority(Priority)}");
+        }
+
+        if (Type == ItemType.Event)
+        {
+            lines.Add($"scheduled_at: {ResolveScheduledDate()!.Value:yyyy-MM-dd}");
+        }
+
+        lines.Add($"tag: {NormalizeTagOrDefault(SelectedTag)}");
+        return lines;
     }
 
     private ItemCollection ResolveCollection() =>
         Type switch
         {
-            ItemType.Note => ItemCollection.Backlog,
-            ItemType.Event => ItemCollection.Week,
+            ItemType.Note => ItemCollection.Notes,
+            ItemType.Event => ItemCollection.Events,
             _ => Timing switch
             {
                 AddItemTimingChoice.Today => ItemCollection.Today,
@@ -134,27 +137,8 @@ public sealed class AddItemFormDraft
         return value.Trim();
     }
 
-    private static List<string> NormalizeTags(IEnumerable<string>? value)
-    {
-        if (value is null)
-        {
-            return [];
-        }
-
-        return
-        [
-            .. value
-                .Select(tag => tag.Trim())
-                .Where(tag => !string.IsNullOrWhiteSpace(tag))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-        ];
-    }
-
-    private static string FormatTags(IEnumerable<string>? value)
-    {
-        var tags = NormalizeTags(value);
-        return tags.Count > 0 ? string.Join(", ", tags) : "-";
-    }
+    private static string NormalizeTagOrDefault(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? Item.DefaultTag : value.Trim().ToLowerInvariant();
 
     private static string FormatPriority(Priority priority) =>
         priority.ToString().ToLowerInvariant();

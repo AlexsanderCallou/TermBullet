@@ -50,9 +50,7 @@ public sealed class JsonIndexService(
                     Collection = item.GetProperty("collection").GetString() ?? string.Empty,
                     Priority = item.GetProperty("priority").GetString() ?? string.Empty,
                     Content = item.GetProperty("content").GetString() ?? string.Empty,
-                    Tags = item.TryGetProperty("tags", out var tags) && tags.ValueKind == JsonValueKind.Array
-                        ? tags.EnumerateArray().Select(tag => tag.GetString() ?? string.Empty).ToArray()
-                        : [],
+                    Tag = item.GetProperty("tag").GetString() ?? string.Empty,
                     Period = period,
                     SourceFile = GetRelativeDataPath(file, projectRootPath),
                     UpdatedAt = item.GetProperty("updated_at").GetDateTimeOffset()
@@ -116,8 +114,8 @@ public sealed class JsonIndexService(
         [JsonPropertyName("content")]
         public string Content { get; set; } = string.Empty;
 
-        [JsonPropertyName("tags")]
-        public string[] Tags { get; set; } = [];
+        [JsonPropertyName("tag")]
+        public string Tag { get; set; } = string.Empty;
 
         [JsonPropertyName("period")]
         public string Period { get; set; } = string.Empty;

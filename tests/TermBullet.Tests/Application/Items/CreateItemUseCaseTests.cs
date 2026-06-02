@@ -23,7 +23,7 @@ public sealed class CreateItemUseCaseTests
             Collection = ItemCollection.Today,
             Priority = Priority.High,
             Description = "  Keep CLI and TUI behavior aligned.  ",
-            Tags = ["auth", "cli"]
+            Tag = " auth "
         };
 
         var result = await useCase.ExecuteAsync(request);
@@ -45,7 +45,7 @@ public sealed class CreateItemUseCaseTests
         Assert.Equal("t-0426-3", item.PublicRef.Value);
         Assert.Equal("Fix authentication flow", item.Content);
         Assert.Equal("Keep CLI and TUI behavior aligned.", item.Description);
-        Assert.Equal(["auth", "cli"], item.Tags);
+        Assert.Equal("auth", item.Tag);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class CreateItemUseCaseTests
         var result = await useCase.ExecuteAsync(request);
 
         Assert.Equal("n-0426-1", result.PublicRef);
-        Assert.Equal(ItemCollection.Today, result.Collection);
+        Assert.Equal(ItemCollection.Notes, result.Collection);
         Assert.Equal(Priority.None, result.Priority);
     }
 
@@ -84,6 +84,28 @@ public sealed class CreateItemUseCaseTests
 
         Assert.Equal(Priority.None, result.Priority);
         Assert.Equal(Priority.None, Assert.Single(repository.AddedItems).Priority);
+    }
+
+    [Theory]
+    [InlineData(ItemType.Note, ItemCollection.Notes)]
+    [InlineData(ItemType.Event, ItemCollection.Events)]
+    public async Task Execute_uses_type_specific_collections_for_non_task_items(
+        ItemType type,
+        ItemCollection expectedCollection)
+    {
+        var repository = new FakeItemRepository();
+        var useCase = CreateUseCase(repository);
+        var request = new CreateItemRequest
+        {
+            Type = type,
+            Content = "Reference item",
+            Collection = ItemCollection.Week
+        };
+
+        var result = await useCase.ExecuteAsync(request);
+
+        Assert.Equal(expectedCollection, result.Collection);
+        Assert.Equal(expectedCollection, Assert.Single(repository.AddedItems).Collection);
     }
 
     [Fact]
@@ -198,7 +220,7 @@ public sealed class CreateItemUseCaseTests
     }
 
     [Fact]
-    public async Task Execute_rejects_empty_tag()
+    public async Task Execute_defaults_empty_tag()
     {
         var repository = new FakeItemRepository();
         var useCase = CreateUseCase(repository);
@@ -206,14 +228,12 @@ public sealed class CreateItemUseCaseTests
         {
             Type = ItemType.Task,
             Content = "Fix authentication flow",
-            Tags = ["auth", " "]
+            Tag = " "
         };
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => useCase.ExecuteAsync(request));
+        var result = await useCase.ExecuteAsync(request);
 
-        Assert.Equal("tags", exception.ParamName);
-        Assert.Empty(repository.AddedItems);
+        Assert.Equal(Item.DefaultTag, Assert.Single(repository.AddedItems).Tag);
     }
 
     private static CreateItemUseCase CreateUseCase(FakeItemRepository repository)

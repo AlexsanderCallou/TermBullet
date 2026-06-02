@@ -81,7 +81,7 @@ public sealed class JsonItemRepository(
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        var (year, month) = GetPeriodFromPublicRef(item.PublicRef);
+        var (year, month) = await ResolveWritePeriodAsync(item.Id, item.PublicRef, cancellationToken);
         var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
         var index = document.Items.FindIndex(existing => existing.Id == item.Id);
         if (index < 0)
@@ -110,7 +110,7 @@ public sealed class JsonItemRepository(
         ArgumentException.ThrowIfNullOrWhiteSpace(publicRef);
         var parsedPublicRef = PublicRef.Parse(publicRef);
 
-        var (year, month) = GetPeriodFromPublicRef(parsedPublicRef);
+        var (year, month) = await ResolveReadPeriodAsync(parsedPublicRef, cancellationToken);
         var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
         var index = document.Items.FindIndex(existing => string.Equals(
             existing.PublicRef,
@@ -172,7 +172,7 @@ public sealed class JsonItemRepository(
         CancellationToken cancellationToken = default)
     {
         var parsedPublicRef = PublicRef.Parse(publicRef);
-        var (year, month) = GetPeriodFromPublicRef(parsedPublicRef);
+        var (year, month) = await ResolveReadPeriodAsync(parsedPublicRef, cancellationToken);
         var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
         var storageItem = document.Items.FirstOrDefault(item => item.PublicRef == parsedPublicRef.Value);
         return storageItem is null ? null : ToDomainItem(storageItem);
@@ -211,7 +211,7 @@ public sealed class JsonItemRepository(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(publicRef);
         var parsedPublicRef = PublicRef.Parse(publicRef);
-        var (year, month) = GetPeriodFromPublicRef(parsedPublicRef);
+        var (year, month) = await ResolveReadPeriodAsync(parsedPublicRef, cancellationToken);
         var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
 
         return document.History
@@ -233,9 +233,115 @@ public sealed class JsonItemRepository(
     {
         var (currentYear, currentMonth) = GetCurrentPeriod();
         var currentDocument = await ReadMonthlyDocumentByPeriodAsync(currentYear, currentMonth, cancellationToken);
+        var currentIds = currentDocument.Items.Select(item => item.Id).ToHashSet();
+
+        foreach (var (year, month) in EnumeratePriorPeriods(currentYear, currentMonth))
+        {
+            var previousDocument = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
+            foreach (var item in previousDocument.Items.Where(ShouldCarryOver))
+            {
+                if (!currentIds.Add(item.Id))
+                {
+                    continue;
+                }
+
+                var carried = CloneForCarryOver(item, clock.UtcNow);
+                currentDocument.Items.Add(carried);
+                AppendHistory(
+                    currentDocument,
+                    carried.Id,
+                    carried.PublicRef,
+                    "carried_over",
+                    clock.UtcNow,
+                    new
+                    {
+                        from_period = $"{year:0000}-{month:00}",
+                        to_period = $"{currentYear:0000}-{currentMonth:00}",
+                        collection = carried.Collection,
+                        tag = carried.Tag
+                    });
+            }
+        }
+
         await WriteMonthlyDocumentAsync(currentYear, currentMonth, currentDocument, cancellationToken);
         await RebuildIndexIfConfiguredAsync(cancellationToken);
     }
+
+    private async Task<(int Year, int Month)> ResolveReadPeriodAsync(PublicRef publicRef, CancellationToken cancellationToken)
+    {
+        var (currentYear, currentMonth) = GetCurrentPeriod();
+        var currentDocument = await ReadMonthlyDocumentByPeriodAsync(currentYear, currentMonth, cancellationToken);
+        if (currentDocument.Items.Any(item => string.Equals(item.PublicRef, publicRef.Value, StringComparison.Ordinal)))
+        {
+            return (currentYear, currentMonth);
+        }
+
+        return GetPeriodFromPublicRef(publicRef);
+    }
+
+    private async Task<(int Year, int Month)> ResolveWritePeriodAsync(Guid itemId, PublicRef publicRef, CancellationToken cancellationToken)
+    {
+        var (currentYear, currentMonth) = GetCurrentPeriod();
+        var currentDocument = await ReadMonthlyDocumentByPeriodAsync(currentYear, currentMonth, cancellationToken);
+        if (currentDocument.Items.Any(item => item.Id == itemId))
+        {
+            return (currentYear, currentMonth);
+        }
+
+        return GetPeriodFromPublicRef(publicRef);
+    }
+
+    private IEnumerable<(int Year, int Month)> EnumeratePriorPeriods(int currentYear, int currentMonth)
+    {
+        var dataRoot = Path.Combine(pathResolver.ProjectRootPath, "data");
+        if (!Directory.Exists(dataRoot))
+        {
+            yield break;
+        }
+
+        var periods = Directory.EnumerateFiles(dataRoot, "data_??_????.json", SearchOption.AllDirectories)
+            .Select(path => new { Path = path, FileName = Path.GetFileName(path) })
+            .Select(file => TryParseMonthlyFileName(file.FileName, out var month, out var year)
+                ? new { Year = year, Month = month }
+                : null)
+            .Where(period => period is not null)
+            .Select(period => (period!.Year, period.Month))
+            .Where(period => period.Year < currentYear || (period.Year == currentYear && period.Month < currentMonth))
+            .OrderByDescending(period => period.Year)
+            .ThenByDescending(period => period.Month);
+
+        foreach (var period in periods)
+        {
+            yield return period;
+        }
+    }
+
+    private static bool ShouldCarryOver(StorageItem item)
+    {
+        return item.Status == "open"
+            && item.Type is "task" or "note"
+            && !string.Equals(item.Tag, Item.DefaultTag, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static StorageItem CloneForCarryOver(StorageItem item, DateTimeOffset changedAt) =>
+        new()
+        {
+            Id = item.Id,
+            PublicRef = item.PublicRef,
+            Type = item.Type,
+            Content = item.Content,
+            Description = item.Description,
+            Status = item.Status,
+            Collection = item.Collection,
+            Priority = item.Priority,
+            Tag = item.Tag,
+            ScheduledAt = item.ScheduledAt,
+            Version = item.Version + 1,
+            CreatedAt = item.CreatedAt,
+            UpdatedAt = changedAt,
+            CompletedAt = item.CompletedAt,
+            CancelledAt = item.CancelledAt
+        };
 
     private async Task<MonthlyDataDocument> ReadCurrentMonthlyDocumentAsync(CancellationToken cancellationToken)
     {
@@ -415,7 +521,7 @@ public sealed class JsonItemRepository(
             Status = ToStatusKey(item.Status),
             Collection = ToCollectionKey(item.Collection),
             Priority = ToPriorityKey(item.Priority),
-            Tags = [.. item.Tags],
+            Tag = item.Tag,
             ScheduledAt = item.ScheduledAt,
             Version = item.Version,
             CreatedAt = item.CreatedAt,
@@ -447,7 +553,7 @@ public sealed class JsonItemRepository(
             ParseStatus(item.Status),
             ParseCollection(item.Collection),
             ParsePriority(item.Priority),
-            item.Tags,
+            item.Tag,
             item.Version,
             item.CreatedAt,
             item.UpdatedAt,
@@ -499,6 +605,8 @@ public sealed class JsonItemRepository(
             ItemCollection.Week => "week",
             ItemCollection.Month => "month",
             ItemCollection.Backlog => "backlog",
+            ItemCollection.Notes => "notes",
+            ItemCollection.Events => "events",
             _ => throw new ArgumentOutOfRangeException(nameof(collection), collection, "Unsupported item collection.")
         };
 
@@ -509,6 +617,8 @@ public sealed class JsonItemRepository(
             "week" => ItemCollection.Week,
             "month" => ItemCollection.Month,
             "backlog" => ItemCollection.Backlog,
+            "note" or "notes" => ItemCollection.Notes,
+            "event" or "events" => ItemCollection.Events,
             _ => throw new InvalidDataException($"Unsupported item collection value: {value}.")
         };
 

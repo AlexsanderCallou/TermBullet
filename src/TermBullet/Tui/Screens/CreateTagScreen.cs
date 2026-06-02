@@ -22,7 +22,7 @@ public static class CreateTagScreen
             Y = 0,
             Width = Dim.Fill()
         };
-        var namePanel = new FrameView("Name")
+        var namePanel = new FrameView("1 Name")
         {
             X = 0,
             Y = 1,
@@ -37,7 +37,7 @@ public static class CreateTagScreen
         };
         namePanel.Add(nameField);
 
-        var descriptionPanel = new FrameView("Description")
+        var descriptionPanel = new FrameView("2 Description")
         {
             X = 0,
             Y = Pos.Bottom(namePanel),
@@ -53,7 +53,7 @@ public static class CreateTagScreen
         };
         descriptionPanel.Add(descriptionField);
 
-        var previewPanel = new FrameView("Preview")
+        var previewPanel = new FrameView("3 Preview")
         {
             X = 0,
             Y = Pos.Bottom(descriptionPanel),
@@ -188,6 +188,25 @@ public static class CreateTagScreen
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.Tags);
                 args.Handled = true;
                 return;
+            }
+
+            var digit = TuiScreenUtilities.GetDigit(args.KeyEvent);
+            if (digit is not null)
+            {
+                var target = digit.Value switch
+                {
+                    1 => FocusArea.Name,
+                    2 => FocusArea.Description,
+                    3 => FocusArea.Preview,
+                    _ => (FocusArea?)null
+                };
+
+                if (target is not null)
+                {
+                    SetFocusArea(target.Value);
+                    args.Handled = true;
+                    return;
+                }
             }
 
             switch (args.KeyEvent.Key)

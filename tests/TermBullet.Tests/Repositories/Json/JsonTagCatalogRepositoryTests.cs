@@ -18,14 +18,16 @@ public sealed class JsonTagCatalogRepositoryTests
         await repository.AddAsync(tag);
         var tags = await repository.ListAsync();
 
-        var stored = Assert.Single(tags);
+        var stored = Assert.Single(tags, existing => existing.Name == "auth");
         Assert.Equal("auth", stored.Name);
         Assert.Equal("Authentication work", stored.Description);
         Assert.True(File.Exists(context.TagsPath));
 
         var json = await File.ReadAllTextAsync(context.TagsPath);
         using var doc = JsonDocument.Parse(json);
-        var jsonTag = Assert.Single(doc.RootElement.GetProperty("tags").EnumerateArray());
+        var jsonTag = Assert.Single(
+            doc.RootElement.GetProperty("tags").EnumerateArray(),
+            existing => existing.GetProperty("name").GetString() == "auth");
         Assert.Equal("auth", jsonTag.GetProperty("name").GetString());
     }
 

@@ -4,7 +4,7 @@ namespace TermBullet.Domain.Items;
 
 public sealed class Item
 {
-    private readonly List<string> _tags;
+    public const string DefaultTag = "default";
 
     private Item(
         Guid id,
@@ -15,7 +15,7 @@ public sealed class Item
         ItemStatus status,
         ItemCollection collection,
         Priority priority,
-        IReadOnlyCollection<string> tags,
+        string tag,
         int version,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
@@ -31,7 +31,7 @@ public sealed class Item
         Status = status;
         Collection = collection;
         Priority = priority;
-        _tags = [.. tags];
+        Tag = tag;
         Version = version;
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
@@ -56,7 +56,7 @@ public sealed class Item
 
     public Priority Priority { get; private set; }
 
-    public IReadOnlyList<string> Tags => _tags.AsReadOnly();
+    public string Tag { get; private set; }
 
     public int Version { get; private set; }
 
@@ -79,7 +79,7 @@ public sealed class Item
         DateTimeOffset createdAt,
         string? description = null,
         Priority priority = Priority.None,
-        IEnumerable<string>? tags = null,
+        string? tag = null,
         DateTimeOffset? scheduledAt = null)
     {
         if (id == Guid.Empty)
@@ -98,7 +98,7 @@ public sealed class Item
         var normalizedContent = NormalizeRequiredText(content, nameof(content));
         var normalizedDescription = NormalizeOptionalText(description);
 
-        EnsureDefined(collection, nameof(collection));
+        collection = NormalizeCollectionForType(type, collection, nameof(collection));
         EnsureDefined(priority, nameof(priority));
 
         return new Item(
@@ -110,7 +110,7 @@ public sealed class Item
             ItemStatus.Open,
             collection,
             priority,
-            NormalizeTags(tags),
+            NormalizeTagOrDefault(tag),
             version: 1,
             createdAt,
             updatedAt: createdAt,
@@ -128,7 +128,7 @@ public sealed class Item
         ItemStatus status,
         ItemCollection collection,
         Priority priority,
-        IEnumerable<string>? tags,
+        string tag,
         int version,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
@@ -144,7 +144,7 @@ public sealed class Item
         ArgumentNullException.ThrowIfNull(publicRef);
         EnsureDefined(type, nameof(type));
         EnsureDefined(status, nameof(status));
-        EnsureDefined(collection, nameof(collection));
+        collection = NormalizeCollectionForType(type, collection, nameof(collection));
         EnsureDefined(priority, nameof(priority));
 
         if (publicRef.Type != type)
@@ -171,7 +171,7 @@ public sealed class Item
             status,
             collection,
             priority,
-            NormalizeTags(tags),
+            NormalizeTag(tag, nameof(tag)),
             version,
             createdAt,
             updatedAt,
@@ -217,7 +217,7 @@ public sealed class Item
             throw new InvalidOperationException("Only tasks can be migrated.");
         }
 
-        EnsureDefined(collection, nameof(collection));
+        EnsureTaskCollection(collection, nameof(collection));
         Collection = collection;
         Touch(changedAt);
     }
@@ -228,7 +228,7 @@ public sealed class Item
         string? description = null,
         ItemCollection? collection = null,
         Priority? priority = null,
-        IEnumerable<string>? tags = null,
+        string? tag = null,
         DateTimeOffset? scheduledAt = null)
     {
         EnsureActive();
@@ -238,7 +238,7 @@ public sealed class Item
         {
             if (collection is not null)
             {
-                EnsureDefined(collection.Value, nameof(collection));
+                EnsureTaskCollection(collection.Value, nameof(collection));
                 Collection = collection.Value;
             }
 
@@ -264,43 +264,37 @@ public sealed class Item
             ScheduledAt = null;
         }
 
-        if (tags is not null)
+        if (tag is not null)
         {
-            _tags.Clear();
-            _tags.AddRange(NormalizeTags(tags));
+            Tag = NormalizeTag(tag, nameof(tag));
         }
 
         Touch(changedAt);
     }
 
-    public void AddTag(string tag, DateTimeOffset changedAt)
+    public void SetTag(string tag, DateTimeOffset changedAt)
     {
         EnsureActive();
-        var normalizedTag = NormalizeRequiredText(tag, nameof(tag));
-        if (_tags.Contains(normalizedTag, StringComparer.OrdinalIgnoreCase))
+        var normalizedTag = NormalizeTag(tag, nameof(tag));
+        if (string.Equals(Tag, normalizedTag, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        _tags.Add(normalizedTag);
+        Tag = normalizedTag;
         Touch(changedAt);
     }
 
     public void RemoveTag(string tag, DateTimeOffset changedAt)
     {
         EnsureActive();
-        var normalizedTag = NormalizeRequiredText(tag, nameof(tag));
-        var index = _tags.FindIndex(existingTag => string.Equals(
-            existingTag,
-            normalizedTag,
-            StringComparison.OrdinalIgnoreCase));
-
-        if (index < 0)
+        var normalizedTag = NormalizeTag(tag, nameof(tag));
+        if (!string.Equals(Tag, normalizedTag, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        _tags.RemoveAt(index);
+        Tag = DefaultTag;
         Touch(changedAt);
     }
 
@@ -311,6 +305,32 @@ public sealed class Item
         {
             throw new ArgumentOutOfRangeException(parameterName, value, $"Unsupported {typeof(TEnum).Name} value.");
         }
+    }
+
+    private static ItemCollection NormalizeCollectionForType(
+        ItemType type,
+        ItemCollection collection,
+        string parameterName)
+    {
+        EnsureDefined(collection, parameterName);
+
+        return type switch
+        {
+            ItemType.Task => EnsureTaskCollection(collection, parameterName),
+            ItemType.Note => ItemCollection.Notes,
+            ItemType.Event => ItemCollection.Events,
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, "Unsupported item type.")
+        };
+    }
+
+    private static ItemCollection EnsureTaskCollection(ItemCollection collection, string parameterName)
+    {
+        EnsureDefined(collection, parameterName);
+        return collection switch
+        {
+            ItemCollection.Today or ItemCollection.Week or ItemCollection.Month or ItemCollection.Backlog => collection,
+            _ => throw new ArgumentException("Tasks support only today, week, month, or backlog collections.", parameterName)
+        };
     }
 
     private static string NormalizeRequiredText(string value, string parameterName)
@@ -333,25 +353,15 @@ public sealed class Item
         return value.Trim();
     }
 
-    private static IReadOnlyCollection<string> NormalizeTags(IEnumerable<string>? tags)
+    private static string NormalizeTagOrDefault(string? tag)
     {
-        if (tags is null)
-        {
-            return [];
-        }
-
-        var normalizedTags = new List<string>();
-        foreach (var tag in tags)
-        {
-            var normalizedTag = NormalizeRequiredText(tag, nameof(tags));
-            if (!normalizedTags.Contains(normalizedTag, StringComparer.OrdinalIgnoreCase))
-            {
-                normalizedTags.Add(normalizedTag);
-            }
-        }
-
-        return normalizedTags;
+        return string.IsNullOrWhiteSpace(tag)
+            ? DefaultTag
+            : NormalizeTag(tag, nameof(tag));
     }
+
+    private static string NormalizeTag(string tag, string parameterName) =>
+        NormalizeRequiredText(tag, parameterName).ToLowerInvariant();
 
     private void EnsureActive()
     {
