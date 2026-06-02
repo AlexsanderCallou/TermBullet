@@ -93,7 +93,7 @@ public sealed class TermBulletMutationCommandsCliTests
         Assert.Equal(0, tagExitCode);
         Assert.Equal(0, untagExitCode);
         var item = Assert.Single(repository.Items);
-        Assert.DoesNotContain("backend", item.Tags);
+        Assert.Equal(Item.DefaultTag, item.Tag);
     }
 
     [Fact]

@@ -17,7 +17,7 @@ public sealed class EditItemFormDraft
 
     public Priority Priority { get; set; } = Priority.None;
 
-    public IReadOnlyCollection<string> SelectedTags { get; set; } = [];
+    public string SelectedTag { get; set; } = Item.DefaultTag;
 
     public string ScheduledAtText { get; set; } = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd");
 
@@ -30,7 +30,7 @@ public sealed class EditItemFormDraft
             Description = row.Description ?? string.Empty,
             Collection = ParseCollection(row.Collection),
             Priority = ParsePriority(row.Priority),
-            SelectedTags = row.Tags,
+            SelectedTag = row.Tag,
             ScheduledAtText = row.ScheduledAt is null
                 ? DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd")
                 : DateOnly.FromDateTime(row.ScheduledAt.Value.UtcDateTime).ToString("yyyy-MM-dd")
@@ -39,7 +39,6 @@ public sealed class EditItemFormDraft
     public EditItemRequest BuildRequest()
     {
         var content = NormalizeRequiredText(Content);
-        var tags = NormalizeTags(SelectedTags);
         DateTimeOffset? scheduledAt = Type == ItemType.Event ? ToUtcInstant(ParseScheduledAt()) : null;
 
         return new EditItemRequest
@@ -49,24 +48,34 @@ public sealed class EditItemFormDraft
             Description = NormalizeOptionalText(Description),
             Collection = Type == ItemType.Task ? Collection : null,
             Priority = Type == ItemType.Task ? Priority : Priority.None,
-            Tags = tags.Count > 0 ? tags : [],
+            Tag = NormalizeTagOrDefault(SelectedTag),
             ScheduledAt = scheduledAt
         };
     }
 
     public IReadOnlyList<string> BuildPreviewLines()
     {
-        return
-        [
+        var lines = new List<string>
+        {
             $"ref: {PublicRef}",
             $"type: {Type.ToString().ToLowerInvariant()}",
             $"content: {(string.IsNullOrWhiteSpace(Content) ? "(required)" : Content.Trim())}",
-            $"description: {(string.IsNullOrWhiteSpace(Description) ? "-" : Description.Trim())}",
-            Type == ItemType.Task ? $"collection: {Collection.ToString().ToLowerInvariant()}" : "collection: unchanged",
-            Type == ItemType.Task ? $"priority: {Priority.ToString().ToLowerInvariant()}" : "priority: none",
-            Type == ItemType.Event ? $"scheduled_at: {ScheduledAtText.Trim()}" : "scheduled_at: -",
-            $"tags: {FormatTags(SelectedTags)}"
-        ];
+            $"description: {(string.IsNullOrWhiteSpace(Description) ? "-" : Description.Trim())}"
+        };
+
+        if (Type == ItemType.Task)
+        {
+            lines.Add($"collection: {Collection.ToString().ToLowerInvariant()}");
+            lines.Add($"priority: {Priority.ToString().ToLowerInvariant()}");
+        }
+
+        if (Type == ItemType.Event)
+        {
+            lines.Add($"scheduled_at: {ScheduledAtText.Trim()}");
+        }
+
+        lines.Add($"tag: {NormalizeTagOrDefault(SelectedTag)}");
+        return lines;
     }
 
     private DateOnly ParseScheduledAt()
@@ -100,27 +109,8 @@ public sealed class EditItemFormDraft
     private static string? NormalizeOptionalText(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static List<string> NormalizeTags(IEnumerable<string>? value)
-    {
-        if (value is null)
-        {
-            return [];
-        }
-
-        return
-        [
-            .. value
-                .Select(tag => tag.Trim())
-                .Where(tag => !string.IsNullOrWhiteSpace(tag))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-        ];
-    }
-
-    private static string FormatTags(IEnumerable<string>? value)
-    {
-        var tags = NormalizeTags(value);
-        return tags.Count > 0 ? string.Join(", ", tags) : "-";
-    }
+    private static string NormalizeTagOrDefault(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? Item.DefaultTag : value.Trim().ToLowerInvariant();
 
     private static ItemType ParseType(string value) =>
         value.ToLowerInvariant() switch

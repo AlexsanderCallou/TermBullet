@@ -139,7 +139,7 @@ public sealed class JsonItemRepositoryTests
                   "status": "open",
                   "collection": "today",
                   "priority": "none",
-                  "tags": [],
+                  "tag": "default",
                   "version": 1,
                   "created_at": "2026-04-23T10:30:00Z",
                   "updated_at": "2026-04-23T10:30:00Z",
@@ -184,7 +184,7 @@ public sealed class JsonItemRepositoryTests
                   "status": "open",
                   "collection": "today",
                   "priority": "none",
-                  "tags": [],
+                  "tag": "default",
                   "version": 1,
                   "created_at": "2026-04-23T10:30:00Z",
                   "updated_at": "2026-04-23T10:30:00Z",
@@ -269,6 +269,35 @@ public sealed class JsonItemRepositoryTests
         Assert.Equal(JsonValueKind.Null, completedAt.ValueKind);
         Assert.True(stored.TryGetProperty("cancelled_at", out var cancelledAt));
         Assert.Equal(JsonValueKind.Null, cancelledAt.ValueKind);
+    }
+
+    [Fact]
+    public async Task AddAsync_writes_type_specific_collections_for_notes_and_events()
+    {
+        var context = CreateContext();
+        var repository = CreateRepository(context);
+
+        await repository.AddAsync(CreateItem(
+            id: Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
+            publicRef: "n-0426-1",
+            collection: ItemCollection.Today,
+            itemType: ItemType.Note));
+        await repository.AddAsync(CreateItem(
+            id: Guid.Parse("c4dbec0e-c42d-4f26-8659-05bfdb4db056"),
+            publicRef: "e-0426-1",
+            collection: ItemCollection.Week,
+            itemType: ItemType.Event));
+
+        var json = await File.ReadAllTextAsync(context.MonthlyFilePath);
+        using var doc = JsonDocument.Parse(json);
+        var items = doc.RootElement.GetProperty("items").EnumerateArray().ToArray();
+
+        Assert.Contains(items, item =>
+            item.GetProperty("public_ref").GetString() == "n-0426-1"
+            && item.GetProperty("collection").GetString() == "notes");
+        Assert.Contains(items, item =>
+            item.GetProperty("public_ref").GetString() == "e-0426-1"
+            && item.GetProperty("collection").GetString() == "events");
     }
 
     [Fact]
@@ -410,7 +439,7 @@ public sealed class JsonItemRepositoryTests
             ItemStatus.Open,
             ItemCollection.Today,
             Priority.High,
-            ["auth"],
+            "auth",
             3,
             CreatedAt,
             ChangedAt,
@@ -430,7 +459,7 @@ public sealed class JsonItemRepositoryTests
     }
 
     [Fact]
-    public async Task RunAutomaticMonthRolloverAsync_creates_empty_current_month_and_keeps_previous_items_in_place()
+    public async Task RunAutomaticMonthRolloverAsync_carries_open_non_default_tagged_items_to_current_month()
     {
         var context = CreateContext(now: new DateTimeOffset(2026, 5, 1, 8, 0, 0, TimeSpan.Zero));
         var repository = CreateRepository(context);
@@ -456,7 +485,7 @@ public sealed class JsonItemRepositoryTests
                   "status": "open",
                   "collection": "today",
                   "priority": "none",
-                  "tags": ["auth"],
+                  "tag": "auth",
                   "version": 1,
                   "created_at": "2026-04-23T10:30:00Z",
                   "updated_at": "2026-04-23T10:30:00Z",
@@ -480,12 +509,17 @@ public sealed class JsonItemRepositoryTests
         Assert.True(File.Exists(context.MonthlyFilePath));
         var currentJson = await File.ReadAllTextAsync(context.MonthlyFilePath);
         using var currentDoc = JsonDocument.Parse(currentJson);
-        Assert.Empty(currentDoc.RootElement.GetProperty("items").EnumerateArray());
+        var currentItem = Assert.Single(currentDoc.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal("t-0426-1", currentItem.GetProperty("public_ref").GetString());
+        Assert.Equal("auth", currentItem.GetProperty("tag").GetString());
+        Assert.Equal(2, currentItem.GetProperty("version").GetInt32());
         Assert.Equal("2026-05", currentDoc.RootElement.GetProperty("period").GetString());
+        var currentHistory = Assert.Single(currentDoc.RootElement.GetProperty("history").EnumerateArray());
+        Assert.Equal("carried_over", currentHistory.GetProperty("event_type").GetString());
 
         var indexJson = await File.ReadAllTextAsync(context.IndexFilePath);
         using var indexDoc = JsonDocument.Parse(indexJson);
-        Assert.Single(indexDoc.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal(2, indexDoc.RootElement.GetProperty("items").EnumerateArray().Count());
     }
 
     [Fact]
@@ -511,7 +545,7 @@ public sealed class JsonItemRepositoryTests
                   "status": "open",
                   "collection": "today",
                   "priority": "none",
-                  "tags": [],
+                  "tag": "default",
                   "version": 1,
                   "created_at": "2026-04-23T10:30:00Z",
                   "updated_at": "2026-04-23T10:30:00Z",
@@ -551,7 +585,7 @@ public sealed class JsonItemRepositoryTests
             "Fix authentication flow",
             collection,
             CreatedAt,
-            tags: ["auth"]);
+            tag: "auth");
     }
 
     private static JsonItemRepository CreateRepository(TestContext? context = null)

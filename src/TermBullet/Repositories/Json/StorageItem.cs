@@ -28,8 +28,8 @@ internal sealed class StorageItem
     [JsonPropertyName("priority")]
     public string Priority { get; set; } = "none";
 
-    [JsonPropertyName("tags")]
-    public List<string> Tags { get; set; } = [];
+    [JsonPropertyName("tag")]
+    public string Tag { get; set; } = "default";
 
     [JsonPropertyName("scheduled_at")]
     public DateTimeOffset? ScheduledAt { get; set; }

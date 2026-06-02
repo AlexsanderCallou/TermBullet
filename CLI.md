@@ -82,6 +82,9 @@ Type flags are mutually exclusive:
 
 Default type is task.
 
+Task items use `today`, `week`, `month`, or `backlog`. Notes are saved in the
+`notes` collection. Events are saved in the `events` collection.
+
 ### `list`
 
 List items, with filters where supported.
@@ -99,8 +102,9 @@ termbullet month
 termbullet backlog
 ```
 
-`week` and `month` show tasks in their respective collections. They are not
-date-grouped task schedules.
+`today`, `week`, `month`, and `backlog` show tasks in their respective
+collections. They are not date-grouped task schedules. Notes and events are
+available through `list`, `show`, `search`, and the TUI Notes/Calendar screens.
 
 Forgotten is currently exposed in the TUI as a derived review list. There is no
 active `forgotten` CLI command in the current command tree.
@@ -154,6 +158,10 @@ termbullet tag t-0426-1 auth
 termbullet untag t-0426-1 auth
 termbullet priority t-0426-1 high
 ```
+
+Each item has one tag. `tag` replaces the current item tag. `untag` resets the
+item to the protected `default` tag when the provided tag matches the current
+tag.
 
 Priorities:
 

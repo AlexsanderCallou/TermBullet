@@ -52,8 +52,8 @@ public sealed class TuiAddItemViewModel
     private static ItemCollection ResolveDefaultCollection(ItemType type) =>
         type switch
         {
-            ItemType.Note => ItemCollection.Backlog,
-            ItemType.Event => ItemCollection.Week,
+            ItemType.Note => ItemCollection.Notes,
+            ItemType.Event => ItemCollection.Events,
             _ => ItemCollection.Today
         };
 }

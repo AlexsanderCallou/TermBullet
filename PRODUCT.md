@@ -22,7 +22,7 @@ developers and technical users who prefer fast local tools.
 V1 delivers the offline core:
 
 - tasks, notes, and events;
-- Today, Week, Month, and Backlog collections;
+- Today, Week, Month, Backlog, Notes, and Events collections;
 - Forgotten as a derived review list for unresolved tasks from previous months;
 - CLI;
 - TUI MVP;
@@ -63,7 +63,7 @@ Every relevant item has:
 - collection;
 - scheduled date/time when it is an event;
 - task priority;
-- tags;
+- tag;
 - creation and update timestamps;
 - version.
 
@@ -73,9 +73,10 @@ into an event.
 Priority is operational task metadata. Notes and events do not expose priority
 and are stored with `none`.
 
-Tags are local metadata labels. Items store tag names, and V1 also keeps a local
-tag catalog for creating named tags with optional descriptions before they are
-attached to items.
+Tags are local metadata labels. Each item has exactly one tag. If no tag is
+selected, the protected `default` tag is used. V1 also keeps a local tag catalog
+for creating named tags with optional descriptions before they are attached to
+items.
 
 Official task statuses in V1:
 
@@ -87,17 +88,19 @@ Official task statuses in V1:
 collection while preserving the internal ID and public ref.
 
 Tasks are planned by collection, not by date. Task creation chooses `today`,
-`week`, `month`, or `backlog`. Dates belong only to events through
-`scheduled_at`.
+`week`, `month`, or `backlog`. Notes are stored in `notes`. Events are stored in
+`events`, and their dates belong only to `scheduled_at`.
 
 Forgotten is the review area for open tasks from previous monthly files that
 were not done or cancelled. It is derived from item state and
 public-ref/monthly-file history, not a persisted item collection.
 
-Operational views stay focused on the active period: Today, Week, Month, and Calendar
-use current-month data for execution. Forgotten and Search may read across all
-monthly files because they are review and lookup surfaces, not automatic
-planning flows.
+Operational views stay focused on the active period: Today, Week, Month, and
+Calendar use current-month data for execution. On month rollover, open tasks and
+notes outside `default` carry into the current month with their existing
+collection so long-running tagged work remains visible. Events do not carry
+over. Open `default` tasks from older monthly files appear in Forgotten, while
+Search may read across all monthly files as a lookup surface.
 
 Manual migration must always declare the destination:
 
@@ -196,7 +199,7 @@ Deferred TUI screens:
 
 - CLI and TUI MVP;
 - tasks, notes, and events;
-- Today, Week, Month, and Backlog collections;
+- Today, Week, Month, Backlog, Notes, and Events collections;
 - Forgotten review;
 - Week view;
 - monthly JSON files;

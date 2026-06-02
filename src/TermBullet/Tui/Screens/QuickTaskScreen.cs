@@ -8,10 +8,11 @@ public static class QuickTaskScreen
     public static void Build(
         View root,
         string? error,
+        string? initialTag,
         Action<CreateItemRequest> onSubmit,
         Action onCancel)
     {
-        var panel = new FrameView("Quick Task")
+        var panel = new FrameView("1 Quick Task")
         {
             X = Pos.Center() - 32,
             Y = Pos.Center() - 5,
@@ -58,7 +59,7 @@ public static class QuickTaskScreen
         {
             try
             {
-                onSubmit(AddItemFormDraft.BuildQuickTaskRequest(taskField.Text?.ToString() ?? string.Empty));
+                onSubmit(AddItemFormDraft.BuildQuickTaskRequest(taskField.Text?.ToString() ?? string.Empty, initialTag));
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

@@ -85,7 +85,7 @@ public sealed class TermBulletCliAppTests
         var exitCode = await app.InvokeAsync(["--version"]);
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("1.1.2", dependencies.Output.ToString());
+        Assert.Contains("1.2.0", dependencies.Output.ToString());
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class TermBulletCliAppTests
         var exitCode = await app.InvokeAsync(["-v"]);
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("1.1.2", dependencies.Output.ToString());
+        Assert.Contains("1.2.0", dependencies.Output.ToString());
     }
 
     [Fact]

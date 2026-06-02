@@ -11,12 +11,26 @@ public sealed class TagsViewModel
 
     public IReadOnlyList<TagSummaryRow> Tags { get; }
 
+    public IReadOnlyList<TagSummaryRow> Filter(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return Tags;
+        }
+
+        var normalized = query.Trim();
+        return Tags
+            .Where(tag => tag.Name.Contains(normalized, StringComparison.OrdinalIgnoreCase)
+                || (tag.Description?.Contains(normalized, StringComparison.OrdinalIgnoreCase) ?? false))
+            .ToArray();
+    }
+
     public static TagsViewModel Build(
         IReadOnlyCollection<TagCatalogResult> catalogTags,
         IReadOnlyCollection<ItemDisplayRow> rows)
     {
         var usageByTag = rows
-            .SelectMany(row => row.Tags.Select(tag => new { Tag = tag, Row = row }))
+            .Select(row => new { row.Tag, Row = row })
             .GroupBy(entry => entry.Tag, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Select(entry => entry.Row).ToArray(), StringComparer.OrdinalIgnoreCase);
 
@@ -46,7 +60,7 @@ public sealed class TagsViewModel
                         : catalogTag?.UpdatedAt ?? DateTimeOffset.MinValue
                 };
             })
-            .OrderByDescending(tag => tag.UsageCount)
+            .OrderBy(tag => tag.LastUsed)
             .ThenBy(tag => tag.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 

@@ -23,6 +23,9 @@ public sealed class TuiAddItemViewModelTests
         Assert.Contains(task.Examples, line => line.Contains("review pull request", StringComparison.Ordinal));
         Assert.Contains(note.Examples, line => line.Contains("investigate stacktrace", StringComparison.Ordinal));
         Assert.Contains(eventVm.Examples, line => line.Contains("team sync", StringComparison.Ordinal));
+        Assert.Equal(ItemCollection.Today, task.Collection);
+        Assert.Equal(ItemCollection.Notes, note.Collection);
+        Assert.Equal(ItemCollection.Events, eventVm.Collection);
     }
 
     [Fact]

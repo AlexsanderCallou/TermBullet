@@ -42,6 +42,7 @@ public sealed class TermBulletItemCommandsCliTests
         var item = Assert.Single(repository.Items);
         Assert.Equal(ItemType.Note, item.Type);
         Assert.Equal("n-0426-1", item.PublicRef.Value);
+        Assert.Equal(ItemCollection.Notes, item.Collection);
     }
 
     [Fact]
@@ -153,7 +154,7 @@ public sealed class TermBulletItemCommandsCliTests
             status,
             collection,
             Priority.None,
-            [],
+            TermBullet.Domain.Items.Item.DefaultTag,
             null,
             1,
             Now,
@@ -179,7 +180,7 @@ public sealed class TermBulletItemCommandsCliTests
                 itemResult.Status,
                 itemResult.Collection,
                 itemResult.Priority,
-                itemResult.Tags,
+                itemResult.Tag,
                 itemResult.Version,
                 itemResult.CreatedAt,
                 itemResult.UpdatedAt));

@@ -39,6 +39,6 @@ public sealed class SearchItemsUseCase(IItemRepository itemRepository)
         return item.PublicRef.Value.Contains(query, comparison)
             || item.Content.Contains(query, comparison)
             || (item.Description?.Contains(query, comparison) ?? false)
-            || item.Tags.Any(tag => tag.Contains(query, comparison));
+            || item.Tag.Contains(query, comparison);
     }
 }

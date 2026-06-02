@@ -89,7 +89,7 @@ Refined target ASCII layout:
 |   Notes             |                                   |                               |
 |   Calendar          |                                   |                               |
 |   Tags              |                                   |                               |
-|                     |                                   | tags: auth, cli               |
+|                     |                                   | tag: auth                     |
 |---------------------+-----------------------------------+-------------------------------|
 | 4 Context           | 5 Content                                                         |
 | context             | Fix auth flow                                                     |
@@ -120,8 +120,8 @@ Notes:
 - `Tags` opens the catalog view where tags can be created, inspected, and later
   selected while editing or creating items.
 - `Content` is the main reading/editing surface for the selected item. It
-  should show the item's `content` and optional `description`; tasks do not
-  currently have an embedded notes collection in the JSON model.
+  should show the item's `content` and optional `description`; notes use their
+  own persisted `notes` collection.
 - `Enter open` opens the selected item in the Item Detail screen.
 - The footer includes `e edit`, but edit is not currently handled by the
   dashboard key handling code.
@@ -149,7 +149,7 @@ Target ASCII layout:
 |-------------------------------------------------------------------------------------------|
 | 1 Results                                    | 2 Preview                                  |
 | > [ ] t-0526-1 Fix auth flow                | ref: t-0526-1                              |
-|   (.) n-0526-1 Empty audience note          | collection: today                          |
+|   (.) n-0526-1 Empty audience note          | type: task                                 |
 |   [ ] t-0526-4 Review token logic           | priority: high                             |
 |                                              | status: open                               |
 |                                              |                                            |
@@ -317,7 +317,7 @@ Notes:
 - `Enter` must not submit the form unless the focused control is `Save`.
 - When focus is inside a multiline text field, `Enter` keeps its text-editing
   behavior.
-- Tags are selected from catalog entries created in the Tags screen. The Add
+- A tag is selected from catalog entries created in the Tags screen. The Add
   flow must not create new tag names from free text.
 
 ### Flow 03D - Add Note
@@ -361,7 +361,7 @@ ASCII layout:
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
-| Status: note | tags: auth, incident                                  |
+| Status: note | tag: auth                                             |
 | Enter activate  Tab focus  Esc cancel  ? help                        |
 +----------------------------------------------------------------------+
 ```
@@ -371,7 +371,7 @@ Notes:
 - `Enter` must not submit the form unless the focused control is `Save`.
 - When focus is inside the multiline description, `Enter` keeps its text-editing
   behavior.
-- Tags are selected from catalog entries created in the Tags screen. The Add
+- A tag is selected from catalog entries created in the Tags screen. The Add
   flow must not create new tag names from free text.
 
 ### Flow 03E - Add Event
@@ -429,7 +429,7 @@ Notes:
 - `Enter` must not submit the form unless the focused control is `Save`.
 - When focus is inside the multiline description, `Enter` keeps its text-editing
   behavior.
-- Tags are selected from catalog entries created in the Tags screen. The Add
+- A tag is selected from catalog entries created in the Tags screen. The Add
   flow must not create new tag names from free text.
 
 ## Flow 04 - Edit Item
@@ -526,7 +526,7 @@ Notes:
   flow. The `migrate` flow remains the deliberate Bullet Journal action for
   moving a task between collections.
 - Notes and events must not expose priority controls.
-- Tags are selected from catalog entries created in the Tags screen. Edit Item
+- A tag is selected from catalog entries created in the Tags screen. Edit Item
   must not create new tag names from free text.
 
 ### Flow 04B - Edit Note
@@ -571,7 +571,7 @@ ASCII layout:
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
-| Status: note | ref: n-0526-1 | tags: auth, incident                  |
+| Status: note | ref: n-0526-1 | tag: auth                             |
 | Enter activate  Tab/1-3 focus  Esc cancel  ? help                    |
 +----------------------------------------------------------------------+
 ```
@@ -580,7 +580,7 @@ Notes:
 
 - Note editing must not expose collection, priority, or scheduled date as
   primary planning fields.
-- Tags are selected from catalog entries created in the Tags screen.
+- A tag is selected from catalog entries created in the Tags screen.
 
 ### Flow 04C - Edit Event
 
@@ -637,77 +637,98 @@ Notes:
 - Event editing must require `scheduled_at`.
 - Event editing must not expose task collection or priority as primary
   planning fields.
-- Tags are selected from catalog entries created in the Tags screen.
+- A tag is selected from catalog entries created in the Tags screen.
 
 ## Screen 04 - Item Detail
 
 Status: implemented.
 
-Role: full read view for one selected item. This screen opens from Main
-Dashboard, Search, Forgotten Review, Backlog Triage, and any future list where
-an item can be selected.
+Role: focused read view for one selected item. This screen opens from Main
+Dashboard, Search, Forgotten Review, Backlog Triage, Notes, Calendar, and any
+future list where an item can be selected.
 
 Navigation:
 
 - `Esc` returns to the previous screen.
-- `e` edits the item.
-- `x` marks a task as done.
-- `z` cancels a task.
-- `>` migrates a task.
-- `d` deletes the item.
-- `Tab` and `Shift+Tab` move focus between sections when needed.
+- `e` edits the item through the same type-specific form used for creation,
+  prefilled with the current values.
+- `Tab` and `Shift+Tab` move focus between the three panels.
+- `1`, `2`, and `3` focus Planning/Info/Schedule, History, and Content.
 - `?` opens contextual help.
 - `q` quits.
 
-Target ASCII layout:
+Task detail target layout:
 
 ```text
-+ TermBullet - Item t-0526-1 --------------------------------------------------------------+
-| Fix auth flow                                                        task / open          |
++ TermBullet - Task t-0526-1 --------------------------------------------------------------+
 |-------------------------------------------------------------------------------------------|
-| Identity                         | Planning                                                |
-| ref: t-0526-1                   | collection: today                                      |
-| id: 0f3a9d94-4df0-47f7-95c1...  | scheduled_at: -                                       |
-| type: task                      |                                                       |
-| status: open                    |                                                       |
-| priority: high                  |                                                       |
-| tags: auth, cli                 |                                                       |
-| version: 3                      | Migration                                             |
-| created: 2026-05-09T08:14:00Z   | from: -                                               |
-| updated: 2026-05-09T10:31:00Z   | to: -                                                 |
-| completed: -                    | same item, same ref                                   |
-| cancelled: -                    |                                                       |
+| 1 Planning                                      | 2 History                                |
+| status: open                                    | 2026-05-09T08:14:00Z created            |
+| collection: today                               | 2026-05-09T09:02:00Z edited             |
+| priority: high                                  | 2026-05-09T10:31:00Z tagged             |
+| tag: auth                                       |                                          |
 |-------------------------------------------------------------------------------------------|
-| Content                                                                                   |
-| fix auth flow                                                                             |
+| 3 Content                                                                                 |
+| title: Fix auth flow                                                                      |
 |                                                                                           |
-| Description                                                                               |
-| - reproduce login failure                                                                 |
-| - check token audience                                                                    |
-|-------------------------------------------------------------------------------------------|
-| History                                                                                   |
-| 2026-05-09T08:14:00Z  created    created in today                                         |
-| 2026-05-09T09:02:00Z  edited     priority none -> high                                    |
-| 2026-05-09T10:31:00Z  tagged     added auth                                               |
+| description:                                                                              |
+| reproduce login failure                                                                   |
+| check token audience                                                                      |
 +-------------------------------------------------------------------------------------------+
-| e edit  x done  z cancel  > migrate  d delete  Tab focus  ? help  Esc back  q quit       |
+| e edit  Tab/1-3 focus  ? help  Esc back  q quit                                           |
++-------------------------------------------------------------------------------------------+
+```
+
+Note detail target layout:
+
+```text
++ TermBullet - Note n-0526-1 --------------------------------------------------------------+
+|-------------------------------------------------------------------------------------------|
+| 1 Info                                          | 2 History                                |
+| status: open                                    | 2026-05-09T08:14:00Z created            |
+| tag: auth                                       | 2026-05-09T10:31:00Z edited             |
+| updated: 2026-05-09T10:31:00Z                   |                                          |
+|-------------------------------------------------------------------------------------------|
+| 3 Content                                                                                 |
+| title: OAuth notes                                                                        |
+|                                                                                           |
+| description:                                                                              |
+| token refresh edge case notes                                                             |
++-------------------------------------------------------------------------------------------+
+| e edit  Tab/1-3 focus  ? help  Esc back  q quit                                           |
++-------------------------------------------------------------------------------------------+
+```
+
+Event detail target layout:
+
+```text
++ TermBullet - Event e-0526-1 -------------------------------------------------------------+
+|-------------------------------------------------------------------------------------------|
+| 1 Schedule                                      | 2 History                                |
+| status: open                                    | 2026-05-09T08:14:00Z created            |
+| scheduled: 2026-05-12                           | 2026-05-09T10:31:00Z edited             |
+| tag: health                                     |                                          |
+|-------------------------------------------------------------------------------------------|
+| 3 Content                                                                                 |
+| title: Dentist appointment                                                                |
+|                                                                                           |
+| description:                                                                              |
+| bring insurance card                                                                      |
++-------------------------------------------------------------------------------------------+
+| e edit  Tab/1-3 focus  ? help  Esc back  q quit                                           |
 +-------------------------------------------------------------------------------------------+
 ```
 
 Notes:
 
-- The initial implementation shows all item fields currently exposed to the TUI.
-- The history section currently explains that per-item history is not loaded by
-  the existing Application contracts.
-- The final implementation should include root-level history entries related to
-  the item, including create, edit, done, cancelled, migrate, forgotten, deleted
-  snapshots when applicable, and history cleanup metadata when relevant.
-- Migration is an in-place collection change. It does not create a destination
-  item and does not show source/destination relationship fields.
-- Long internal IDs may be truncated visually, but the full value should be
-  copyable or visible through a focused row in the final implementation.
-- For notes and events, task-only fields may be shown as `-` or omitted only if
-  the screen remains clear and complete.
+- The public ref appears only in the screen title.
+- Internal IDs are not shown to users.
+- Task-only fields are shown only for tasks.
+- Note details must not show the fixed `notes` collection.
+- Event details show scheduling only when the event has a schedule.
+- The top row consumes roughly 30% of the screen height. Content consumes the
+  remaining space so long notes stay readable.
+- Empty or irrelevant fields should be omitted instead of displayed as `-`.
 
 ## Screen 05 - Planning
 
@@ -823,7 +844,7 @@ Navigation and layout match Screen 06 - Week View, with the first panel titled
 
 Status: implemented.
 
-Role: triage view for open tasks in Backlog and notes kept as reference
+Role: triage view for open tasks in Backlog.
 material.
 
 Entry points:
@@ -850,9 +871,9 @@ Target ASCII layout:
 | 1 Backlog                                        | 2 Preview                           |
 | > [ ] t-0526-12 Refactor tag selector           | ref: t-0526-12                      |
 |   [ ] t-0526-13 Review CLI help                 | type: task                          |
-|   (.) n-0526-2  OAuth notes                     | status: open                        |
-|   (.) n-0526-3  Terminal.Gui research           | collection: backlog                 |
-|                                                  | tags: infra, tui                    |
+|   [ ] t-0526-14 Prepare release notes           | status: open                        |
+|   [ ] t-0526-15 Review installer flow           | collection: backlog                 |
+|                                                  | tag: infra                         |
 |--------------------------------------------------+-------------------------------------|
 | 3 Actions                                                                              |
 | > migrate to today                                                                      |
@@ -906,7 +927,7 @@ Target ASCII layout:
 |   [ ] t-0426-6 Update docs         previous month | type: task                       |
 |   [ ] t-0426-8 Check backup path   previous month | status: open                     |
 |                                                  | collection: today                   |
-|                                                  | tags: tests                         |
+|                                                  | tag: tests                         |
 |--------------------------------------------------+-------------------------------------|
 | 3 Resolution                                                                           |
 | > migrate to today                                                                     |
@@ -960,9 +981,8 @@ Target ASCII layout:
 | > (.) n-0526-1 Capture edge case               | ref: n-0526-1                       |
 |   (.) n-0526-2 OAuth notes                     | type: note                          |
 |   (.) n-0526-3 Terminal.Gui research           | status: open                        |
-|   (.) n-0526-4 Storage caveats                 | collection: backlog                 |
-|                                                  | scheduled_at: -                     |
-|                                                  | tags: auth, tui                     |
+|   (.) n-0526-4 Storage caveats                 | tag: auth                           |
+|                                                  | updated: 2026-05-09                 |
 |--------------------------------------------------+-------------------------------------|
 | 3 Actions                                                                              |
 | > open detail                                                                          |
@@ -975,18 +995,18 @@ Target ASCII layout:
 
 Notes:
 
-- This screen lists only notes, regardless of collection.
+- This screen lists notes from the `notes` collection.
 - Notes do not expose date actions because they do not use `scheduled_at`.
 - A note can still be opened in Item Detail to inspect identity, content,
-  description, tags, and timestamps.
+  description, tag, and timestamps.
 - Deleting a note must use the same delete use case as other item types.
 
 ## Screen 10 - Calendar
 
 Status: implemented.
 
-Role: month-style schedule view for scheduled events. Calendar is a derived
-view, not a persisted collection.
+Role: month-style schedule view for scheduled events from the `events`
+collection.
 
 Entry points:
 
@@ -1061,14 +1081,15 @@ item list and must not create tasks, notes, or events by itself.
 Entry points:
 
 - `Enter` on `Tags` from the Main Dashboard menu.
-- Future shortcut: `g` from the dashboard.
+- `t` from the dashboard.
 
 Navigation:
 
 - `CursorUp` and `CursorDown` move inside the focused list.
-- `Tab` and `Shift+Tab` move focus between Tags, Preview, and Actions.
-- `c` opens the Create Tag flow.
-- `Enter` opens the selected tag preview.
+- `Tab` and `Shift+Tab` move focus between Search, Tags, Preview, and Actions.
+- `1`, `2`, `3`, and `4` focus Search, Tags, Preview, and Actions.
+- `n` opens the Create Tag flow.
+- `Enter` opens the selected tag detail.
 - `Esc` returns to the dashboard.
 - `?` opens contextual help.
 
@@ -1076,34 +1097,90 @@ Target ASCII layout:
 
 ```text
 + TermBullet - Tags ----------------------------------------------------------------------+
-| 1 Tags                                         | 2 Preview                            |
-| > auth                                6 items | name: auth                           |
-|   cli                                 4 items | usage: 6 items                       |
-|   tui                                 3 items | active tasks: 3                      |
-|   storage                             2 items | notes: 2                             |
-|   backup                              1 item  | events: 1                            |
+| 1 Search                                                                                |
+| auth                                                                                    |
+|-----------------------------------------------------------------------------------------|
+| 2 Tags                                         | 3 Preview                            |
+| > # auth                         6 items      | name: auth                           |
+|   # cli                          4 items      | usage: 6 items                       |
+|   # tui                          3 items      | active tasks: 3                      |
+|   # storage                      2 items      | notes: 2                             |
+|                                                 | events: 1                            |
 |                                                 | last used: 2026-05-09                |
-|                                                 |                                      |
 |-------------------------------------------------+--------------------------------------|
-| 3 Actions                                                                              |
-| > create tag                                                                           |
-|   preview selected                                                                     |
-|   remove selected from all items: future rule                                          |
+| 4 Actions                                                                              |
+| > open detail                                                                          |
+|   create tag                                                                           |
 +-----------------------------------------------------------------------------------------+
-| c create  Enter preview  Tab focus  ? help  Esc back  q quit                           |
+| Enter detail  n new  Tab/1-4 focus  ? help  Esc back  q quit                           |
 +-----------------------------------------------------------------------------------------+
 ```
 
 Notes:
 
 - Tags are metadata strings attached to items; they are not item types.
-- The current model has `tags` on items and a local tag catalog for tag names
-  and optional descriptions. There is no separate `project` field.
+- Each item has exactly one `tag`; missing tags use protected `default`.
+- The dashboard Context panel shows at most four active non-default tags, oldest
+  first.
 - The dashboard Context panel should show the most relevant active tags based on
   item usage.
-- Removing a tag needs a clear business rule before implementation: block
-  removal while referenced, or remove it from all items after confirmation.
-  Until then, the TUI must not advertise `d delete` for tags.
+- Removing or editing tag catalog entries is deferred until a clear business
+  rule exists. Until then, the TUI must not advertise edit/delete for tags.
+
+## Screen 12 - Tag Detail
+
+Status: implemented.
+
+Role: planning support view for one selected tag. It exposes every current item
+belonging to that tag, split by item type and task collection.
+
+Entry points:
+
+- `Enter` from the Tags screen.
+
+Navigation:
+
+- `Tab` and `Shift+Tab` move focus between Summary, Timeline, Tasks, Notes, and
+  Events.
+- `1` through `5` focus Summary, Timeline, Tasks, Notes, and Events.
+- `Enter` opens the selected item detail.
+- `c` opens Add Item with the current tag preselected.
+- `n` opens Quick Task with the current tag preselected.
+- `e` edits the selected item through the type-specific edit form.
+- `Esc` returns to Tags.
+
+Target ASCII layout:
+
+```text
++ TermBullet - Tag auth ------------------------------------------------------------------+
+| 1 Summary                                    | 2 Timeline                              |
+| tag: auth                                    | 2026-05-09 t-0526-1 Fix auth flow       |
+| tasks: 4                                     | 2026-05-09 n-0526-2 OAuth notes         |
+| notes: 2                                     |                                         |
+| events: 1                                    |                                         |
+|----------------------------------------------+------------------------------------------|
+| 3 Tasks                                      | 4 Notes                                  |
+| today                                        | > (.) n-0526-2 OAuth notes              |
+| > [ ] t-0526-1 Fix auth flow                |                                          |
+| week                                         |------------------------------------------|
+|   [ ] t-0526-4 Rotate keys                  | 5 Events                                 |
+| month                                        |   (o) e-0526-1 Auth review              |
+|   [ ] t-0526-8 Review login errors          |                                          |
+| backlog                                      |                                          |
+|   [ ] t-0526-9 Document auth setup          |                                          |
++-----------------------------------------------------------------------------------------+
+| Enter detail  c create  n quick task  e edit item  Tab/1-5 focus  Esc back  q quit      |
++-----------------------------------------------------------------------------------------+
+```
+
+Notes:
+
+- The screen shows tasks from Today, Week, Month, and Backlog, plus notes and
+  events that use the selected tag.
+- Create and quick-task shortcuts must pass the current tag into the creation
+  form.
+- The screen is scoped to current operational data. Global search remains the
+  lookup surface for previous monthly JSON files.
 
 ## Flow 12 - Create Tag
 
@@ -1166,7 +1243,6 @@ show the basic item data, ask for one destination, and confirm or cancel.
 Entry points:
 
 - `>` from Main Dashboard selected task.
-- `>` from Item Detail.
 - Future list screens where a task is selected.
 
 Navigation:
@@ -1188,7 +1264,7 @@ Target ASCII layout:
 | status: open                                                                              |
 | collection: today                                                                         |
 | priority: high                                                                            |
-| tags: auth, cli                                                                           |
+| tag: auth                                                                                 |
 |-------------------------------------------------------------------------------------------|
 | Destination                                                                               |
 | (x) Today                                                                                 |

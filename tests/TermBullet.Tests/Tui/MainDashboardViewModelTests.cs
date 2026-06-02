@@ -163,7 +163,7 @@ public sealed class MainDashboardViewModelTests
             Status: status,
             Collection: ItemCollection.Today,
             Priority: priority,
-            Tags: [],
+            Tag: Item.DefaultTag,
             ScheduledAt: null,
             Version: 1,
             CreatedAt: DateTimeOffset.UtcNow,

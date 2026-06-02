@@ -28,18 +28,18 @@ public sealed class ListItemsUseCaseTests
         var repository = new FakeItemRepository(
             [
                 CreateTask(collection: ItemCollection.Today),
-                CreateNote(collection: ItemCollection.Backlog)
+                CreateNote(collection: ItemCollection.Notes)
             ]);
         var useCase = new ListItemsUseCase(repository);
 
         var results = await useCase.ExecuteAsync(new ListItemsRequest
         {
-            Collection = ItemCollection.Backlog
+            Collection = ItemCollection.Notes
         });
 
         var result = Assert.Single(results);
         Assert.Equal("n-0426-1", result.PublicRef);
-        Assert.Equal(ItemCollection.Backlog, repository.LastCollection);
+        Assert.Equal(ItemCollection.Notes, repository.LastCollection);
         Assert.Null(repository.LastStatus);
     }
 

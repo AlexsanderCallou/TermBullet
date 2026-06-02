@@ -24,7 +24,7 @@ public sealed class EditItemUseCase(
             request.Description,
             request.Collection,
             request.Priority,
-            request.Tags,
+            request.Tag,
             request.ScheduledAt);
 
         await itemRepository.UpdateAsync(item, cancellationToken);

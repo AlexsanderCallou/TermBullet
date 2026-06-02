@@ -1,26 +1,28 @@
 using Terminal.Gui;
+using TermBullet.Domain.Items;
 
 namespace TermBullet.Tui.Screens;
 
 internal sealed class TagSelectionList
 {
     private readonly List<string> _availableTags;
-    private readonly HashSet<string> _selectedTags;
     private readonly ListView _listView;
+    private string _selectedTag;
 
-    public TagSelectionList(IEnumerable<string> availableTags, IEnumerable<string>? selectedTags = null)
+    public TagSelectionList(IEnumerable<string> availableTags, string? selectedTag = null)
     {
         _availableTags =
         [
             .. availableTags
+                .Append(Item.DefaultTag)
                 .Where(tag => !string.IsNullOrWhiteSpace(tag))
                 .Select(tag => tag.Trim())
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
         ];
-        _selectedTags = new HashSet<string>(
-            selectedTags ?? [],
-            StringComparer.OrdinalIgnoreCase);
+        _selectedTag = string.IsNullOrWhiteSpace(selectedTag)
+            ? Item.DefaultTag
+            : selectedTag.Trim().ToLowerInvariant();
         _listView = new ListView(TuiScreenUtilities.SanitizeListItems(BuildRows()))
         {
             X = 0,
@@ -32,10 +34,7 @@ internal sealed class TagSelectionList
 
     public ListView View => _listView;
 
-    public IReadOnlyCollection<string> SelectedTags =>
-        _availableTags
-            .Where(tag => _selectedTags.Contains(tag))
-            .ToArray();
+    public string SelectedTag => _selectedTag;
 
     public void ToggleSelected()
     {
@@ -51,11 +50,7 @@ internal sealed class TagSelectionList
         }
 
         var tag = _availableTags[index];
-        if (!_selectedTags.Add(tag))
-        {
-            _selectedTags.Remove(tag);
-        }
-
+        _selectedTag = tag;
         Refresh();
         _listView.SelectedItem = index;
     }
@@ -74,7 +69,7 @@ internal sealed class TagSelectionList
 
         return
         [
-            .. _availableTags.Select(tag => $"{(_selectedTags.Contains(tag) ? "[x]" : "[ ]")} {tag}")
+            .. _availableTags.Select(tag => $"{(string.Equals(_selectedTag, tag, StringComparison.OrdinalIgnoreCase) ? "(x)" : "( )")} {tag}")
         ];
     }
 }

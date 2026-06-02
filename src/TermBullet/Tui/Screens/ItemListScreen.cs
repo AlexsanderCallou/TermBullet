@@ -209,7 +209,7 @@ public static class ItemListScreen
             $"status: {item.Status}",
             $"collection: {item.Collection}",
             $"scheduled_at: {(item.ScheduledAt is null ? "-" : item.ScheduledAt.Value.ToString("yyyy-MM-dd"))}",
-            $"tags: {(item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "(none)")}",
+            $"tag: {item.Tag}",
             " ",
             item.Content,
             "Description:",

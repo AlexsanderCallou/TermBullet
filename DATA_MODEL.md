@@ -64,9 +64,10 @@ Tag catalog files:
 <data_root>/data/tags.backup.json
 ```
 
-The tag catalog is global local metadata. Item `tags` arrays remain the source
-of item-to-tag assignment, while `data/tags.json` stores optional tag
-descriptions and allows tags to exist before any item uses them.
+The tag catalog is global local metadata. Each item stores one `tag` value as
+the source of item-to-tag assignment, while `data/tags.json` stores optional tag
+descriptions and allows tags to exist before any item uses them. The `default`
+tag is protected and always available.
 
 The local index is derived data and can be rebuilt:
 
@@ -75,7 +76,7 @@ The local index is derived data and can be rebuilt:
 ```
 
 The index may include ID, public ref, type, status, collection, task priority,
-tags, content summary, source file, and timestamps.
+tag, content summary, source file, and timestamps.
 
 ## Item Concepts
 
@@ -91,11 +92,14 @@ Minimum V1 collections:
 - `week`
 - `month`
 - `backlog`
+- `notes`
+- `events`
 
 Review, Forgotten, and Search are screens/features, not item collections.
 Forgotten is a derived review list for open tasks from previous monthly files
-that still have no terminal status. Week and Month are task collections, not
-dated task schedules. Events use `scheduled_at`.
+that still have no terminal status. Today, Week, Month, and Backlog are task
+collections, not dated task schedules. Notes use the `notes` collection. Events
+use the `events` collection plus `scheduled_at`.
 
 Current operational queries read the current monthly file. Archive/review
 queries may read all monthly files explicitly. Forgotten uses archive review
@@ -143,13 +147,14 @@ Required persisted fields:
 - `status`
 - `collection`
 - `priority`
-- `tags`
+- `tag`
 - `version`
 - `created_at`
 - `updated_at`
 
 Tasks do not persist a planning date. Task placement is expressed through
-`collection`. Dates belong to events through `scheduled_at`.
+`collection`. Notes are stored in `notes`. Events are stored in `events`, and
+their dates belong to `scheduled_at`.
 
 Optional fields:
 
@@ -187,7 +192,10 @@ Rules:
 - names are unique case-insensitively;
 - descriptions are optional;
 - creating a catalog tag does not mutate existing items;
-- usage counts are derived from item `tags` arrays.
+- each item has exactly one tag;
+- missing or blank tags become `default`;
+- `default` is protected and cannot be removed;
+- usage counts are derived from item `tag` values.
 
 Tag catalog shape:
 
@@ -225,7 +233,7 @@ Tag catalog shape:
       "status": "open",
       "collection": "today",
       "priority": "high",
-      "tags": ["jwt", "auth"],
+      "tag": "auth",
       "scheduled_at": null,
       "version": 1,
       "created_at": "2026-04-22T08:14:00Z",
@@ -273,29 +281,38 @@ Rules:
 - tasks created from Quick Task use the `today` collection;
 - normal task creation must choose one of `today`, `week`, `month`, or `backlog`;
 - dates must not be stored on tasks;
-- an open task from a previous monthly file with no terminal action appears in
+- open tasks with `tag = "default"` from previous monthly files appear in
   Forgotten review;
-- Forgotten tasks wait for explicit user action.
+- Forgotten tasks wait for explicit user action;
+- open tasks and notes with `tag != "default"` carry into the current monthly
+  file during rollover while preserving their collection.
 
-At startup or at the beginning of a new month, the application should keep old
-open tasks in their original monthly files and expose them through Forgotten for
-explicit review.
+At startup or at the beginning of a new month, the application keeps quick
+default-tag tasks in their original monthly files and exposes them through
+Forgotten for explicit review. Long-running tagged project work is copied into
+the current month so current views remain useful for planning.
 
 Month rollover is maintenance-only in V1. On the first day of a month it ensures
-the current monthly file exists and refreshes the local index. It must not move,
-copy, mark, or automatically migrate old tasks. Old open tasks remain in their
-original monthly files and are surfaced through Forgotten for explicit human
-action.
+the current monthly file exists, carries open non-default tasks and notes into
+the current month, and refreshes the local index. Carried items keep their
+internal ID, public ref, type, collection, content, description, priority, and
+tag. The current-month copy increments `version`, updates `updated_at`, and gets
+a `carried_over` history event. Events do not carry over.
 
 Recommended forgotten history event:
 
 ```json
 {
-  "type": "forgotten",
+  "event_type": "carried_over",
   "item_id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
-  "from_collection": "today",
-  "review": "forgotten",
-  "created_at": "2026-04-23T00:05:00Z"
+  "public_ref": "t-0426-1",
+  "occurred_at": "2026-05-01T08:00:00Z",
+  "data": {
+    "from_period": "2026-04",
+    "to_period": "2026-05",
+    "collection": "today",
+    "tag": "auth"
+  }
 }
 ```
 

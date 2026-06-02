@@ -11,51 +11,41 @@ public static class ItemDetailScreen
         TuiNavigationState navigation,
         Action onBack,
         Action onEdit,
-        Action onMigrate,
         Action onQuit)
     {
-        var topBar = new Label($" TermBullet - Item {viewModel.PublicRef}")
+        var topBar = new Label($" TermBullet - {viewModel.DetailTitle}")
         {
             X = 0, Y = 0, Width = Dim.Fill()
         };
-        var footer = new Label(" e edit  x done  z cancel  > migrate  d delete  Tab/1-5 focus  ? help  Esc back  q quit")
+        var footer = new Label(" e edit  Tab/1-3 focus  ? help  Esc back  q quit")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
 
-        var identityPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, "Identity", navigation, 0))
+        var topHeight = Dim.Percent(30);
+        var summaryPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, viewModel.SummaryTitle, navigation, 0))
         {
-            X = 0, Y = 1, Width = Dim.Percent(50), Height = Dim.Percent(33)
+            X = 0, Y = 1, Width = Dim.Percent(50), Height = topHeight
         };
-        var planningPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(2, "Planning", navigation, 1))
+        var historyPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(2, "History", navigation, 1))
         {
-            X = Pos.Right(identityPanel), Y = 1, Width = Dim.Fill(), Height = Dim.Percent(33)
+            X = Pos.Right(summaryPanel), Y = 1, Width = Dim.Fill(), Height = topHeight
         };
         var contentPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Content", navigation, 2))
         {
-            X = 0, Y = Pos.Bottom(identityPanel), Width = Dim.Percent(50), Height = Dim.Percent(33)
-        };
-        var migrationPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(4, "Migration", navigation, 3))
-        {
-            X = Pos.Right(contentPanel), Y = Pos.Bottom(planningPanel), Width = Dim.Fill(), Height = Dim.Percent(33)
-        };
-        var historyPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(5, "History", navigation, 4))
-        {
-            X = 0, Y = Pos.Bottom(contentPanel), Width = Dim.Fill(), Height = Dim.Fill(1)
+            X = 0, Y = Pos.Bottom(summaryPanel), Width = Dim.Fill(), Height = Dim.Fill(1)
         };
 
-        var identityList = AddList(identityPanel, viewModel.IdentityLines);
-        var planningList = AddList(planningPanel, viewModel.PlanningLines);
-        var contentList = AddList(contentPanel, viewModel.ContentLines);
-        var migrationList = AddList(migrationPanel, viewModel.MigrationLines);
+        var summaryList = AddList(summaryPanel, viewModel.SummaryLines);
         var historyList = AddList(historyPanel, viewModel.HistoryLines);
+        var contentList = AddList(contentPanel, viewModel.ContentLines);
 
-        var panels = new[] { identityPanel, planningPanel, contentPanel, migrationPanel, historyPanel };
-        var panelTitles = new[] { "Identity", "Planning", "Content", "Migration", "History" };
-        var focusTargets = new View[] { identityList, planningList, contentList, migrationList, historyList };
+        var panels = new[] { summaryPanel, historyPanel, contentPanel };
+        var panelTitles = new[] { viewModel.SummaryTitle, "History", "Content" };
+        var focusTargets = new View[] { summaryList, historyList, contentList };
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
 
-        root.Add(topBar, identityPanel, planningPanel, contentPanel, migrationPanel, historyPanel, footer);
+        root.Add(topBar, summaryPanel, historyPanel, contentPanel, footer);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
 
         bool HandleDetailShortcut(KeyEvent keyEvent)
@@ -91,9 +81,6 @@ public static class ItemDetailScreen
                     return true;
                 case Key e when e == (Key)'e':
                     onEdit();
-                    return true;
-                case Key x when x == (Key)'>':
-                    onMigrate();
                     return true;
             }
 

@@ -14,7 +14,7 @@ public sealed class CreateItemRequest
 
     public string? Description { get; init; }
 
-    public IReadOnlyCollection<string>? Tags { get; init; }
+    public string? Tag { get; init; }
 
     public DateTimeOffset? ScheduledAt { get; init; }
 }

@@ -18,10 +18,11 @@ public sealed class MainDashboardViewModel
         MonthItems = monthItems.Select(MapToRow).ToList();
         BacklogItems = backlogItems.Select(MapToRow).ToList();
         ProjectOrTagRows = dayItems.Concat(weekItems).Concat(monthItems).Concat(backlogItems)
-            .SelectMany(item => item.Tags)
+            .Select(item => item.Tag)
+            .Where(tag => !string.Equals(tag, Item.DefaultTag, StringComparison.OrdinalIgnoreCase))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(tag => tag, StringComparer.OrdinalIgnoreCase)
-            .Take(6)
+            .Take(4)
             .ToArray();
         _selectedDayItemIndex = DayItems.Count > 0 ? 0 : -1;
     }
@@ -50,14 +51,14 @@ public sealed class MainDashboardViewModel
                 return [];
             }
 
-            var activeTags = SelectedDayItem?.Tags ?? [];
-            if (activeTags.Length == 0)
+            var activeTag = SelectedDayItem?.Tag;
+            if (string.IsNullOrWhiteSpace(activeTag) || string.Equals(activeTag, Item.DefaultTag, StringComparison.OrdinalIgnoreCase))
             {
                 return BacklogItems.Take(5).ToArray();
             }
 
             var filtered = BacklogItems
-                .Where(item => item.Tags.Any(tag => activeTags.Contains(tag, StringComparer.OrdinalIgnoreCase)))
+                .Where(item => string.Equals(item.Tag, activeTag, StringComparison.OrdinalIgnoreCase))
                 .Take(5)
                 .ToArray();
 

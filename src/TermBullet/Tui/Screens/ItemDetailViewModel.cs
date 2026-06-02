@@ -6,33 +6,35 @@ public sealed class ItemDetailViewModel
 {
     private ItemDetailViewModel(
         string publicRef,
+        string itemKind,
         string content,
-        IReadOnlyList<string> identityLines,
-        IReadOnlyList<string> planningLines,
+        string summaryTitle,
+        IReadOnlyList<string> summaryLines,
         IReadOnlyList<string> contentLines,
-        IReadOnlyList<string> migrationLines,
         IReadOnlyList<string> historyLines)
     {
         PublicRef = publicRef;
+        ItemKind = itemKind;
         Content = content;
-        IdentityLines = identityLines;
-        PlanningLines = planningLines;
+        SummaryTitle = summaryTitle;
+        SummaryLines = summaryLines;
         ContentLines = contentLines;
-        MigrationLines = migrationLines;
         HistoryLines = historyLines;
     }
 
     public string PublicRef { get; }
 
+    public string ItemKind { get; }
+
     public string Content { get; }
 
-    public IReadOnlyList<string> IdentityLines { get; }
+    public string DetailTitle => $"{ItemKind} {PublicRef}";
 
-    public IReadOnlyList<string> PlanningLines { get; }
+    public string SummaryTitle { get; }
+
+    public IReadOnlyList<string> SummaryLines { get; }
 
     public IReadOnlyList<string> ContentLines { get; }
-
-    public IReadOnlyList<string> MigrationLines { get; }
 
     public IReadOnlyList<string> HistoryLines { get; }
 
@@ -45,44 +47,75 @@ public sealed class ItemDetailViewModel
         ItemDisplayRow item,
         IReadOnlyCollection<ItemHistoryEntryResult>? history = null)
     {
-        var tags = item.Tags.Length > 0 ? string.Join(", ", item.Tags) : "-";
-        var scheduledAt = item.ScheduledAt is null ? "-" : FormatInstant(item.ScheduledAt.Value);
+        var itemKind = FormatKind(item.Type);
         return new ItemDetailViewModel(
             item.PublicRef,
+            itemKind,
             item.Content,
-            [
-                $"ref: {item.PublicRef}",
-                $"id: {item.Id}",
-                $"type: {item.Type}",
-                $"status: {item.Status}",
-                $"version: {item.Version}",
-                $"created: {FormatInstant(item.CreatedAt)}",
-                $"updated: {FormatInstant(item.UpdatedAt)}"
-            ],
-            [
-                $"collection: {item.Collection}",
-                $"scheduled_at: {scheduledAt}",
-                $"priority: {item.Priority}",
-                $"tags: {tags}"
-            ],
+            ResolveSummaryTitle(item.Type),
+            BuildSummaryLines(item),
             BuildContentLines(item),
-            [
-                "migrate changes this task's collection in place",
-                "id and public ref stay the same"
-            ],
             BuildHistoryLines(history));
+    }
+
+    private static string ResolveSummaryTitle(string type) =>
+        type.ToLowerInvariant() switch
+        {
+            "note" => "Info",
+            "event" => "Schedule",
+            _ => "Planning"
+        };
+
+    private static string[] BuildSummaryLines(ItemDisplayRow item)
+    {
+        var lines = new List<string>
+        {
+            $"status: {item.Status}"
+        };
+
+        switch (item.Type.ToLowerInvariant())
+        {
+            case "task":
+                lines.Add($"collection: {item.Collection}");
+                lines.Add($"priority: {item.Priority}");
+                AddTag(lines, item.Tag);
+                break;
+            case "event":
+                if (item.ScheduledAt is not null)
+                {
+                    lines.Add($"scheduled: {FormatDate(item.ScheduledAt.Value)}");
+                }
+
+                AddTag(lines, item.Tag);
+                break;
+            default:
+                AddTag(lines, item.Tag);
+                lines.Add($"updated: {FormatInstant(item.UpdatedAt)}");
+                break;
+        }
+
+        return [.. lines];
     }
 
     private static string[] BuildContentLines(ItemDisplayRow item)
     {
         var lines = new List<string>
         {
-            item.Content,
+            $"title: {item.Content}",
             " ",
-            "Description:"
+            "description:"
         };
+
         lines.Add(string.IsNullOrWhiteSpace(item.Description) ? "-" : item.Description);
         return [.. lines];
+    }
+
+    private static void AddTag(List<string> lines, string tag)
+    {
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            lines.Add($"tag: {tag}");
+        }
     }
 
     private static string[] BuildHistoryLines(IReadOnlyCollection<ItemHistoryEntryResult>? history)
@@ -102,4 +135,15 @@ public sealed class ItemDetailViewModel
 
     private static string FormatInstant(DateTimeOffset value) =>
         value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+    private static string FormatDate(DateTimeOffset value) =>
+        value.ToUniversalTime().ToString("yyyy-MM-dd");
+
+    private static string FormatKind(string type) =>
+        type.ToLowerInvariant() switch
+        {
+            "note" => "Note",
+            "event" => "Event",
+            _ => "Task"
+        };
 }

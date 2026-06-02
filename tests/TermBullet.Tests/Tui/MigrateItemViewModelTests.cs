@@ -67,7 +67,7 @@ public sealed class MigrateItemViewModelTests
             Status: ItemStatus.Open,
             Collection: ItemCollection.Today,
             Priority: Priority.High,
-            Tags: ["auth", "cli"],
+            Tag: "auth",
             ScheduledAt: null,
             Version: 1,
             CreatedAt: DateTimeOffset.UtcNow,

@@ -126,16 +126,16 @@ public static class EditItemScreen
             Height = 3,
             Text = draft.Description
         };
-        var tagsLabel = new Label("Tags:") { X = 1, Y = 6 };
+        var tagsLabel = new Label("Tag:") { X = 1, Y = 6 };
         var tagSelection = new TagSelectionList(
-            availableTags.Concat(draft.SelectedTags),
-            draft.SelectedTags);
+            availableTags.Append(draft.SelectedTag),
+            draft.SelectedTag);
         var tagsList = tagSelection.View;
         tagsList.X = Pos.Right(tagsLabel) + 1;
         tagsList.Y = 6;
         tagsList.Width = Dim.Fill(2);
         tagsList.Height = 3;
-        var tagsHint = new Label("Space toggle")
+        var tagsHint = new Label("Space select")
         {
             X = Pos.Right(tagsLabel) + 1,
             Y = 9,
@@ -161,7 +161,7 @@ public static class EditItemScreen
         {
             draft.Content = contentField.Text?.ToString() ?? string.Empty;
             draft.Description = descriptionField.Text?.ToString() ?? string.Empty;
-            draft.SelectedTags = tagSelection.SelectedTags;
+            draft.SelectedTag = tagSelection.SelectedTag;
             draft.Collection = CollectionFromIndex(collectionGroup.SelectedItem);
             draft.Priority = PriorityFromIndex(priorityGroup.SelectedItem);
             draft.ScheduledAtText = scheduledField.Text?.ToString() ?? string.Empty;

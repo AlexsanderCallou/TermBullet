@@ -36,7 +36,7 @@ public sealed class TermBulletCliApp(
         return InvokeInternalAsync(args, cancellationToken);
     }
 
-    public const string Version = "1.1.2";
+    public const string Version = "1.2.0";
 
     private async Task<int> InvokeInternalAsync(string[] args, CancellationToken cancellationToken)
     {
@@ -238,13 +238,11 @@ public sealed class TermBulletCliApp(
         };
         var collectionOption = new Option<string?>("--collection")
         {
-            Description = "Collection: today, week, month, backlog"
+            Description = "Collection: today, week, month, backlog, notes, events"
         };
-        var tagOption = new Option<string[]>("--tag")
+        var tagOption = new Option<string?>("--tag")
         {
-            Description = "Repeatable tag option",
-            Arity = ArgumentArity.ZeroOrMore,
-            AllowMultipleArgumentsPerToken = true
+            Description = "Item tag"
         };
 
         var command = new Command("add", "Create a new item")
@@ -269,8 +267,8 @@ public sealed class TermBulletCliApp(
                     parseResult.GetValue(noteOption),
                     parseResult.GetValue(eventOption));
                 var priority = ParsePriority(parseResult.GetValue(priorityOption));
-                var collection = ParseCollection(parseResult.GetValue(collectionOption)) ?? ItemCollection.Today;
-                var tags = parseResult.GetValue(tagOption);
+                var collection = ParseCollection(parseResult.GetValue(collectionOption)) ?? DefaultCollectionFor(itemType);
+                var tag = parseResult.GetValue(tagOption);
 
                 var result = await createItemUseCase!.ExecuteAsync(new CreateItemRequest
                 {
@@ -278,7 +276,7 @@ public sealed class TermBulletCliApp(
                     Content = content,
                     Collection = collection,
                     Priority = priority,
-                    Tags = tags
+                    Tag = tag
                 }, cancellationToken);
 
                 await standardOutput.WriteLineAsync($"{result.PublicRef} {content}");
@@ -1012,9 +1010,19 @@ public sealed class TermBulletCliApp(
             "week" => ItemCollection.Week,
             "month" => ItemCollection.Month,
             "backlog" => ItemCollection.Backlog,
+            "note" or "notes" => ItemCollection.Notes,
+            "event" or "events" => ItemCollection.Events,
             _ => throw new ArgumentException($"Unsupported collection: {value}.")
         };
     }
+
+    private static ItemCollection DefaultCollectionFor(ItemType type) =>
+        type switch
+        {
+            ItemType.Note => ItemCollection.Notes,
+            ItemType.Event => ItemCollection.Events,
+            _ => ItemCollection.Today
+        };
 
     private static ItemStatus? ParseStatus(string? value)
     {
@@ -1073,9 +1081,6 @@ public sealed class TermBulletCliApp(
         await standardOutput.WriteLineAsync($"status: {item.Status.ToString().ToLowerInvariant()}");
         await standardOutput.WriteLineAsync($"collection: {item.Collection.ToString().ToLowerInvariant()}");
         await standardOutput.WriteLineAsync($"priority: {item.Priority.ToString().ToLowerInvariant()}");
-        if (item.Tags.Count > 0)
-        {
-            await standardOutput.WriteLineAsync($"tags: {string.Join(", ", item.Tags)}");
-        }
+        await standardOutput.WriteLineAsync($"tag: {item.Tag}");
     }
 }
