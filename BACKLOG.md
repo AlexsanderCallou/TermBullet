@@ -72,12 +72,12 @@ Status: in progress.
 
 Implemented foundation:
 
-- `conf.json` can load and save optional `ai.active_profile` and
-  `ai.profiles`.
-- `termbullet ai profile add|list|use|show|test|remove` is available for local
-  profile management.
-- `ai profile test` validates local profile configuration and provider
-  communication.
+- `<data_root>/.aiconf` stores named AI profiles in an editable comment-friendly
+  line format.
+- `termbullet test-ai` creates the `.aiconf` template when missing and validates
+  the active profile.
+- `termbullet set-ai <name>` sets the default profile when more than one profile
+  is configured.
 - Documentation recommends Ollama for local model profiles and
   OpenAI-compatible profiles for hosted providers.
 
@@ -206,7 +206,7 @@ Implemented foundation:
 
 - Added `termbullet ai plan <mode> --prompt ...` to generate a validated draft
   preview through the active AI profile.
-- The real CLI wiring loads `<install-dir>/conf.json`, the active AI provider,
+- The real CLI wiring loads `<data_root>/.aiconf`, the active AI provider,
   and `<install-dir>/agents/planning-bulletjournal-agent.md`.
 - `ai plan` previews the structured draft by default.
 - `ai plan --apply --yes` applies the validated draft through the Application
@@ -217,7 +217,8 @@ Implemented foundation:
 - `ai chat` generates validated draft previews and applies only after
   interactive confirmation.
 - `termbullet` with no command still opens the TUI.
-- CLI parsing tests cover the implemented AI profile, plan, and chat paths.
+- CLI parsing tests cover the implemented `.aiconf`, `test-ai`, `set-ai`, plan,
+  and chat paths.
 
 Remaining:
 

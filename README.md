@@ -196,34 +196,48 @@ ollama pull llama3.2:1b
 ollama run llama3.2:1b
 ```
 
-Register the local profile:
+Create or edit the AI configuration file:
 
-```bash
-termbullet ai profile add local \
-  --provider openai-compatible \
-  --model llama3.2:1b \
-  --base-url http://localhost:11434/v1 \
-  --no-api-key
-
-termbullet ai profile use local
-termbullet ai profile test local
+```text
+<data_root>/.aiconf
 ```
 
-Hosted providers can also be used when they expose an OpenAI-compatible API:
+Running `termbullet test-ai` creates a commented template when `.aiconf` does
+not exist.
 
-```bash
-termbullet ai profile add cloud \
-  --provider openai-compatible \
-  --model gpt-4.1-mini \
-  --base-url https://api.openai.com/v1 \
-  --api-key-env TERMBULLET_OPENAI_API_KEY
+Recommended local Ollama profile:
 
-termbullet ai profile use cloud
-termbullet ai profile test cloud
+```ini
+[local-gemma]
+provider=openai-compatible
+model=gemma3:4b
+base_url=http://localhost:11434/v1
+api_key=ollama
+default=true
+timeout_seconds=180
 ```
 
-The profile is stored in `<install-dir>/conf.json`. API keys should be provided
-through environment variables, not written directly into the config file.
+Lightweight local fallback:
+
+```ini
+[local-llama-fast]
+provider=openai-compatible
+model=llama3.2:1b
+base_url=http://localhost:11434/v1
+api_key=ollama
+timeout_seconds=180
+```
+
+Validate and switch profiles:
+
+```bash
+termbullet test-ai
+termbullet set-ai local-gemma
+```
+
+Hosted providers can also be used when they expose an OpenAI-compatible API. For
+hosted keys, prefer `api_key_env=OPENAI_API_KEY` instead of writing a secret into
+`.aiconf`.
 
 ## Product Summary
 

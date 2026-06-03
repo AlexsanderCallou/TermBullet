@@ -156,6 +156,41 @@ public sealed class AiPlanningDraftValidatorTests
         Assert.Contains(draft.Actions, action => action.Collection == "backlog");
     }
 
+    [Theory]
+    [InlineData("this_week")]
+    [InlineData("this-week")]
+    [InlineData("this week")]
+    [InlineData("weekly")]
+    [InlineData("this_month")]
+    [InlineData("this-month")]
+    [InlineData("this month")]
+    [InlineData("monthly")]
+    public void Validate_accepts_common_model_collection_synonyms(string collection)
+    {
+        var draft = AiPlanningDraftParser.Parse(
+            $$"""
+            {
+              "mode": "new_project",
+              "summary": "Java study roadmap.",
+              "actions": [
+                { "type": "create_tag", "name": "estudo-java" },
+                {
+                  "type": "create_task",
+                  "tag": "estudo-java",
+                  "collection": "{{collection}}",
+                  "content": "Study Java syntax"
+                }
+              ]
+            }
+            """);
+        var validator = new AiPlanningDraftValidator();
+
+        var result = validator.Validate(draft);
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+
     [Fact]
     public void Validate_accepts_nutrition_chatbot_project_scenario()
     {

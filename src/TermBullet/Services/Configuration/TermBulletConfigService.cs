@@ -102,6 +102,12 @@ public sealed class TermBulletConfigService(string installDirectory)
 
         [JsonPropertyName("api_key_env")]
         public string? ApiKeyEnv { get; set; }
+
+        [JsonPropertyName("api_key")]
+        public string? ApiKey { get; set; }
+
+        [JsonPropertyName("timeout_seconds")]
+        public int? TimeoutSeconds { get; set; }
     }
 
     private static AiConfiguration? ToAiConfiguration(AiConfigDocument? document)
@@ -127,7 +133,9 @@ public sealed class TermBulletConfigService(string installDirectory)
                 pair.Value.Model.Trim(),
                 NormalizeOptional(pair.Value.BaseUrl),
                 NormalizeOptional(pair.Value.ApiKeySource) ?? "environment",
-                NormalizeOptional(pair.Value.ApiKeyEnv));
+                NormalizeOptional(pair.Value.ApiKeyEnv),
+                NormalizeOptional(pair.Value.ApiKey),
+                pair.Value.TimeoutSeconds);
         }
 
         return new AiConfiguration(NormalizeOptional(document.ActiveProfile), profiles);
@@ -153,7 +161,9 @@ public sealed class TermBulletConfigService(string installDirectory)
                         Model = pair.Value.Model,
                         BaseUrl = NormalizeOptional(pair.Value.BaseUrl),
                         ApiKeySource = NormalizeOptional(pair.Value.ApiKeySource) ?? "environment",
-                        ApiKeyEnv = NormalizeOptional(pair.Value.ApiKeyEnv)
+                        ApiKeyEnv = NormalizeOptional(pair.Value.ApiKeyEnv),
+                        ApiKey = NormalizeOptional(pair.Value.ApiKey),
+                        TimeoutSeconds = pair.Value.TimeoutSeconds
                     },
                     StringComparer.OrdinalIgnoreCase)
         };

@@ -45,6 +45,7 @@ public static class TermBulletBootstrap
         var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
         var installDirectory = Path.GetDirectoryName(runtimePaths.ConfigPath)
             ?? throw new InvalidOperationException("Runtime config path is invalid.");
+        var aiConfigurationFileService = new AiConfigurationFileService(runtimePaths.DataRoot);
 
         return new TermBulletCliApp(
             new ClearStoredHistoryUseCase(historyMaintenanceService, clock),
@@ -84,7 +85,10 @@ public static class TermBulletBootstrap
                 tagCatalogRepository,
                 clock,
                 cancellationToken),
-            testAiProfileConnection: TestAiProfileConnectionAsync,
+            testAiProfileConnection: (profileName, cancellationToken) => TestAiProfileConnectionAsync(
+                aiConfigurationFileService,
+                profileName,
+                cancellationToken),
             startupAction: startupAction ?? startupMaintenanceUseCase.ExecuteAsync);
     }
 
@@ -169,13 +173,8 @@ public static class TermBulletBootstrap
         string installDirectory,
         CancellationToken cancellationToken = default)
     {
-        var configService = new TermBulletConfigService(installDirectory);
-        var config = await configService.LoadAsync(cancellationToken)
-            ?? throw new InvalidOperationException("AI is not configured. Add an AI profile before using planning.");
-        var providerFactory = new AiPlanningProviderFactory(() => new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(270)
-        });
+        var config = await LoadAiConfigAsync(installDirectory, cancellationToken);
+        var providerFactory = new AiPlanningProviderFactory(() => CreateAiHttpClient(config));
         var provider = providerFactory.Create(config);
         var useCase = new GenerateAiPlanningResponseUseCase(
             new BuildAiPlanningRequestUseCase(
@@ -211,25 +210,59 @@ public static class TermBulletBootstrap
         return await useCase.ExecuteAsync(draft, cancellationToken);
     }
 
+    private static async Task<TermBulletConfig> LoadAiConfigAsync(
+        string installDirectory,
+        CancellationToken cancellationToken)
+    {
+        var legacyConfigService = new TermBulletConfigService(installDirectory);
+        var legacyConfig = await legacyConfigService.LoadAsync(cancellationToken);
+        var dataRoot = legacyConfig?.DataRoot ?? Path.Combine(installDirectory, "data");
+        return await new AiConfigurationFileService(dataRoot).LoadConfigAsync(cancellationToken);
+    }
+
+    private static HttpClient CreateAiHttpClient(TermBulletConfig config)
+    {
+        var timeoutSeconds = 270;
+        if (config.Ai is not null
+            && !string.IsNullOrWhiteSpace(config.Ai.ActiveProfile)
+            && config.Ai.Profiles.TryGetValue(config.Ai.ActiveProfile, out var profile)
+            && profile.TimeoutSeconds is > 0)
+        {
+            timeoutSeconds = profile.TimeoutSeconds.Value;
+        }
+
+        return new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(timeoutSeconds)
+        };
+    }
+
     private static async Task<AiPlanningProviderResponse> TestAiProfileConnectionAsync(
-        TermBulletConfig config,
-        string profileName,
+        AiConfigurationFileService aiConfigurationFileService,
+        string? profileName,
         CancellationToken cancellationToken = default)
     {
+        var config = await aiConfigurationFileService.LoadConfigOrCreateTemplateAsync(cancellationToken);
         var profiles = config.Ai?.Profiles ?? new Dictionary<string, AiProfile>();
-        if (!profiles.ContainsKey(profileName))
+        var activeProfile = string.IsNullOrWhiteSpace(profileName)
+            ? config.Ai?.ActiveProfile
+            : profileName;
+
+        if (string.IsNullOrWhiteSpace(activeProfile))
         {
-            throw new InvalidOperationException($"AI profile not found: {profileName}");
+            throw new InvalidOperationException("No active AI profile is configured.");
+        }
+
+        if (!profiles.ContainsKey(activeProfile))
+        {
+            throw new InvalidOperationException($"AI profile not found: {activeProfile}");
         }
 
         var testConfig = config with
         {
-            Ai = new AiConfiguration(profileName, profiles)
+            Ai = new AiConfiguration(activeProfile, profiles)
         };
-        var provider = new AiPlanningProviderFactory(() => new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(90)
-        }).Create(testConfig);
+        var provider = new AiPlanningProviderFactory(() => CreateAiHttpClient(testConfig)).Create(testConfig);
 
         return await provider.SendAsync(new AiPlanningModelRequest(
             AiPlanningMode.NewWeekly,

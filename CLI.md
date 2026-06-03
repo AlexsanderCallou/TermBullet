@@ -41,10 +41,11 @@ termbullet
 ├── untag
 ├── priority
 ├── search
+├── test-ai
+├── set-ai
 ├── ai
 │   ├── chat
-│   ├── plan
-│   └── profile
+│   └── plan
 ├── history
 │   └── clear
 └── path
@@ -223,90 +224,84 @@ On first execution, TermBullet asks for the base data directory, validates
 read/write permissions, and saves the selection in `<install-dir>/conf.json`.
 There are no user-editable product keys.
 
-## Planned V2 AI Configuration Commands
+## AI Configuration
 
-AI connection configuration is CLI-only in V2 MVP. The TUI reads the selected
-profile but does not edit AI provider settings.
-
-### `ai profile add`
-
-```bash
-termbullet ai profile add local \
-  --provider openai-compatible \
-  --model llama3.1 \
-  --base-url http://localhost:11434/v1 \
-  --no-api-key
-```
-
-Adds or updates a named AI connection profile in `<install-dir>/conf.json`.
-Environment variables are the preferred API key source.
-
-For local models, Ollama is the recommended setup. Its default
-OpenAI-compatible base URL is:
+AI connection settings live in the data root:
 
 ```text
-http://localhost:11434/v1
+<data_root>/.aiconf
+```
+
+The file is plain text. Lines starting with `#` are comments. Each profile starts
+with `[profile-name]`, followed by `key=value` settings.
+
+If `.aiconf` does not exist, run:
+
+```bash
+termbullet test-ai
+```
+
+TermBullet creates a commented template and exits with an instruction to edit it.
+
+Example local Ollama configuration:
+
+```ini
+[local-gemma]
+provider=openai-compatible
+model=gemma3:4b
+base_url=http://localhost:11434/v1
+api_key=ollama
+default=true
+timeout_seconds=180
+
+[local-llama-fast]
+provider=openai-compatible
+model=llama3.2:1b
+base_url=http://localhost:11434/v1
+api_key=ollama
+timeout_seconds=180
 ```
 
 Hosted provider example:
 
-```bash
-termbullet ai profile add cloud \
-  --provider openai-compatible \
-  --model gpt-4.1-mini \
-  --base-url https://api.openai.com/v1 \
-  --api-key-env TERMBULLET_OPENAI_API_KEY
+```ini
+[hosted-fast]
+provider=openai-compatible
+model=gpt-4.1-mini
+base_url=https://api.openai.com/v1
+api_key_env=OPENAI_API_KEY
+timeout_seconds=180
 ```
 
-### `ai profile list`
+Required keys:
 
-```bash
-termbullet ai profile list
-```
+- `provider`
+- `model`
+- `base_url` for `openai-compatible`
+- either `api_key` or `api_key_env`
 
-Shows registered profile names, provider, model, and active status. It must not
-print API keys.
+If a single profile exists, it is active automatically. If multiple profiles
+exist, exactly one must have `default=true`.
 
-Example output:
-
-```text
-* local  openai-compatible   llama3.1
-  cloud  openai-compatible   gpt-4.1-mini
-```
-
-### `ai profile use`
+### `test-ai`
 
 ```bash
-termbullet ai profile use local
+termbullet test-ai
+termbullet test-ai local-gemma
 ```
 
-Sets the active AI profile used by Planning.
+Validates `.aiconf`, resolves the active or requested profile, checks required
+settings, and sends a short provider request. A failed test returns a clear
+actionable error.
 
-### `ai profile show`
+### `set-ai`
 
 ```bash
-termbullet ai profile show local
+termbullet set-ai local-gemma
 ```
 
-Shows one profile without exposing secret values.
-
-### `ai profile test`
-
-```bash
-termbullet ai profile test local
-```
-
-Validates provider, model, base URL, key source, and provider communication with
-a short chat-completions request. A failed test returns a clear actionable error.
-
-### `ai profile remove`
-
-```bash
-termbullet ai profile remove local
-```
-
-Removes a profile. Removing the active profile must require selecting another
-active profile or leaving AI unconfigured.
+Sets the default profile in `.aiconf`. It rewrites the file with the same profile
+settings and updates `default=true`.
 
 ## V2 AI Planning Commands
 
@@ -337,7 +332,7 @@ Allowed mode values:
 
 Rules:
 
-- The active AI profile is loaded from `<install-dir>/conf.json`.
+- The active AI profile is loaded from `<data_root>/.aiconf`.
 - The planning agent prompt is loaded from
   `<install-dir>/agents/planning-bulletjournal-agent.md`.
 - Provider output must parse as a valid structured draft before it is printed.
@@ -411,7 +406,7 @@ Interactive commands:
 
 Rules:
 
-- `ai chat` uses the active profile from `<install-dir>/conf.json`.
+- `ai chat` uses the active profile from `<data_root>/.aiconf`.
 - `ai chat` must load `<install-dir>/agents/planning-bulletjournal-agent.md`
   before calling the model.
 - AI output uses a response envelope JSON object. `draft_ready=false` displays

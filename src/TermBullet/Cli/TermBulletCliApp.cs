@@ -34,7 +34,7 @@ public sealed class TermBulletCliApp(
     Func<BuildAiPlanningRequest, CancellationToken, Task<GenerateAiPlanningDraftResult>>? generateAiPlanningDraft = null,
     Func<BuildAiPlanningRequest, CancellationToken, Task<GenerateAiPlanningResponseResult>>? generateAiPlanningResponse = null,
     Func<AiPlanningDraft, CancellationToken, Task<AiPlanningDraftApplyResult>>? applyAiPlanningDraft = null,
-    Func<TermBulletConfig, string, CancellationToken, Task<AiPlanningProviderResponse>>? testAiProfileConnection = null,
+    Func<string?, CancellationToken, Task<AiPlanningProviderResponse>>? testAiProfileConnection = null,
     TextReader? input = null,
     Func<CancellationToken, Task>? startupAction = null)
 {
@@ -212,6 +212,8 @@ public sealed class TermBulletCliApp(
         {
             rootCommand.Subcommands.Add(BuildPathCommand(standardOutput));
             rootCommand.Subcommands.Add(BuildAiCommand(standardOutput, standardError, cancellationToken));
+            rootCommand.Subcommands.Add(BuildTestAiCommand(standardOutput, standardError, cancellationToken));
+            rootCommand.Subcommands.Add(BuildSetAiCommand(standardOutput, standardError, cancellationToken));
         }
 
         rootCommand.Subcommands.Add(BuildHistoryCommand(standardOutput, standardError, cancellationToken));
@@ -754,6 +756,81 @@ public sealed class TermBulletCliApp(
         return command;
     }
 
+    private Command BuildTestAiCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var nameArgument = new Argument<string?>("name")
+        {
+            Description = "Optional AI profile name",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+        var command = new Command("test-ai", "Validate the active AI configuration")
+        {
+            nameArgument
+        };
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var profileName = NormalizeOptional(parseResult.GetValue(nameArgument));
+                var config = await LoadAiConfigurationFileAsync(createTemplateIfMissing: true, cancellationToken);
+                var activeProfile = ResolveAiProfileName(config, profileName);
+                var profile = config.Ai!.Profiles[activeProfile];
+                ValidateAiProfile(activeProfile, profile);
+                await standardOutput.WriteLineAsync($"profile valid: {activeProfile}");
+                if (testAiProfileConnection is not null)
+                {
+                    var response = await testAiProfileConnection(activeProfile, cancellationToken);
+                    await standardOutput.WriteLineAsync($"provider reachable: {response.Model ?? profile.Model}");
+                }
+
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildSetAiCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var nameArgument = new Argument<string>("name")
+        {
+            Description = "AI profile name"
+        };
+        var command = new Command("set-ai", "Set the default AI profile")
+        {
+            nameArgument
+        };
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var profileName = NormalizeProfileName(parseResult.GetValue(nameArgument));
+                var service = CreateAiConfigurationFileService();
+                await service.SetActiveProfileAsync(profileName, cancellationToken);
+                await standardOutput.WriteLineAsync($"active AI profile: {profileName}");
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
     private Command BuildAiChatCommand(
         TextWriter standardOutput,
         TextWriter standardError,
@@ -1221,8 +1298,7 @@ public sealed class TermBulletCliApp(
                 await standardOutput.WriteLineAsync($"profile valid: {name}");
                 if (testAiProfileConnection is not null)
                 {
-                    var config = await LoadConfigOrDefaultAsync(cancellationToken);
-                    var response = await testAiProfileConnection(config, name, cancellationToken);
+                    var response = await testAiProfileConnection(name, cancellationToken);
                     await standardOutput.WriteLineAsync($"provider reachable: {response.Model ?? profile.Model}");
                 }
 
@@ -1291,6 +1367,16 @@ public sealed class TermBulletCliApp(
             ?? new TermBulletConfig(runtimePaths!.DataRoot);
     }
 
+    private async Task<TermBulletConfig> LoadAiConfigurationFileAsync(
+        bool createTemplateIfMissing,
+        CancellationToken cancellationToken)
+    {
+        var service = CreateAiConfigurationFileService();
+        return createTemplateIfMissing
+            ? await service.LoadConfigOrCreateTemplateAsync(cancellationToken)
+            : await service.LoadConfigAsync(cancellationToken);
+    }
+
     private async Task SaveConfigAsync(TermBulletConfig config, CancellationToken cancellationToken)
     {
         var service = CreateConfigService();
@@ -1316,6 +1402,30 @@ public sealed class TermBulletCliApp(
         var installDirectory = Path.GetDirectoryName(runtimePaths!.ConfigPath)
             ?? throw new InvalidOperationException("Runtime config path is invalid.");
         return new TermBulletConfigService(installDirectory);
+    }
+
+    private AiConfigurationFileService CreateAiConfigurationFileService() =>
+        new(runtimePaths!.DataRoot);
+
+    private static string ResolveAiProfileName(TermBulletConfig config, string? requestedProfile)
+    {
+        if (config.Ai is null || config.Ai.Profiles.Count == 0)
+        {
+            throw new InvalidOperationException("AI is not configured.");
+        }
+
+        var profileName = NormalizeOptional(requestedProfile) ?? config.Ai.ActiveProfile;
+        if (string.IsNullOrWhiteSpace(profileName))
+        {
+            throw new InvalidOperationException("No active AI profile is configured. Run 'termbullet set-ai <name>'.");
+        }
+
+        if (!config.Ai.Profiles.ContainsKey(profileName))
+        {
+            throw new InvalidOperationException($"AI profile not found: {profileName}");
+        }
+
+        return profileName;
     }
 
     private static Dictionary<string, AiProfile> CopyProfiles(TermBulletConfig config) =>
@@ -1439,6 +1549,12 @@ public sealed class TermBulletCliApp(
             return;
         }
 
+        if (string.Equals(keySource, "literal", StringComparison.OrdinalIgnoreCase))
+        {
+            _ = RequireNonEmpty(profile.ApiKey, "api_key");
+            return;
+        }
+
         if (!string.Equals(keySource, "environment", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException($"Unsupported API key source for profile {name}: {profile.ApiKeySource}");
@@ -1470,6 +1586,16 @@ public sealed class TermBulletCliApp(
         if (!string.IsNullOrWhiteSpace(profile.ApiKeyEnv))
         {
             await standardOutput.WriteLineAsync($"api_key_env: {profile.ApiKeyEnv}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(profile.ApiKey))
+        {
+            await standardOutput.WriteLineAsync("api_key: <configured>");
+        }
+
+        if (profile.TimeoutSeconds is not null)
+        {
+            await standardOutput.WriteLineAsync($"timeout_seconds: {profile.TimeoutSeconds}");
         }
     }
 

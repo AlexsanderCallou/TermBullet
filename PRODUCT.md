@@ -209,8 +209,9 @@ Deferred TUI screens:
 ### V2 - AI Planning
 
 - Planning workspace with guided planning inputs for fresh project plans;
-- BYOK AI setup managed through CLI commands;
-- named AI profiles with one active profile at a time;
+- BYOK AI setup managed through `<data_root>/.aiconf`;
+- named AI profiles with one active profile selected by `default=true` or
+  `set-ai`;
 - CLI `ai chat` as a terminal-first planning interface using the same modes as
   the TUI;
 - a canonical planning and Bullet Journal specialist agent loaded for every AI
@@ -264,7 +265,8 @@ TUI only shows whether AI is configured and which profile is active.
 
 For local models, Ollama is the recommended user setup in V2. Hosted providers
 and other compatible services remain supported through named
-OpenAI-compatible profiles, but they are not required for local usage.
+OpenAI-compatible profiles in `.aiconf`, but they are not required for local
+usage.
 
 CLI `ai chat` uses the active AI profile by default and supports interactive
 planning commands such as mode selection, conversational replies, draft preview,

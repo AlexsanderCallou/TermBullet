@@ -80,6 +80,17 @@ public sealed class OpenAiCompatiblePlanningProvider(
             return;
         }
 
+        if (string.Equals(keySource, "literal", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(profile.ApiKey))
+            {
+                throw new InvalidOperationException("AI profile api_key is required for literal API key source.");
+            }
+
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", profile.ApiKey);
+            return;
+        }
+
         if (!string.Equals(keySource, "environment", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException($"Unsupported API key source: {profile.ApiKeySource}");

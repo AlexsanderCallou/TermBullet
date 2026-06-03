@@ -111,6 +111,40 @@ public sealed class ApplyAiPlanningDraftUseCaseTests
         Assert.Empty(tagRepository.Tags);
     }
 
+    [Theory]
+    [InlineData("this_week", ItemCollection.Week)]
+    [InlineData("this-week", ItemCollection.Week)]
+    [InlineData("this_month", ItemCollection.Month)]
+    [InlineData("this-month", ItemCollection.Month)]
+    public async Task ExecuteAsync_applies_common_model_collection_synonyms(
+        string modelCollection,
+        ItemCollection expectedCollection)
+    {
+        var itemRepository = new FakeItemRepository();
+        var tagRepository = new FakeTagCatalogRepository();
+        var useCase = CreateUseCase(itemRepository, tagRepository);
+        var draft = AiPlanningDraftParser.Parse(
+            $$"""
+            {
+              "mode": "new_project",
+              "summary": "Java study roadmap.",
+              "actions": [
+                { "type": "create_tag", "name": "estudo-java" },
+                {
+                  "type": "create_task",
+                  "tag": "estudo-java",
+                  "collection": "{{modelCollection}}",
+                  "content": "Study Java syntax"
+                }
+              ]
+            }
+            """);
+
+        await useCase.ExecuteAsync(draft);
+
+        Assert.Contains(itemRepository.Items, item => item.Collection == expectedCollection);
+    }
+
     private static ApplyAiPlanningDraftUseCase CreateUseCase(
         FakeItemRepository itemRepository,
         FakeTagCatalogRepository tagRepository)

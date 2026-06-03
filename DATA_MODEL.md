@@ -40,15 +40,29 @@ The install directory must be writable. If TermBullet cannot write
 `conf.json`, startup fails with a clear permission error. There is no automatic
 fallback config location in V1.
 
-The `ai` section is planned for V2. AI configuration is managed only through CLI
-commands in the V2 MVP. The TUI reads the active profile and reports missing or
-invalid configuration, but it does not edit provider settings.
+AI configuration is stored in the selected data root:
 
-AI profiles are named connection presets. A user may register more than one
-profile, such as the recommended local Ollama profile and a hosted
-OpenAI-compatible profile, and select which profile is active. API keys should
-not be printed by normal CLI output. Environment variables are the preferred key
-source.
+```text
+<data_root>/.aiconf
+```
+
+The file is a user-editable line format. `#` starts comments, each profile starts
+with `[profile-name]`, and settings use `key=value`. If a single profile exists,
+it is active automatically. If multiple profiles exist, exactly one must have
+`default=true`, or the user must run `termbullet set-ai <name>`.
+
+Supported settings:
+
+- `provider`
+- `model`
+- `base_url`
+- `api_key`
+- `api_key_env`
+- `default`
+- `timeout_seconds`
+
+Normal CLI output must not print API key values. Hosted-provider secrets should
+use `api_key_env`.
 
 The V2 planning agent prompt is installed beside the executable:
 
