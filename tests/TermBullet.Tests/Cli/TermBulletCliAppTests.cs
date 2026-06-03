@@ -1,14 +1,21 @@
 using TermBullet.Services.Clock;
 using TermBullet.Services.History;
 using System.Text;
+using TermBullet.Application.Ai;
 using TermBullet.Application.History;
 using TermBullet.Cli;
+using TermBullet.Services.Ai;
 using TermBullet.Services.Configuration;
 
 namespace TermBullet.Tests.Cli;
 
-public sealed class TermBulletCliAppTests
+public sealed class TermBulletCliAppTests : IDisposable
 {
+    private readonly string _root = Path.Combine(
+        Path.GetTempPath(),
+        "termbullet-cli-ai-tests",
+        Guid.NewGuid().ToString("N"));
+
     [Fact]
     public async Task InvokeAsync_runs_history_clear_for_specific_month()
     {
@@ -120,6 +127,419 @@ public sealed class TermBulletCliAppTests
     }
 
     [Fact]
+    public async Task InvokeAsync_adds_ai_profile_to_config()
+    {
+        var dependencies = CreateDependencies();
+        var runtimePaths = CreateRuntimePaths();
+        var app = CreateApp(dependencies, runtimePaths: runtimePaths, startupAction: _ => Task.CompletedTask);
+
+        var exitCode = await app.InvokeAsync([
+            "ai", "profile", "add", "gpt",
+            "--provider", "openai",
+            "--model", "gpt-4.1-mini",
+            "--base-url", "https://api.openai.com/v1",
+            "--api-key-env", "TERMBULLET_OPENAI_API_KEY"
+        ]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("profile saved: gpt", dependencies.Output.ToString());
+        var config = await new TermBulletConfigService(_root).LoadAsync();
+        Assert.NotNull(config);
+        Assert.Equal("gpt", config.Ai?.ActiveProfile);
+        Assert.Equal("openai", config.Ai?.Profiles["gpt"].Provider);
+        Assert.Equal("TERMBULLET_OPENAI_API_KEY", config.Ai?.Profiles["gpt"].ApiKeyEnv);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_lists_ai_profiles_without_secrets()
+    {
+        var dependencies = CreateDependencies();
+        var runtimePaths = CreateRuntimePaths();
+        await new TermBulletConfigService(_root).SaveAsync(new TermBulletConfig(
+            runtimePaths.DataRoot,
+            new AiConfiguration(
+                "gpt",
+                new Dictionary<string, AiProfile>
+                {
+                    ["gpt"] = new("openai", "gpt-4.1-mini", ApiKeyEnv: "TERMBULLET_OPENAI_API_KEY"),
+                    ["local"] = new("openai-compatible", "llama3.1", "http://localhost:11434/v1", "none")
+                })));
+        var app = CreateApp(dependencies, runtimePaths: runtimePaths, startupAction: _ => Task.CompletedTask);
+
+        var exitCode = await app.InvokeAsync(["ai", "profile", "list"]);
+
+        Assert.Equal(0, exitCode);
+        var output = dependencies.Output.ToString();
+        Assert.Contains("* gpt", output);
+        Assert.Contains("local", output);
+        Assert.Contains("gpt-4.1-mini", output);
+        Assert.DoesNotContain("TERMBULLET_OPENAI_API_KEY", output);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_selects_active_ai_profile()
+    {
+        var dependencies = CreateDependencies();
+        var runtimePaths = CreateRuntimePaths();
+        await new TermBulletConfigService(_root).SaveAsync(new TermBulletConfig(
+            runtimePaths.DataRoot,
+            new AiConfiguration(
+                "gpt",
+                new Dictionary<string, AiProfile>
+                {
+                    ["gpt"] = new("openai", "gpt-4.1-mini"),
+                    ["local"] = new("openai-compatible", "llama3.1", ApiKeySource: "none")
+                })));
+        var app = CreateApp(dependencies, runtimePaths: runtimePaths, startupAction: _ => Task.CompletedTask);
+
+        var exitCode = await app.InvokeAsync(["ai", "profile", "use", "local"]);
+
+        Assert.Equal(0, exitCode);
+        var config = await new TermBulletConfigService(_root).LoadAsync();
+        Assert.Equal("local", config?.Ai?.ActiveProfile);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_shows_ai_profile_without_secret_value()
+    {
+        var dependencies = CreateDependencies();
+        var runtimePaths = CreateRuntimePaths();
+        await new TermBulletConfigService(_root).SaveAsync(new TermBulletConfig(
+            runtimePaths.DataRoot,
+            new AiConfiguration(
+                "gpt",
+                new Dictionary<string, AiProfile>
+                {
+                    ["gpt"] = new("openai", "gpt-4.1-mini", ApiKeyEnv: "TERMBULLET_OPENAI_API_KEY")
+                })));
+        var app = CreateApp(dependencies, runtimePaths: runtimePaths, startupAction: _ => Task.CompletedTask);
+
+        var exitCode = await app.InvokeAsync(["ai", "profile", "show", "gpt"]);
+
+        Assert.Equal(0, exitCode);
+        var output = dependencies.Output.ToString();
+        Assert.Contains("profile: gpt", output);
+        Assert.Contains("provider: openai", output);
+        Assert.Contains("api_key_env: TERMBULLET_OPENAI_API_KEY", output);
+        Assert.DoesNotContain("api_key:", output);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_removes_ai_profile_and_clears_active_profile()
+    {
+        var dependencies = CreateDependencies();
+        var runtimePaths = CreateRuntimePaths();
+        await new TermBulletConfigService(_root).SaveAsync(new TermBulletConfig(
+            runtimePaths.DataRoot,
+            new AiConfiguration(
+                "gpt",
+                new Dictionary<string, AiProfile>
+                {
+                    ["gpt"] = new("openai", "gpt-4.1-mini")
+                })));
+        var app = CreateApp(dependencies, runtimePaths: runtimePaths, startupAction: _ => Task.CompletedTask);
+
+        var exitCode = await app.InvokeAsync(["ai", "profile", "remove", "gpt"]);
+
+        Assert.Equal(0, exitCode);
+        var config = await new TermBulletConfigService(_root).LoadAsync();
+        Assert.Null(config?.Ai);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_tests_ai_profile_configuration_and_provider_connection()
+    {
+        var dependencies = CreateDependencies();
+        var runtimePaths = CreateRuntimePaths();
+        await new TermBulletConfigService(_root).SaveAsync(new TermBulletConfig(
+            runtimePaths.DataRoot,
+            new AiConfiguration(
+                "local",
+                new Dictionary<string, AiProfile>
+                {
+                    ["local"] = new("openai-compatible", "llama3.1", "http://localhost:11434/v1", "none")
+                })));
+        var testedProfile = string.Empty;
+        var app = CreateApp(
+            dependencies,
+            runtimePaths: runtimePaths,
+            startupAction: _ => Task.CompletedTask,
+            testAiProfileConnection: (_, profileName, _) =>
+            {
+                testedProfile = profileName;
+                return Task.FromResult(new AiPlanningProviderResponse("ok", "llama3.1"));
+            });
+
+        var exitCode = await app.InvokeAsync(["ai", "profile", "test", "local"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal("local", testedProfile);
+        var output = dependencies.Output.ToString();
+        Assert.Contains("profile valid: local", output);
+        Assert.Contains("provider reachable: llama3.1", output);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_generates_ai_plan_preview()
+    {
+        var dependencies = CreateDependencies();
+        BuildAiPlanningRequest? capturedRequest = null;
+        var app = CreateApp(
+            dependencies,
+            runtimePaths: CreateRuntimePaths(),
+            startupAction: _ => Task.CompletedTask,
+            generateAiPlanningDraft: (request, _) =>
+            {
+                capturedRequest = request;
+                return Task.FromResult(new GenerateAiPlanningDraftResult(
+                    AiPlanningDraftParser.Parse(
+                        """
+                        {
+                          "mode": "new_weekly",
+                          "summary": "Weekly plan.",
+                          "actions": [
+                            {
+                              "type": "create_task",
+                              "tag": "default",
+                              "collection": "week",
+                              "content": "Review open tasks"
+                            }
+                          ]
+                        }
+                        """),
+                    "test-model",
+                    new AiPlanningModelRequest(AiPlanningMode.NewWeekly, null, [], [])));
+            });
+
+        var exitCode = await app.InvokeAsync(["ai", "plan", "new-weekly", "--prompt", "Plan my week."]);
+
+        Assert.Equal(0, exitCode);
+        Assert.NotNull(capturedRequest);
+        Assert.Equal(AiPlanningMode.NewWeekly, capturedRequest.Mode);
+        Assert.Equal("Plan my week.", capturedRequest.UserPrompt);
+        var output = dependencies.Output.ToString();
+        Assert.Contains("model: test-model", output);
+        Assert.Contains("mode: new_weekly", output);
+        Assert.Contains("summary: Weekly plan.", output);
+        Assert.Contains("1. create_task", output);
+        Assert.Contains("content: Review open tasks", output);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_rejects_revise_project_ai_plan_without_tag()
+    {
+        var dependencies = CreateDependencies();
+        var app = CreateApp(
+            dependencies,
+            runtimePaths: CreateRuntimePaths(),
+            startupAction: _ => Task.CompletedTask,
+            generateAiPlanningDraft: (_, _) => throw new InvalidOperationException("Should not be called."));
+
+        var exitCode = await app.InvokeAsync(["ai", "plan", "revise-project", "--prompt", "Review project."]);
+
+        Assert.Equal(1, exitCode);
+        Assert.Contains("Tag is required", dependencies.Error.ToString());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_cancels_ai_plan_apply_when_interactive_confirmation_is_rejected()
+    {
+        var dependencies = CreateDependencies();
+        var applyCalled = false;
+        var app = CreateApp(
+            dependencies,
+            runtimePaths: CreateRuntimePaths(),
+            startupAction: _ => Task.CompletedTask,
+            generateAiPlanningDraft: (_, _) => Task.FromResult(CreateWeeklyDraftResult()),
+            applyAiPlanningDraft: (_, _) =>
+            {
+                applyCalled = true;
+                return Task.FromResult(new AiPlanningDraftApplyResult([]));
+            },
+            input: new StringReader("no"));
+
+        var exitCode = await app.InvokeAsync(["ai", "plan", "new-weekly", "--prompt", "Plan my week.", "--apply"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.False(applyCalled);
+        var output = dependencies.Output.ToString();
+        Assert.Contains("confirm apply draft?", output);
+        Assert.Contains("apply cancelled", output);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_applies_ai_plan_when_yes_flag_confirms()
+    {
+        var dependencies = CreateDependencies();
+        AiPlanningDraft? appliedDraft = null;
+        var app = CreateApp(
+            dependencies,
+            runtimePaths: CreateRuntimePaths(),
+            startupAction: _ => Task.CompletedTask,
+            generateAiPlanningDraft: (_, _) => Task.FromResult(CreateWeeklyDraftResult()),
+            applyAiPlanningDraft: (draft, _) =>
+            {
+                appliedDraft = draft;
+                return Task.FromResult(new AiPlanningDraftApplyResult(
+                [
+                    new AiPlanningDraftAppliedAction("create_task", "t-0626-1", "default", "week")
+                ]));
+            });
+
+        var exitCode = await app.InvokeAsync(["ai", "plan", "new-weekly", "--prompt", "Plan my week.", "--apply", "--yes"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.NotNull(appliedDraft);
+        var output = dependencies.Output.ToString();
+        Assert.Contains("applied:", output);
+        Assert.Contains("1. create_task t-0626-1", output);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_applies_ai_plan_when_interactive_confirmation_is_accepted()
+    {
+        var dependencies = CreateDependencies();
+        AiPlanningDraft? appliedDraft = null;
+        var app = CreateApp(
+            dependencies,
+            runtimePaths: CreateRuntimePaths(),
+            startupAction: _ => Task.CompletedTask,
+            generateAiPlanningDraft: (_, _) => Task.FromResult(CreateWeeklyDraftResult()),
+            applyAiPlanningDraft: (draft, _) =>
+            {
+                appliedDraft = draft;
+                return Task.FromResult(new AiPlanningDraftApplyResult(
+                [
+                    new AiPlanningDraftAppliedAction("create_task", "t-0626-1", "default", "week")
+                ]));
+            },
+            input: new StringReader("yes"));
+
+        var exitCode = await app.InvokeAsync(["ai", "plan", "new-weekly", "--prompt", "Plan my week.", "--apply"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.NotNull(appliedDraft);
+        var output = dependencies.Output.ToString();
+        Assert.Contains("confirm apply draft?", output);
+        Assert.Contains("applied:", output);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_runs_ai_chat_and_generates_draft_preview()
+    {
+        var dependencies = CreateDependencies();
+        BuildAiPlanningRequest? capturedRequest = null;
+        var app = CreateApp(
+            dependencies,
+            runtimePaths: CreateRuntimePaths(),
+            startupAction: _ => Task.CompletedTask,
+            generateAiPlanningDraft: (request, _) =>
+            {
+                capturedRequest = request;
+                return Task.FromResult(CreateWeeklyDraftResult());
+            },
+            input: new StringReader("Plan my week.\n/exit\n"));
+
+        var exitCode = await app.InvokeAsync(["ai", "chat", "--mode", "new-weekly"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.NotNull(capturedRequest);
+        Assert.Equal(AiPlanningMode.NewWeekly, capturedRequest.Mode);
+        Assert.Equal("Plan my week.", capturedRequest.UserPrompt);
+        var output = dependencies.Output.ToString();
+        Assert.Contains("mode: new-weekly", output);
+        Assert.Contains("draft ready", output);
+        Assert.Contains("summary: Weekly plan.", output);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_ai_chat_discards_current_draft()
+    {
+        var dependencies = CreateDependencies();
+        var app = CreateApp(
+            dependencies,
+            runtimePaths: CreateRuntimePaths(),
+            startupAction: _ => Task.CompletedTask,
+            generateAiPlanningDraft: (_, _) => Task.FromResult(CreateWeeklyDraftResult()),
+            input: new StringReader("Plan my week.\n/discard\n/exit\n"));
+
+        var exitCode = await app.InvokeAsync(["ai", "chat", "--mode", "new-weekly"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("draft discarded", dependencies.Output.ToString());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_ai_chat_sends_previous_turns_as_conversation_history()
+    {
+        var dependencies = CreateDependencies();
+        var capturedRequests = new List<BuildAiPlanningRequest>();
+        var app = CreateApp(
+            dependencies,
+            runtimePaths: CreateRuntimePaths(),
+            startupAction: _ => Task.CompletedTask,
+            generateAiPlanningResponse: (request, _) =>
+            {
+                capturedRequests.Add(request);
+                if (capturedRequests.Count == 1)
+                {
+                    return Task.FromResult(new GenerateAiPlanningResponseResult(
+                        Draft: null,
+                        AssistantMessage: "Roadmap: ownership, borrowing, structs, enums, modules.",
+                        ProviderModel: "test-model",
+                        ModelRequest: new AiPlanningModelRequest(AiPlanningMode.NewProject, null, [], [])));
+                }
+
+                return Task.FromResult(new GenerateAiPlanningResponseResult(
+                    CreateProjectDraft(),
+                    AssistantMessage: null,
+                    ProviderModel: "test-model",
+                    ModelRequest: new AiPlanningModelRequest(AiPlanningMode.NewProject, null, [], [])));
+            },
+            input: new StringReader("Help me think about a Rust roadmap.\nCreate the tasks.\n/exit\n"));
+
+        var exitCode = await app.InvokeAsync(["ai", "chat", "--mode", "new-project"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(2, capturedRequests.Count);
+        Assert.Empty(capturedRequests[0].ConversationHistory);
+        Assert.False(capturedRequests[0].RequireStructuredDraft);
+        Assert.Equal(2, capturedRequests[1].ConversationHistory.Count);
+        Assert.True(capturedRequests[1].RequireStructuredDraft);
+        Assert.Equal(AiPlanningMessageRole.User, capturedRequests[1].ConversationHistory[0].Role);
+        Assert.Equal("Help me think about a Rust roadmap.", capturedRequests[1].ConversationHistory[0].Content);
+        Assert.Equal(AiPlanningMessageRole.Assistant, capturedRequests[1].ConversationHistory[1].Role);
+        Assert.Contains("ownership", capturedRequests[1].ConversationHistory[1].Content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_ai_chat_applies_current_draft_after_confirmation()
+    {
+        var dependencies = CreateDependencies();
+        AiPlanningDraft? appliedDraft = null;
+        var app = CreateApp(
+            dependencies,
+            runtimePaths: CreateRuntimePaths(),
+            startupAction: _ => Task.CompletedTask,
+            generateAiPlanningDraft: (_, _) => Task.FromResult(CreateWeeklyDraftResult()),
+            applyAiPlanningDraft: (draft, _) =>
+            {
+                appliedDraft = draft;
+                return Task.FromResult(new AiPlanningDraftApplyResult(
+                [
+                    new AiPlanningDraftAppliedAction("create_task", "t-0626-1", "default", "week")
+                ]));
+            },
+            input: new StringReader("Plan my week.\n/apply\nyes\n/exit\n"));
+
+        var exitCode = await app.InvokeAsync(["ai", "chat", "--mode", "new-weekly"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.NotNull(appliedDraft);
+        Assert.Contains("applied:", dependencies.Output.ToString());
+    }
+
+    [Fact]
     public async Task InvokeAsync_writes_parse_error_for_unknown_command()
     {
         var dependencies = CreateDependencies();
@@ -139,7 +559,12 @@ public sealed class TermBulletCliAppTests
     private static TermBulletCliApp CreateApp(
         TestDependencies dependencies,
         Func<CancellationToken, Task>? startupAction = null,
-        TermBulletRuntimePaths? runtimePaths = null)
+        TermBulletRuntimePaths? runtimePaths = null,
+        Func<BuildAiPlanningRequest, CancellationToken, Task<GenerateAiPlanningDraftResult>>? generateAiPlanningDraft = null,
+        Func<BuildAiPlanningRequest, CancellationToken, Task<GenerateAiPlanningResponseResult>>? generateAiPlanningResponse = null,
+        Func<AiPlanningDraft, CancellationToken, Task<AiPlanningDraftApplyResult>>? applyAiPlanningDraft = null,
+        Func<TermBulletConfig, string, CancellationToken, Task<AiPlanningProviderResponse>>? testAiProfileConnection = null,
+        TextReader? input = null)
     {
         return new TermBulletCliApp(
             new ClearStoredHistoryUseCase(
@@ -148,8 +573,54 @@ public sealed class TermBulletCliAppTests
             dependencies.Output,
             dependencies.Error,
             runtimePaths: runtimePaths,
+            generateAiPlanningDraft: generateAiPlanningDraft,
+            generateAiPlanningResponse: generateAiPlanningResponse,
+            applyAiPlanningDraft: applyAiPlanningDraft,
+            testAiProfileConnection: testAiProfileConnection,
+            input: input,
             startupAction: startupAction);
     }
+
+    private static GenerateAiPlanningDraftResult CreateWeeklyDraftResult() =>
+        new(
+            AiPlanningDraftParser.Parse(
+                """
+                {
+                  "mode": "new_weekly",
+                  "summary": "Weekly plan.",
+                  "actions": [
+                    {
+                      "type": "create_task",
+                      "tag": "default",
+                      "collection": "week",
+                      "content": "Review open tasks"
+                    }
+                  ]
+                }
+                """),
+            "test-model",
+            new AiPlanningModelRequest(AiPlanningMode.NewWeekly, null, [], []));
+
+    private static AiPlanningDraft CreateProjectDraft() =>
+        AiPlanningDraftParser.Parse(
+            """
+            {
+              "mode": "new_project",
+              "summary": "Rust study tasks.",
+              "actions": [
+                {
+                  "type": "create_tag",
+                  "name": "estudos-rust"
+                },
+                {
+                  "type": "create_task",
+                  "tag": "estudos-rust",
+                  "collection": "today",
+                  "content": "Start Rust ownership study"
+                }
+              ]
+            }
+            """);
 
     private static TestDependencies CreateDependencies()
     {
@@ -158,6 +629,12 @@ public sealed class TermBulletCliAppTests
             new StringWriter(new StringBuilder()),
             new StringWriter(new StringBuilder()));
     }
+
+    private TermBulletRuntimePaths CreateRuntimePaths() =>
+        new(
+            Path.Combine(_root, "conf.json"),
+            Path.Combine(_root, "data-root"),
+            Path.Combine(_root, "data-root", "data"));
 
     private sealed record TestDependencies(
         FakeHistoryMaintenanceService HistoryService,
@@ -186,5 +663,13 @@ public sealed class TermBulletCliAppTests
     private sealed class FixedClock(DateTimeOffset utcNow) : IClock
     {
         public DateTimeOffset UtcNow { get; } = utcNow;
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_root))
+        {
+            Directory.Delete(_root, recursive: true);
+        }
     }
 }

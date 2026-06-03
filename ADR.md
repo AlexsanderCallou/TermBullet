@@ -26,6 +26,7 @@ Long-form ADRs may be split into `docs/adr/` later if more detail is needed.
 | 0015 | Accepted | License is Apache-2.0. |
 | 0016 | Accepted | First run stores `conf.json` in the install directory. |
 | 0017 | Accepted | Items have one tag, and non-default tagged work carries into the current month. |
+| 0018 | Accepted | V2 AI planning uses approved structured drafts before applying changes. |
 
 ## ADR-0001 - Local-First Product
 
@@ -164,12 +165,20 @@ AI, Google Calendar, sync, and cloud are optional modules.
 
 V2 AI follows BYOK:
 
+- named connection profiles;
+- one active profile at a time;
 - provider;
 - model;
-- API key;
 - optional base URL;
-- internal profiles such as `plan-day`, `review-day`, `breakdown-task`, and
-  `prioritize-backlog`.
+- API key source, preferably an environment variable.
+
+For local models, Ollama is the recommended user-facing setup. Hosted providers
+and other compatible services use the same OpenAI-compatible profile contract,
+but they are optional alternatives instead of separate product paths.
+
+AI connection profiles are configured through CLI commands in V2 MVP. The TUI
+may show the active profile and configuration errors, but it does not edit AI
+connection settings.
 
 Rejected: mandatory AI and mandatory cloud sync from V1.
 
@@ -312,6 +321,80 @@ but do not appear in Forgotten.
 
 Rejected: item `tags` arrays, automatic carry-over for all open work, and event
 carry-over.
+
+## ADR-0018 - AI Planning With Approved Structured Execution
+
+V2 introduces optional BYOK AI planning. AI is an assistant for planning and
+review, not a direct persistence layer.
+
+The planning and Bullet Journal specialist agent is a versioned product asset,
+not a user-editable runtime setting. Source stores it at:
+
+```text
+src/TermBullet/Services/Ai/Agents/planning-bulletjournal-agent.md
+```
+
+Published installs place it at:
+
+```text
+<install-dir>/agents/planning-bulletjournal-agent.md
+```
+
+Every planning model request must include this agent prompt. If the prompt
+cannot be loaded, TermBullet must fail the AI planning request with a clear error
+instead of calling the provider without the agent.
+
+AI connection settings use named profiles stored in install-directory
+configuration. The user can register multiple profiles, such as the recommended
+local Ollama profile and a hosted OpenAI-compatible profile, and select one
+active profile. V2 MVP manages these profiles through CLI commands only.
+
+The Planning TUI has two main flows:
+
+- New Planning: creates a new project plan or weekly personal plan from user
+  intent.
+- Revise Planning: reviews existing default-tag work or one selected project tag.
+
+The CLI may expose the same planning modes through `termbullet ai chat`. CLI
+chat uses the active AI profile unless the user selects another registered
+profile. It must follow the same structured draft and explicit approval flow as
+the TUI.
+
+AI responses must become structured drafts before they can change data. The
+application validates each draft and applies approved actions through
+Application use cases. Monthly JSON repositories never execute AI output
+directly.
+
+V2 alpha uses preflight validation plus ordered execution for approved drafts.
+It does not require transaction-level rollback for a failure after partial
+application. Local monthly JSON files remain user-readable and safe writes keep
+the existing backup/atomic replacement guarantees.
+
+Allowed V2 MVP draft actions:
+
+- create a tag for a new closed-scope project;
+- create tasks;
+- create notes;
+- move tasks between collections;
+- set task priority;
+- cancel stale tasks.
+
+Project Plan may create one project tag, one scope note, and the required tasks.
+Weekly Plan creates tasks under the protected `default` tag. Weekly Review
+reviews open `default` tasks. Project Review reviews work for one selected tag.
+
+When the user explicitly requests a tag or collection distribution, the draft
+must preserve that request unless validation rejects it. Ordered plans are
+represented by ordered draft actions and previews; V2 MVP does not add a new
+persisted ordering field.
+
+AI context must be filtered to the selected planning mode. TermBullet must not
+send all monthly JSON files by default.
+
+Rejected: direct AI writes to JSON files, free-form text execution without
+validation, autonomous CLI execution without confirmation, deleting items from AI
+proposals in V2 MVP, editing AI provider settings from the TUI in V2 MVP, and
+making AI required for the local-first product.
 
 ## Future ADR Candidates
 

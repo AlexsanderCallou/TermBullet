@@ -37,7 +37,6 @@ Current implemented screens:
 
 Planned but not currently implemented as TUI screens:
 
-- AI Planning
 - Review
 - Sync / Cloud
 
@@ -732,14 +731,22 @@ Notes:
 
 ## Screen 05 - Planning
 
-Status: implemented placeholder.
+Status: partially implemented for V2.
 
-Role: future AI-assisted planning workspace. Planning is where the user will
-eventually ask TermBullet to help turn goals, backlog context, notes, and dated
-work into proposed tasks.
+Role: AI-assisted planning workspace. Planning is where the user asks
+TermBullet to turn a goal, project scope, or weekly intent into a validated
+proposal that can create or reorganize local items after explicit approval.
 
-This screen is not part of the V1 execution workflow. In V1 it must stay empty
-and must not call AI, persist suggestions, or mutate items.
+Planning has two entry options:
+
+- New Planning: create a new project plan or a weekly personal plan.
+- Revise Planning: review existing default-tag work or an existing project tag.
+
+The current TUI implementation includes the Planning Hub plus New Planning and
+Revise Planning workspaces. Prompt submission calls the configured AI planning
+provider, renders either conversational assistant text or a validated draft
+preview, and supports applying or discarding the current draft. Rich scrollback
+behavior remains a V2 hardening item.
 
 Entry points:
 
@@ -747,33 +754,121 @@ Entry points:
 
 Navigation:
 
+- `CursorUp` and `CursorDown` scroll chat messages or move through focused
+  lists.
+- `PgUp` and `PgDn` page through long chat history.
+- `Tab` and `Shift+Tab` move focus between numbered panels.
+- `Enter` sends the prompt or activates the selected action.
 - `Esc` returns to the dashboard.
 - `?` opens contextual help.
 - `q` quits.
 
-Target ASCII layout:
+Planning hub target ASCII layout:
 
 ```text
 + TermBullet - Planning ------------------------------------------------------------------+
-| Future AI Planning                                                                       |
-|                                                                                          |
-| Planning will become the AI-assisted workspace for turning goals into tasks.              |
-|                                                                                          |
-| For now, this screen is intentionally empty. V1 keeps planning manual and local-first.    |
-|                                                                                          |
-| Future scope: goals, context selection, task suggestions, and preview before saving.      |
-+------------------------------------------------------------------------------------------+
-| ? help  Esc back  q quit                                                                 |
-+------------------------------------------------------------------------------------------+
+| 1 Planning Mode                                                                         |
+| > New Planning                                                                          |
+|   Revise Planning                                                                       |
+|                                                                                         |
+| 2 Preview                                                                               |
+| New Planning creates a fresh AI draft from user intent.                                 |
+| Revise Planning reviews existing work and proposes changes before applying them.         |
++-----------------------------------------------------------------------------------------+
+| Enter open  Tab focus  ? help  Esc back  q quit                                         |
++-----------------------------------------------------------------------------------------+
 ```
 
-Notes:
+New Planning target ASCII layout:
 
-- Planning is a future V2 surface, not a synonym for Week View.
-- Planning must not create, edit, migrate, or delete items in V1.
-- Future AI behavior must preview suggestions before saving them.
-- Future AI behavior must operate on filtered local context, not the whole data
-  set by default.
+```text
++ TermBullet - New Planning --------------------------------------------------------------+
+| 1 Setup                                      | 2 Draft Actions                           |
+| > Project Plan                              |   Apply plan                              |
+|   Weekly Plan                               |   Discard draft                           |
+| output: tasks + notes                       |                                           |
+| tag: new project tag or default             |                                           |
+| scope: new work                             |                                           |
+| ai: local                                   |                                           |
+|---------------------------------------------+-------------------------------------------|
+| 3 Conversation                                                                          |
+| assistant> Tell me the project outcome, constraints, and what done means.               |
+| user> Build the first version of the billing module by the end of the month.            |
+| assistant> Draft ready: 1 tag, 1 scope note, 7 tasks.                                   |
+|                                                                                     v   |
+|-----------------------------------------------------------------------------------------|
+| 4 Prompt                                                                                |
+| Write a message...                                                                      |
++-----------------------------------------------------------------------------------------+
+| Enter send/open  Up/Down scroll  PgUp/PgDn page  Tab focus  ? help  Esc back  q quit    |
++-----------------------------------------------------------------------------------------+
+```
+
+New Planning modes:
+
+- Project Plan handles closed-scope project planning. Approved drafts may
+  create one project tag, one scope note, and the necessary tasks for that tag.
+- Weekly Plan handles smaller ongoing personal planning. Approved drafts create
+  tasks under the protected `default` tag.
+- New Planning does not show Today, Month, Forgotten, active tags, or project
+  tracking context by default because it creates new work instead of revising
+  existing work.
+- Editing the generated draft is deferred for V2 MVP. If the draft is wrong,
+  the user continues the conversation or discards it.
+- AI provider settings are configured through CLI commands only in V2 MVP. This
+  screen only shows the active profile and configuration errors.
+
+Revise Planning target ASCII layout:
+
+```text
++ TermBullet - Revise Planning -----------------------------------------------------------+
+| 1 Review Scope                                | 2 Draft Actions                         |
+| > Weekly Review                               |   Apply changes                         |
+|   Project Review                              |   Discard draft                         |
+| selected tag: auth                            |                                         |
+| allowed actions: create, move, prioritize, cancel                                        |
+|-----------------------------------------------+-----------------------------------------|
+| 3 Conversation                                                                          |
+| assistant> Select a review scope.                                                       |
+| user> Review the auth project and suggest the next execution steps.                     |
+| assistant> Draft ready: move 2 tasks, create 3 tasks, cancel 1 stale task.              |
+|                                                                                     v   |
+|-----------------------------------------------------------------------------------------|
+| 4 Prompt                                                                                |
+| Write a message...                                                                      |
++-----------------------------------------------------------------------------------------+
+| Enter send/open  Up/Down scroll  PgUp/PgDn page  Tab focus  ? help  Esc back  q quit    |
++-----------------------------------------------------------------------------------------+
+```
+
+Revise Planning modes:
+
+- Weekly Review reviews open `default` tasks and can propose missing tasks,
+  priority changes, collection moves, or cancellations.
+- Project Review reviews existing work for one selected tag and can propose next
+  steps, task movement, priority changes, cancellations, and project notes.
+- Revise Planning does not delete items in V2 MVP.
+
+AI notes:
+
+- AI never writes directly to monthly JSON files.
+- AI may answer conversationally while planning. When it produces a structured
+  draft, the application validates it, and only an approved draft is applied
+  through Application use cases.
+- AI responses use one JSON envelope. `draft_ready=false` renders `message` as
+  chat, and `draft_ready=true` renders the validated `draft` preview.
+- Planning sends recent user and assistant turns with each prompt so follow-up
+  messages can refer to the current conversation.
+- If the user explicitly asks to create, add, generate, or build tasks, plans,
+  roadmaps, or drafts, Planning requires a structured draft instead of another
+  conversational reply.
+- If the required draft is returned as normal chat, Planning retries once with a
+  draft-repair instruction before showing an error.
+- Long assistant messages wrap inside the conversation panel.
+- Structured draft JSON is rendered as a user-facing preview, not shown as raw
+  JSON conversation text.
+- AI context must be filtered to the selected planning mode and must not send
+  all monthly JSON files by default.
 
 ## Screen 06 - Week View
 

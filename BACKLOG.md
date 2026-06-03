@@ -37,11 +37,214 @@ offline core.
 
 ### V2 - AI Planning
 
-- BYOK provider/model/key/base URL setup.
-- Planning profiles such as `plan-day`, `review-day`, `breakdown-task`, and
-  `prioritize-backlog`.
-- Preview-before-persisting workflow.
-- Filtered AI context assembly from local JSON.
+Goal: add optional AI-assisted planning while preserving local-first behavior.
+AI must propose structured drafts, the application must validate them, and the
+user must approve before anything is persisted.
+
+V2 MVP behavior scenarios:
+
+- Java study roadmap: when the user asks for tag `estudo-java`, one task for
+  `today`, four tasks for `week`, remaining near-term tasks for `month`, and
+  longer work for `backlog`, the draft must create the requested tag, one scope
+  note, and ordered tasks in the requested collections.
+- Nutrition chatbot project: when the user asks to build a chatbot project, the
+  draft must create a project tag, one scope note, and initial tasks. Future
+  additions should happen through `revise-project` for that tag, not by
+  recreating the plan.
+- Gym habit tracking: when the user explicitly asks for a tag for an ongoing
+  personal habit, the draft must create that non-default tag and weekly
+  tracking tasks. Recurring tasks are not part of V2 MVP; later weekly updates
+  use `revise-project` for the habit tag.
+- Local AI setup: Ollama is the recommended local model runtime for users.
+  Hosted providers and other services may be used through OpenAI-compatible
+  profiles, but the README should present Ollama as the local path.
+
+#### V2.0 - Planning Contracts and ADR
+
+- Keep ADR-0018 aligned with the approved AI workflow.
+- Keep `screens.md` aligned with Planning Hub, New Planning, and Revise Planning.
+- Keep `DATA_MODEL.md` aligned with AI proposal contracts and history events.
+- Keep the canonical planning agent prompt aligned with the accepted V2
+  behavior scenarios.
+- Define acceptance criteria for AI being unavailable, misconfigured, or
+  returning invalid drafts.
+
+#### V2.1 - BYOK AI Configuration
+
+Status: in progress.
+
+Implemented foundation:
+
+- `conf.json` can load and save optional `ai.active_profile` and
+  `ai.profiles`.
+- `termbullet ai profile add|list|use|show|test|remove` is available for local
+  profile management.
+- `ai profile test` validates local profile configuration and provider
+  communication.
+- Documentation recommends Ollama for local model profiles and
+  OpenAI-compatible profiles for hosted providers.
+
+Remaining:
+
+- Add TUI status display for the active AI profile and missing or invalid AI
+  configuration.
+- Keep AI provider editing out of the TUI in V2 MVP.
+- Validate that TermBullet still works fully offline when AI is not configured.
+
+#### V2.2 - AI Provider Boundary
+
+Status: MVP implemented.
+
+Implemented foundation:
+
+- The canonical planning agent prompt is shipped as a product asset.
+- `PlanningAgentPromptLoader` reads
+  `<install-dir>/agents/planning-bulletjournal-agent.md`.
+- Missing or unreadable agent prompt fails before model usage can be wired.
+- `BuildAiPlanningRequestUseCase` assembles agent prompt, filtered context, and
+  user prompt into a model request.
+- `IAiPlanningProvider` defines the provider boundary for future hosted or local
+  adapters.
+- `OpenAiCompatiblePlanningProvider` sends chat-completions requests to hosted
+  or local OpenAI-compatible endpoints.
+- Provider tests cover request mapping, bearer token handling, missing API key,
+  HTTP failures, empty content, and malformed responses.
+- Provider tests cover timeout/cancellation reporting.
+- `AiPlanningProviderFactory` selects `openai` and `openai-compatible` profiles
+  from the active profile.
+- `GenerateAiPlanningDraftUseCase` assembles the model request, calls the active
+  provider, parses the provider response as a structured draft, and validates it
+  before returning it to callers.
+- Runtime wiring is connected from Bootstrap to CLI and TUI planning flows.
+
+#### V2.3 - Structured Planning Drafts
+
+Status: in progress.
+
+Implemented foundation:
+
+- Added structured planning draft DTOs with ordered actions.
+- Added parser for canonical JSON draft responses.
+- Added validation for modes `new_project`, `new_weekly`, `revise_weekly`, and
+  `revise_project`.
+- Added validation for allowed action types: `create_tag`, `create_task`,
+  `create_note`, `move_task`, `set_priority`, and `cancel_task`.
+- Unsupported actions such as delete, event creation, and direct note body
+  editing are rejected before any apply workflow exists.
+- Project drafts must use a non-default tag and weekly drafts must use
+  `default`.
+- Project planning drafts must focus one non-default tag.
+- Added scenario fixtures for the Java roadmap, nutrition chatbot project, and
+  gym habit tracking examples.
+
+Remaining:
+
+- Preserve ordered user requests through grouped draft previews.
+- Validate explicit collection distribution across `today`, `week`, `month`, and
+  `backlog`.
+- Add broader tests for missing fields, conflicting tags, unsupported
+  collections, and unknown public refs.
+
+#### V2.4 - Planning TUI
+
+Status: in progress.
+
+Implemented foundation:
+
+- Implemented Planning Hub with `New Planning` and `Revise Planning`.
+- Implemented New Planning workspace shell with Project Plan and Weekly Plan
+  modes.
+- Implemented Revise Planning workspace shell with Weekly Review and Project
+  Review modes.
+- Implemented Draft Actions shell with Apply and Discard actions visible.
+- Wired TUI prompt submission to the AI draft generation use case.
+- Wired TUI apply and discard actions to the current generated draft.
+- Updated Planning contextual help for the real hub/workspace behavior.
+
+Remaining:
+
+- Implement terminal-like chat panels with scroll support.
+- Keep draft editing out of V2 MVP; users refine by continuing the conversation
+  or discarding the draft.
+- Verify keyboard navigation, focus, scroll behavior, and footer shortcuts.
+
+#### V2.5 - Apply Plan Use Case
+
+Status: in progress.
+
+Implemented foundation:
+
+- Added an Application use case that applies approved structured drafts.
+- The apply flow validates the draft before persisting any action.
+- The apply flow uses existing tag creation, item creation, movement, priority,
+  and cancellation use cases.
+- Draft actions are applied in order and applied refs are returned in the result
+  summary.
+- Tests cover project creation actions, review mutations, and invalid drafts
+  being rejected before persistence.
+- Tests cover unknown public refs for review mutations.
+- Apply intentionally uses validation plus ordered execution instead of
+  transactional rollback; users can recover through readable JSON/backups if
+  manual repair is needed during alpha.
+
+Remaining:
+
+- Append `ai_plan_applied` history plus normal per-item history events where
+  needed.
+- Add stronger preflight validation for mid-apply failures when new action types
+  are added.
+
+#### V2.6 - Revise Planning
+
+Status: MVP implemented.
+
+Implemented foundation:
+
+- Weekly Review uses open `default` tasks as context.
+- Project Review uses open items for one selected non-default tag as context.
+- Request assembly filters context to the selected review scope.
+- Review drafts can create tasks, create notes, move tasks, set priority, and
+  cancel stale tasks.
+
+Remaining:
+
+- Add tests that archived/monthly context is only included when explicitly
+  required by the selected scope.
+
+#### V2.7 - CLI Support
+
+Status: MVP implemented.
+
+Implemented foundation:
+
+- Added `termbullet ai plan <mode> --prompt ...` to generate a validated draft
+  preview through the active AI profile.
+- `ai plan revise-project` requires `--tag`.
+- The real CLI wiring loads `<install-dir>/conf.json`, the active AI provider,
+  and `<install-dir>/agents/planning-bulletjournal-agent.md`.
+- `ai plan` previews the structured draft by default.
+- `ai plan --apply --yes` applies the validated draft through the Application
+  apply use case.
+- `ai plan --apply` prompts for interactive confirmation before applying.
+- Added `termbullet ai chat` with line-based prompts, `/mode`, `/apply`,
+  `/discard`, and `/exit`.
+- `ai chat` generates validated draft previews and applies only after
+  interactive confirmation.
+- `termbullet` with no command still opens the TUI.
+- CLI parsing tests cover the implemented AI profile, plan, and chat paths.
+
+Remaining:
+
+- Add optional profile switching for CLI chat after the active-profile workflow
+  is stable.
+
+#### V2.8 - Release Readiness
+
+- Run `dotnet restore`, `dotnet build`, and `dotnet test`.
+- Run manual TUI smoke tests for Planning Hub, New Planning, Revise Planning,
+  draft approval, and AI unavailable states.
+- Update README, release notes, and deployment assets.
+- Publish V2 only after local-first non-AI flows remain unaffected.
 
 ### V3 - Google Calendar
 

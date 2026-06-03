@@ -141,6 +141,16 @@ The install directory must allow writing `conf.json`. If it does not,
 TermBullet exits with a clear permission error so the user can adjust
 permissions or reinstall into a writable directory.
 
+V2 AI Planning will also install the canonical planning agent prompt beside the
+executable:
+
+```text
+<install-dir>/agents/planning-bulletjournal-agent.md
+```
+
+TermBullet must load that agent before every AI planning request. If the file is
+missing or unreadable, AI planning fails before calling the configured provider.
+
 Show the active paths:
 
 ```bash
@@ -167,6 +177,53 @@ termbullet search "jwt"
 ```
 
 The full command tree is documented in [CLI.md](CLI.md).
+
+## AI Planning Setup
+
+V2 AI Planning is optional. TermBullet keeps working without AI, internet
+access, or external accounts.
+
+For local models, the recommended setup is Ollama. It gives a simple local
+server while still using the same OpenAI-compatible profile shape as hosted
+providers.
+
+Install Ollama, pull a model, and keep Ollama running. For a lightweight local
+default, TermBullet recommends `llama3.2:1b`: it is small, fast to load, and a
+practical first choice for local planning on modest machines.
+
+```bash
+ollama pull llama3.2:1b
+ollama run llama3.2:1b
+```
+
+Register the local profile:
+
+```bash
+termbullet ai profile add local \
+  --provider openai-compatible \
+  --model llama3.2:1b \
+  --base-url http://localhost:11434/v1 \
+  --no-api-key
+
+termbullet ai profile use local
+termbullet ai profile test local
+```
+
+Hosted providers can also be used when they expose an OpenAI-compatible API:
+
+```bash
+termbullet ai profile add cloud \
+  --provider openai-compatible \
+  --model gpt-4.1-mini \
+  --base-url https://api.openai.com/v1 \
+  --api-key-env TERMBULLET_OPENAI_API_KEY
+
+termbullet ai profile use cloud
+termbullet ai profile test cloud
+```
+
+The profile is stored in `<install-dir>/conf.json`. API keys should be provided
+through environment variables, not written directly into the config file.
 
 ## Product Summary
 

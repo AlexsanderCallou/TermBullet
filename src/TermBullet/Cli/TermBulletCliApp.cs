@@ -1,8 +1,10 @@
 using System.CommandLine;
+using TermBullet.Application.Ai;
 using TermBullet.Application.History;
 using TermBullet.Application.Items;
 using TermBullet.Application.Startup;
 using TermBullet.Domain.Items;
+using TermBullet.Services.Ai;
 using TermBullet.Services.Configuration;
 
 namespace TermBullet.Cli;
@@ -29,6 +31,11 @@ public sealed class TermBulletCliApp(
     DeleteItemUseCase? deleteItemUseCase = null,
     SearchItemsUseCase? searchItemsUseCase = null,
     TermBulletRuntimePaths? runtimePaths = null,
+    Func<BuildAiPlanningRequest, CancellationToken, Task<GenerateAiPlanningDraftResult>>? generateAiPlanningDraft = null,
+    Func<BuildAiPlanningRequest, CancellationToken, Task<GenerateAiPlanningResponseResult>>? generateAiPlanningResponse = null,
+    Func<AiPlanningDraft, CancellationToken, Task<AiPlanningDraftApplyResult>>? applyAiPlanningDraft = null,
+    Func<TermBulletConfig, string, CancellationToken, Task<AiPlanningProviderResponse>>? testAiProfileConnection = null,
+    TextReader? input = null,
     Func<CancellationToken, Task>? startupAction = null)
 {
     public Task<int> InvokeAsync(string[] args, CancellationToken cancellationToken = default)
@@ -204,6 +211,7 @@ public sealed class TermBulletCliApp(
         if (runtimePaths is not null)
         {
             rootCommand.Subcommands.Add(BuildPathCommand(standardOutput));
+            rootCommand.Subcommands.Add(BuildAiCommand(standardOutput, standardError, cancellationToken));
         }
 
         rootCommand.Subcommands.Add(BuildHistoryCommand(standardOutput, standardError, cancellationToken));
@@ -717,6 +725,768 @@ public sealed class TermBulletCliApp(
         });
 
         return command;
+    }
+
+    private Command BuildAiCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var command = new Command("ai", "Manage AI planning configuration");
+        if (generateAiPlanningDraft is not null)
+        {
+            command.Subcommands.Add(BuildAiPlanCommand(standardOutput, standardError, cancellationToken));
+        }
+
+        if (generateAiPlanningResponse is not null || generateAiPlanningDraft is not null)
+        {
+            command.Subcommands.Add(BuildAiChatCommand(standardOutput, standardError, cancellationToken));
+        }
+
+        var profileCommand = new Command("profile", "Manage AI connection profiles");
+        profileCommand.Subcommands.Add(BuildAiProfileAddCommand(standardOutput, standardError, cancellationToken));
+        profileCommand.Subcommands.Add(BuildAiProfileListCommand(standardOutput, standardError, cancellationToken));
+        profileCommand.Subcommands.Add(BuildAiProfileUseCommand(standardOutput, standardError, cancellationToken));
+        profileCommand.Subcommands.Add(BuildAiProfileShowCommand(standardOutput, standardError, cancellationToken));
+        profileCommand.Subcommands.Add(BuildAiProfileTestCommand(standardOutput, standardError, cancellationToken));
+        profileCommand.Subcommands.Add(BuildAiProfileRemoveCommand(standardOutput, standardError, cancellationToken));
+        command.Subcommands.Add(profileCommand);
+        return command;
+    }
+
+    private Command BuildAiChatCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var modeOption = new Option<string>("--mode")
+        {
+            Description = "Planning mode: new-project, new-weekly, revise-weekly, revise-project",
+            DefaultValueFactory = _ => "new-project"
+        };
+        var tagOption = new Option<string?>("--tag")
+        {
+            Description = "Project tag for revise-project"
+        };
+
+        var command = new Command("chat", "Start an interactive AI planning chat")
+        {
+            modeOption,
+            tagOption
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var mode = ParseAiPlanningMode(parseResult.GetValue(modeOption));
+                var tag = NormalizeOptional(parseResult.GetValue(tagOption));
+                if (mode == AiPlanningMode.ReviseProject && tag is null)
+                {
+                    throw new ArgumentException("Tag is required for revise-project planning.");
+                }
+
+                await RunAiChatAsync(mode, tag, standardOutput, cancellationToken);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private async Task RunAiChatAsync(
+        AiPlanningMode mode,
+        string? tag,
+        TextWriter standardOutput,
+        CancellationToken cancellationToken)
+    {
+        AiPlanningDraft? currentDraft = null;
+        var conversationHistory = new List<AiPlanningMessage>();
+        await standardOutput.WriteLineAsync($"mode: {ToAiPlanningModeKey(mode)}");
+        await standardOutput.WriteLineAsync("commands: /mode <mode> [tag], /apply, /discard, /exit");
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await standardOutput.WriteAsync("you> ");
+            var line = await (input ?? Console.In).ReadLineAsync();
+            if (line is null)
+            {
+                break;
+            }
+
+            var message = line.Trim();
+            if (message.Length == 0)
+            {
+                continue;
+            }
+
+            if (string.Equals(message, "/exit", StringComparison.OrdinalIgnoreCase))
+            {
+                break;
+            }
+
+            if (string.Equals(message, "/discard", StringComparison.OrdinalIgnoreCase))
+            {
+                currentDraft = null;
+                conversationHistory.Clear();
+                await standardOutput.WriteLineAsync("draft discarded");
+                continue;
+            }
+
+            if (message.StartsWith("/mode ", StringComparison.OrdinalIgnoreCase))
+            {
+                (mode, tag) = ParseAiChatModeCommand(message);
+                currentDraft = null;
+                conversationHistory.Clear();
+                await standardOutput.WriteLineAsync($"mode: {ToAiPlanningModeKey(mode)}");
+                continue;
+            }
+
+            if (string.Equals(message, "/apply", StringComparison.OrdinalIgnoreCase))
+            {
+                if (currentDraft is null)
+                {
+                    await standardOutput.WriteLineAsync("no draft to apply");
+                    continue;
+                }
+
+                if (applyAiPlanningDraft is null)
+                {
+                    throw new InvalidOperationException("AI planning draft application is not available.");
+                }
+
+                if (!await ConfirmAiPlanningApplyAsync(standardOutput))
+                {
+                    await standardOutput.WriteLineAsync("apply cancelled");
+                    continue;
+                }
+
+                var applyResult = await applyAiPlanningDraft(currentDraft, cancellationToken);
+                await WriteAiPlanningApplyResultAsync(applyResult, standardOutput);
+                currentDraft = null;
+                conversationHistory.Clear();
+                continue;
+            }
+
+            var historyForRequest = conversationHistory.ToArray();
+            conversationHistory.Add(new AiPlanningMessage(AiPlanningMessageRole.User, message));
+            var requireStructuredDraft = AiPlanningDraftIntent.RequiresStructuredDraft(message);
+            var response = generateAiPlanningResponse is not null
+                ? await generateAiPlanningResponse(new BuildAiPlanningRequest
+                {
+                    Mode = mode,
+                    Tag = tag,
+                    UserPrompt = message,
+                    ConversationHistory = historyForRequest,
+                    RequireStructuredDraft = requireStructuredDraft
+                }, cancellationToken)
+                : ToFlexibleResponse(await generateAiPlanningDraft!(new BuildAiPlanningRequest
+                {
+                    Mode = mode,
+                    Tag = tag,
+                    UserPrompt = message,
+                    ConversationHistory = historyForRequest
+                }, cancellationToken));
+
+            if (response.Draft is null)
+            {
+                await standardOutput.WriteLineAsync($"ai> {response.AssistantMessage}");
+                if (!string.IsNullOrWhiteSpace(response.AssistantMessage))
+                {
+                    conversationHistory.Add(new AiPlanningMessage(
+                        AiPlanningMessageRole.Assistant,
+                        response.AssistantMessage));
+                }
+
+                continue;
+            }
+
+            var result = new GenerateAiPlanningDraftResult(
+                response.Draft,
+                response.ProviderModel,
+                response.ModelRequest);
+            currentDraft = response.Draft;
+            await standardOutput.WriteLineAsync("draft ready");
+            await WriteAiPlanningDraftPreviewAsync(result, standardOutput);
+            conversationHistory.Add(new AiPlanningMessage(
+                AiPlanningMessageRole.Assistant,
+                $"draft ready: {response.Draft.Actions.Count} actions. {response.Draft.Summary}"));
+        }
+    }
+
+    private static GenerateAiPlanningResponseResult ToFlexibleResponse(GenerateAiPlanningDraftResult result) =>
+        new(result.Draft, null, result.ProviderModel ?? string.Empty, result.ModelRequest);
+
+    private Command BuildAiPlanCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var modeArgument = new Argument<string>("mode")
+        {
+            Description = "Planning mode: new-project, new-weekly, revise-weekly, revise-project"
+        };
+        var promptOption = new Option<string>("--prompt")
+        {
+            Description = "Planning prompt",
+            Required = true
+        };
+        var tagOption = new Option<string?>("--tag")
+        {
+            Description = "Project tag for revise-project"
+        };
+        var applyOption = new Option<bool>("--apply")
+        {
+            Description = "Apply the generated draft after validation"
+        };
+        var yesOption = new Option<bool>("--yes")
+        {
+            Description = "Confirm draft application without an interactive prompt"
+        };
+
+        var command = new Command("plan", "Generate an AI planning draft preview")
+        {
+            modeArgument,
+            promptOption,
+            tagOption,
+            applyOption,
+            yesOption
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var mode = ParseAiPlanningMode(parseResult.GetValue(modeArgument));
+                var tag = NormalizeOptional(parseResult.GetValue(tagOption));
+                if (mode == AiPlanningMode.ReviseProject && tag is null)
+                {
+                    throw new ArgumentException("Tag is required for revise-project planning.");
+                }
+
+                var result = await generateAiPlanningDraft!(new BuildAiPlanningRequest
+                {
+                    Mode = mode,
+                    Tag = tag,
+                    UserPrompt = parseResult.GetValue(promptOption)
+                        ?? throw new ArgumentException("Prompt is required.")
+                }, cancellationToken);
+
+                await WriteAiPlanningDraftPreviewAsync(result, standardOutput);
+                if (parseResult.GetValue(applyOption))
+                {
+                    if (!parseResult.GetValue(yesOption)
+                        && !await ConfirmAiPlanningApplyAsync(standardOutput))
+                    {
+                        await standardOutput.WriteLineAsync("apply cancelled");
+                        return 0;
+                    }
+
+                    if (applyAiPlanningDraft is null)
+                    {
+                        throw new InvalidOperationException("AI planning draft application is not available.");
+                    }
+
+                    var applyResult = await applyAiPlanningDraft(result.Draft, cancellationToken);
+                    await WriteAiPlanningApplyResultAsync(applyResult, standardOutput);
+                }
+
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private async Task<bool> ConfirmAiPlanningApplyAsync(TextWriter standardOutput)
+    {
+        await standardOutput.WriteAsync("confirm apply draft? ");
+        var answer = await (input ?? Console.In).ReadLineAsync();
+        return string.Equals(answer?.Trim(), "yes", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(answer?.Trim(), "y", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private Command BuildAiProfileAddCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var nameArgument = new Argument<string>("name") { Description = "Profile name" };
+        var providerOption = new Option<string>("--provider")
+        {
+            Description = "AI provider",
+            Required = true
+        };
+        var modelOption = new Option<string>("--model")
+        {
+            Description = "AI model",
+            Required = true
+        };
+        var baseUrlOption = new Option<string?>("--base-url")
+        {
+            Description = "Optional provider base URL"
+        };
+        var apiKeyEnvOption = new Option<string?>("--api-key-env")
+        {
+            Description = "Environment variable containing the API key"
+        };
+        var noApiKeyOption = new Option<bool>("--no-api-key")
+        {
+            Description = "Use a profile that does not require an API key"
+        };
+
+        var command = new Command("add", "Add or update an AI profile")
+        {
+            nameArgument,
+            providerOption,
+            modelOption,
+            baseUrlOption,
+            apiKeyEnvOption,
+            noApiKeyOption
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var name = NormalizeProfileName(parseResult.GetValue(nameArgument));
+                var provider = RequireNonEmpty(parseResult.GetValue(providerOption), "provider");
+                var model = RequireNonEmpty(parseResult.GetValue(modelOption), "model");
+                var baseUrl = NormalizeOptional(parseResult.GetValue(baseUrlOption));
+                var apiKeyEnv = NormalizeOptional(parseResult.GetValue(apiKeyEnvOption));
+                var noApiKey = parseResult.GetValue(noApiKeyOption);
+                if (noApiKey && apiKeyEnv is not null)
+                {
+                    throw new ArgumentException("Use either --api-key-env or --no-api-key, not both.");
+                }
+
+                var config = await LoadConfigOrDefaultAsync(cancellationToken);
+                var profiles = CopyProfiles(config);
+                profiles[name] = new AiProfile(
+                    provider,
+                    model,
+                    baseUrl,
+                    noApiKey ? "none" : "environment",
+                    noApiKey ? null : apiKeyEnv);
+                var activeProfile = string.IsNullOrWhiteSpace(config.Ai?.ActiveProfile)
+                    ? name
+                    : config.Ai.ActiveProfile;
+                await SaveConfigAsync(config with
+                {
+                    Ai = new AiConfiguration(activeProfile, profiles)
+                }, cancellationToken);
+
+                await standardOutput.WriteLineAsync($"profile saved: {name}");
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildAiProfileListCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var command = new Command("list", "List AI profiles");
+        command.SetAction(async _ =>
+        {
+            try
+            {
+                var config = await LoadConfigOrDefaultAsync(cancellationToken);
+                var profiles = config.Ai?.Profiles ?? new Dictionary<string, AiProfile>();
+                if (profiles.Count == 0)
+                {
+                    await standardOutput.WriteLineAsync("No AI profiles configured.");
+                    return 0;
+                }
+
+                foreach (var pair in profiles.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+                {
+                    var marker = string.Equals(pair.Key, config.Ai?.ActiveProfile, StringComparison.OrdinalIgnoreCase)
+                        ? "*"
+                        : " ";
+                    await standardOutput.WriteLineAsync(
+                        $"{marker} {pair.Key}  {pair.Value.Provider}  {pair.Value.Model}");
+                }
+
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildAiProfileUseCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var nameArgument = new Argument<string>("name") { Description = "Profile name" };
+        var command = new Command("use", "Set the active AI profile")
+        {
+            nameArgument
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var name = NormalizeProfileName(parseResult.GetValue(nameArgument));
+                var config = await LoadConfigOrDefaultAsync(cancellationToken);
+                var profiles = CopyProfiles(config);
+                if (!profiles.ContainsKey(name))
+                {
+                    throw new InvalidOperationException($"AI profile not found: {name}");
+                }
+
+                await SaveConfigAsync(config with
+                {
+                    Ai = new AiConfiguration(name, profiles)
+                }, cancellationToken);
+                await standardOutput.WriteLineAsync($"active profile: {name}");
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildAiProfileShowCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var nameArgument = new Argument<string>("name") { Description = "Profile name" };
+        var command = new Command("show", "Show an AI profile")
+        {
+            nameArgument
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var name = NormalizeProfileName(parseResult.GetValue(nameArgument));
+                var (config, profile) = await LoadProfileAsync(name, cancellationToken);
+                await WriteAiProfileAsync(name, profile, config.Ai?.ActiveProfile, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildAiProfileTestCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var nameArgument = new Argument<string>("name") { Description = "Profile name" };
+        var command = new Command("test", "Validate an AI profile configuration")
+        {
+            nameArgument
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var name = NormalizeProfileName(parseResult.GetValue(nameArgument));
+                var (_, profile) = await LoadProfileAsync(name, cancellationToken);
+                ValidateAiProfile(name, profile);
+                await standardOutput.WriteLineAsync($"profile valid: {name}");
+                if (testAiProfileConnection is not null)
+                {
+                    var config = await LoadConfigOrDefaultAsync(cancellationToken);
+                    var response = await testAiProfileConnection(config, name, cancellationToken);
+                    await standardOutput.WriteLineAsync($"provider reachable: {response.Model ?? profile.Model}");
+                }
+
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildAiProfileRemoveCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var nameArgument = new Argument<string>("name") { Description = "Profile name" };
+        var command = new Command("remove", "Remove an AI profile")
+        {
+            nameArgument
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var name = NormalizeProfileName(parseResult.GetValue(nameArgument));
+                var config = await LoadConfigOrDefaultAsync(cancellationToken);
+                var profiles = CopyProfiles(config);
+                if (!profiles.Remove(name))
+                {
+                    throw new InvalidOperationException($"AI profile not found: {name}");
+                }
+
+                var activeProfile = string.Equals(config.Ai?.ActiveProfile, name, StringComparison.OrdinalIgnoreCase)
+                    ? null
+                    : config.Ai?.ActiveProfile;
+                await SaveConfigAsync(config with
+                {
+                    Ai = profiles.Count == 0
+                        ? null
+                        : new AiConfiguration(activeProfile, profiles)
+                }, cancellationToken);
+
+                await standardOutput.WriteLineAsync($"profile removed: {name}");
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private async Task<TermBulletConfig> LoadConfigOrDefaultAsync(CancellationToken cancellationToken)
+    {
+        var service = CreateConfigService();
+        return await service.LoadAsync(cancellationToken)
+            ?? new TermBulletConfig(runtimePaths!.DataRoot);
+    }
+
+    private async Task SaveConfigAsync(TermBulletConfig config, CancellationToken cancellationToken)
+    {
+        var service = CreateConfigService();
+        await service.SaveAsync(config, cancellationToken);
+    }
+
+    private async Task<(TermBulletConfig Config, AiProfile Profile)> LoadProfileAsync(
+        string name,
+        CancellationToken cancellationToken)
+    {
+        var config = await LoadConfigOrDefaultAsync(cancellationToken);
+        var profiles = config.Ai?.Profiles ?? new Dictionary<string, AiProfile>();
+        if (!profiles.TryGetValue(name, out var profile))
+        {
+            throw new InvalidOperationException($"AI profile not found: {name}");
+        }
+
+        return (config, profile);
+    }
+
+    private TermBulletConfigService CreateConfigService()
+    {
+        var installDirectory = Path.GetDirectoryName(runtimePaths!.ConfigPath)
+            ?? throw new InvalidOperationException("Runtime config path is invalid.");
+        return new TermBulletConfigService(installDirectory);
+    }
+
+    private static Dictionary<string, AiProfile> CopyProfiles(TermBulletConfig config) =>
+        new(config.Ai?.Profiles ?? new Dictionary<string, AiProfile>(), StringComparer.OrdinalIgnoreCase);
+
+    private static string NormalizeProfileName(string? name)
+    {
+        var normalized = NormalizeOptional(name);
+        if (normalized is null)
+        {
+            throw new ArgumentException("Profile name is required.");
+        }
+
+        return normalized;
+    }
+
+    private static string RequireNonEmpty(string? value, string name) =>
+        NormalizeOptional(value) ?? throw new ArgumentException($"{name} is required.");
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static AiPlanningMode ParseAiPlanningMode(string? value)
+    {
+        var normalized = NormalizeOptional(value)?.ToLowerInvariant();
+        return normalized switch
+        {
+            "new-project" => AiPlanningMode.NewProject,
+            "new-weekly" => AiPlanningMode.NewWeekly,
+            "revise-weekly" => AiPlanningMode.ReviseWeekly,
+            "revise-project" => AiPlanningMode.ReviseProject,
+            _ => throw new ArgumentException($"Unsupported AI planning mode: {value}.")
+        };
+    }
+
+    private static (AiPlanningMode Mode, string? Tag) ParseAiChatModeCommand(string command)
+    {
+        var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length < 2)
+        {
+            throw new ArgumentException("Mode command must be /mode <mode> [tag].");
+        }
+
+        var mode = ParseAiPlanningMode(parts[1]);
+        var tag = parts.Length > 2 ? parts[2] : null;
+        if (mode == AiPlanningMode.ReviseProject && string.IsNullOrWhiteSpace(tag))
+        {
+            throw new ArgumentException("Tag is required for revise-project planning.");
+        }
+
+        return (mode, tag);
+    }
+
+    private static string ToAiPlanningModeKey(AiPlanningMode mode) =>
+        mode switch
+        {
+            AiPlanningMode.NewProject => "new-project",
+            AiPlanningMode.NewWeekly => "new-weekly",
+            AiPlanningMode.ReviseWeekly => "revise-weekly",
+            AiPlanningMode.ReviseProject => "revise-project",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported AI planning mode.")
+        };
+
+    private static async Task WriteAiPlanningDraftPreviewAsync(
+        GenerateAiPlanningDraftResult result,
+        TextWriter standardOutput)
+    {
+        if (!string.IsNullOrWhiteSpace(result.ProviderModel))
+        {
+            await standardOutput.WriteLineAsync($"model: {result.ProviderModel}");
+        }
+
+        await standardOutput.WriteLineAsync($"mode: {result.Draft.Mode}");
+        await standardOutput.WriteLineAsync($"summary: {result.Draft.Summary}");
+        await standardOutput.WriteLineAsync("actions:");
+        for (var index = 0; index < result.Draft.Actions.Count; index++)
+        {
+            var action = result.Draft.Actions[index];
+            await standardOutput.WriteLineAsync($"{index + 1}. {action.Type}");
+            await WriteOptionalDraftFieldAsync("name", action.Name, standardOutput);
+            await WriteOptionalDraftFieldAsync("public_ref", action.PublicRef, standardOutput);
+            await WriteOptionalDraftFieldAsync("tag", action.Tag, standardOutput);
+            await WriteOptionalDraftFieldAsync("collection", action.Collection, standardOutput);
+            await WriteOptionalDraftFieldAsync("priority", action.Priority, standardOutput);
+            await WriteOptionalDraftFieldAsync("content", action.Content, standardOutput);
+            await WriteOptionalDraftFieldAsync("description", action.Description, standardOutput);
+        }
+    }
+
+    private static async Task WriteOptionalDraftFieldAsync(
+        string name,
+        string? value,
+        TextWriter standardOutput)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            await standardOutput.WriteLineAsync($"   {name}: {value}");
+        }
+    }
+
+    private static async Task WriteAiPlanningApplyResultAsync(
+        AiPlanningDraftApplyResult result,
+        TextWriter standardOutput)
+    {
+        await standardOutput.WriteLineAsync("applied:");
+        for (var index = 0; index < result.Actions.Count; index++)
+        {
+            var action = result.Actions[index];
+            var details = new[]
+                {
+                    action.PublicRef,
+                    action.Tag is null ? null : $"tag={action.Tag}",
+                    action.Collection is null ? null : $"collection={action.Collection}"
+                }
+                .Where(value => !string.IsNullOrWhiteSpace(value));
+
+            await standardOutput.WriteLineAsync(
+                $"{index + 1}. {action.Type} {string.Join(' ', details)}".TrimEnd());
+        }
+    }
+
+    private static void ValidateAiProfile(string name, AiProfile profile)
+    {
+        _ = RequireNonEmpty(profile.Provider, "provider");
+        _ = RequireNonEmpty(profile.Model, "model");
+        var keySource = NormalizeOptional(profile.ApiKeySource) ?? "environment";
+        if (string.Equals(keySource, "none", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!string.Equals(keySource, "environment", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Unsupported API key source for profile {name}: {profile.ApiKeySource}");
+        }
+
+        var envName = RequireNonEmpty(profile.ApiKeyEnv, "api_key_env");
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(envName)))
+        {
+            throw new InvalidOperationException($"API key environment variable is not set for profile {name}: {envName}");
+        }
+    }
+
+    private static async Task WriteAiProfileAsync(
+        string name,
+        AiProfile profile,
+        string? activeProfile,
+        TextWriter standardOutput)
+    {
+        await standardOutput.WriteLineAsync($"profile: {name}");
+        await standardOutput.WriteLineAsync($"active: {string.Equals(name, activeProfile, StringComparison.OrdinalIgnoreCase).ToString().ToLowerInvariant()}");
+        await standardOutput.WriteLineAsync($"provider: {profile.Provider}");
+        await standardOutput.WriteLineAsync($"model: {profile.Model}");
+        if (!string.IsNullOrWhiteSpace(profile.BaseUrl))
+        {
+            await standardOutput.WriteLineAsync($"base_url: {profile.BaseUrl}");
+        }
+
+        await standardOutput.WriteLineAsync($"api_key_source: {profile.ApiKeySource}");
+        if (!string.IsNullOrWhiteSpace(profile.ApiKeyEnv))
+        {
+            await standardOutput.WriteLineAsync($"api_key_env: {profile.ApiKeyEnv}");
+        }
     }
 
     private Command BuildCollectionCommand(

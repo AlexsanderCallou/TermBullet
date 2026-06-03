@@ -44,8 +44,12 @@ public static class TuiContextHelp
             ],
             TuiScreen.Planning =>
             [
-                "Planning is a future AI-assisted workspace",
-                "V1 keeps this screen empty and local-first",
+                "Enter: open New Planning or Revise Planning",
+                "New Planning creates project or weekly drafts",
+                "Revise Planning reviews default-tag or project work",
+                "AI drafts must be approved before applying",
+                "a: apply current draft",
+                "d: discard current draft",
                 "Esc: return to previous screen",
                 "q: quit"
             ],

@@ -147,6 +147,38 @@ Persistence:
 Application use case -> repository interface -> JSON repository -> safe write -> backup/index update
 ```
 
+V2 AI planning:
+
+```text
+TUI/CLI -> Application planning use case
+        -> AI agent prompt loader
+        -> filtered context assembler
+        -> AI service interface -> provider adapter
+        -> structured draft validator
+        -> Application apply use case
+        -> repository interface -> JSON repository
+```
+
+The canonical planning agent prompt lives in source at:
+
+```text
+src/TermBullet/Services/Ai/Agents/planning-bulletjournal-agent.md
+```
+
+Published builds copy it to:
+
+```text
+<install-dir>/agents/planning-bulletjournal-agent.md
+```
+
+The AI planning runtime must load this agent prompt before every planning model
+request. If the agent file is missing or unreadable, AI planning must fail with
+a clear configuration error instead of calling the model without the agent.
+
+AI provider adapters live in Services or a Services subfolder. Domain must not
+know about AI providers, prompts, API keys, HTTP clients, or model-specific
+response formats. TUI and CLI must not call AI providers directly.
+
 ## Persistence Constraints
 
 Monthly JSON files are the V1 operational store.

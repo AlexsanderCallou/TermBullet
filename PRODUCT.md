@@ -208,17 +208,79 @@ Deferred TUI screens:
 
 ### V2 - AI Planning
 
-- Planning workspace with AI-assisted goal-to-task support;
-- BYOK AI setup;
-- provider/model/key/base URL setup;
-- daily planning and review;
-- task breakdown;
-- backlog prioritization;
-- brain dump transformation;
-- preview before persisting suggestions.
+- Planning workspace with an AI-assisted terminal-like chat;
+- BYOK AI setup managed through CLI commands;
+- named AI profiles with one active profile at a time;
+- CLI `ai chat` as a terminal-first planning interface using the same modes as
+  the TUI;
+- a canonical planning and Bullet Journal specialist agent loaded for every AI
+  planning request;
+- conversational planning that can ask clarifying questions before a draft is
+  ready;
+- New Planning flow for fresh work;
+- Revise Planning flow for reviewing existing work;
+- structured drafts that must be approved before any persistence.
+
+New Planning supports:
+
+- Project Plan for closed-scope projects. The approved plan may create a project
+  tag, a project scope note, and the tasks needed for the project;
+- Weekly Plan for smaller ongoing personal work. The approved plan creates tasks
+  under the protected `default` tag and does not require a project start or end.
+
+Planning interpretation rules:
+
+- if the user explicitly names a tag, the draft must use that tag;
+- if the user explicitly names a tag for an ongoing personal habit, the draft
+  should treat it as a lightweight project plan instead of forcing `default`;
+- if the user does not name a tag for weekly personal planning, the draft uses
+  `default`;
+- if the user asks for tasks in `today`, `week`, `month`, or `backlog`, the
+  draft must assign those task collections directly;
+- if the plan is likely to exceed the current month, future tracking work should
+  go to `backlog`;
+- ordered user requests are represented by the ordered draft preview and the
+  ordered action list, without adding a new persisted ordering field in V2 MVP;
+- continuing a tagged plan later should use Revise Planning for that tag.
+
+Revise Planning supports:
+
+- Weekly Review for existing open `default` tasks;
+- Project Review for existing work attached to one selected project tag;
+- proposals to create tasks, create notes, move tasks, set priority, and cancel
+  stale tasks.
 
 AI should operate on filtered context from local data. It should not send all
-JSON files by default.
+JSON files by default. AI never writes directly; it may respond with normal
+conversation while refining the plan. Provider responses use one JSON envelope:
+`draft_ready=false` carries chat text, while `draft_ready=true` carries a
+structured draft. TermBullet validates that draft, and the user must approve
+before Application use cases create or change items.
+
+AI connection settings are not edited inside the TUI in V2 MVP. Users configure
+provider, model, optional base URL, and API key source through CLI commands. The
+TUI only shows whether AI is configured and which profile is active.
+
+For local models, Ollama is the recommended user setup in V2. Hosted providers
+and other compatible services remain supported through named
+OpenAI-compatible profiles, but they are not required for local usage.
+
+CLI `ai chat` uses the active AI profile by default and supports interactive
+planning commands such as mode selection, conversational replies, draft preview,
+discard, and explicit apply. It is a planning interface, not unrestricted
+autonomous execution.
+Interactive AI planning keeps recent conversation turns in the active session so
+follow-up prompts can refer to prior assistant replies before a draft is ready.
+Explicit creation prompts for tasks, plans, roadmaps, or drafts must produce a
+structured draft for approval instead of continuing as open-ended chat.
+If the model answers a required draft request with normal chat, TermBullet makes
+one automatic repair attempt that asks the model to return only the filled draft
+JSON template.
+
+The planning agent prompt is installed at
+`<install-dir>/agents/planning-bulletjournal-agent.md`. TermBullet must load it
+for every AI planning request. If the agent cannot be loaded, AI planning fails
+before any provider call.
 
 ### V3 - Google Calendar
 

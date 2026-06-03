@@ -55,12 +55,13 @@ public sealed class TuiContextHelpTests
     }
 
     [Fact]
-    public void Planning_help_describes_future_ai_workspace()
+    public void Planning_help_describes_planning_hub_and_approval()
     {
         var lines = TuiContextHelp.GetLines(TuiScreen.Planning);
 
-        Assert.Contains(lines, line => line.Contains("future AI-assisted workspace", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(lines, line => line.Contains("empty", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(lines, line => line.Contains("New Planning", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(lines, line => line.Contains("Revise Planning", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(lines, line => line.Contains("approved", StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]

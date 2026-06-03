@@ -19,4 +19,12 @@
     <PackageReference Include="Terminal.Gui" Version="1.19.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Services\Ai\Agents\planning-bulletjournal-agent.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>agents\planning-bulletjournal-agent.md</TargetPath>
+    </Content>
+  </ItemGroup>
+
 </Project>
