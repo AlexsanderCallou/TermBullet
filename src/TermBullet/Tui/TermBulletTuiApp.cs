@@ -1,4 +1,5 @@
 using Terminal.Gui;
+using TermBullet.Application.Ai;
 using TermBullet.Application.Items;
 using TermBullet.Application.Tags;
 using TermBullet.Domain.Items;
@@ -24,6 +25,8 @@ public sealed class TermBulletTuiApp(
     MigrateItemUseCase? migrateItemUseCase = null,
     DeleteItemUseCase? deleteItemUseCase = null,
     ShowItemHistoryUseCase? showItemHistoryUseCase = null,
+    Func<BuildAiPlanningRequest, CancellationToken, Task<GenerateAiPlanningResponseResult>>? generateAiPlanningResponse = null,
+    Func<AiPlanningDraft, CancellationToken, Task<AiPlanningDraftApplyResult>>? applyAiPlanningDraft = null,
     Func<CancellationToken, Task>? startupAction = null)
 {
     public async Task RunAsync(CancellationToken cancellationToken = default)
@@ -292,12 +295,6 @@ public sealed class TermBulletTuiApp(
                     return true;
                 }
 
-                if (keyEvent.Key == Key.q)
-                {
-                    Quit();
-                    return true;
-                }
-
                 if (keyEvent.Key == Key.Esc && navigation.CurrentScreen != TuiScreen.MainDashboard)
                 {
                     NavigateBack();
@@ -329,12 +326,6 @@ public sealed class TermBulletTuiApp(
                 if (keyEvent.Key == (Key)'t' && navigation.CurrentScreen == TuiScreen.MainDashboard)
                 {
                     NavigateTo(TuiScreen.Tags, GetPanelCount(TuiScreen.Tags));
-                    return true;
-                }
-
-                if (keyEvent.Key == (Key)'e' && selectedItem is not null && editItemUseCase is not null)
-                {
-                    OpenEditItem(selectedItem);
                     return true;
                 }
 
@@ -564,7 +555,15 @@ public sealed class TermBulletTuiApp(
                         break;
 
                     case TuiScreen.Planning:
-                        PlanningScreen.Build(root, NavigateBack, Quit);
+                        selectedItem = null;
+                        PlanningScreen.Build(
+                            root,
+                            generateAiPlanningResponse,
+                            applyAiPlanningDraft,
+                            NavigateBack,
+                            Quit,
+                            RefreshAndRender,
+                            cancellationToken);
                         break;
 
                     case TuiScreen.Week:

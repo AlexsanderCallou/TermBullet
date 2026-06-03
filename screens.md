@@ -37,7 +37,6 @@ Current implemented screens:
 
 Planned but not currently implemented as TUI screens:
 
-- AI Planning
 - Review
 - Sync / Cloud
 
@@ -732,14 +731,15 @@ Notes:
 
 ## Screen 05 - Planning
 
-Status: implemented placeholder.
+Status: partially implemented for V2.
 
-Role: future AI-assisted planning workspace. Planning is where the user will
-eventually ask TermBullet to help turn goals, backlog context, notes, and dated
-work into proposed tasks.
+Role: AI-assisted planning workspace. Planning is where the user asks
+TermBullet to turn a goal, project scope, or weekly intent into a validated
+proposal that can create or reorganize local items after explicit approval.
 
-This screen is not part of the V1 execution workflow. In V1 it must stay empty
-and must not call AI, persist suggestions, or mutate items.
+Planning currently has one purpose: create a new guided project plan. The user
+fills fixed choices, then TermBullet asks the configured AI planning provider
+for a validated draft preview. The draft can be applied or discarded.
 
 Entry points:
 
@@ -747,33 +747,99 @@ Entry points:
 
 Navigation:
 
+- `Tab` and `Shift+Tab` move focus between numbered panels.
+- `g` generates a structured draft.
+- `s` cycles task volume.
+- `t` toggles the first task in Today.
+- `Enter` sends the prompt or activates the selected action.
 - `Esc` returns to the dashboard.
 - `?` opens contextual help.
 - `q` quits.
 
-Target ASCII layout:
+Planning target ASCII layout:
 
 ```text
 + TermBullet - Planning ------------------------------------------------------------------+
-| Future AI Planning                                                                       |
-|                                                                                          |
-| Planning will become the AI-assisted workspace for turning goals into tasks.              |
-|                                                                                          |
-| For now, this screen is intentionally empty. V1 keeps planning manual and local-first.    |
-|                                                                                          |
-| Future scope: goals, context selection, task suggestions, and preview before saving.      |
-+------------------------------------------------------------------------------------------+
-| ? help  Esc back  q quit                                                                 |
-+------------------------------------------------------------------------------------------+
+| 1 Setup                                      | 2 Rules                                   |
+| Topic        Rust programming               | Volume: Medium                            |
+| Project tag  studies-rust                   | Target range: 10-20 tasks                 |
+| s: cycle task volume                        | Target tasks: 15                          |
+| t: toggle first task today                  | Start today: Yes                          |
+| g: generate structured draft                | Today: 1                                  |
+| All task titles start with 1., 2., 3.       | Week: max 5 (5)                           |
+|                                             | Month: max 20 (9)                         |
+|                                             | Backlog: remaining (0)                    |
+|---------------------------------------------+-------------------------------------------|
+| 3 Draft Preview                                                                         |
+| system> generating medium plan for studies-rust...                                      |
+| assistant> draft ready: 15 actions.                                                     |
+| draft> 1. Install the Rust toolchain                                                    |
+| draft> 2. Learn cargo project basics                                                    |
+|                                                                                     v   |
+|-----------------------------------------------------------------------------------------|
+| 4 Actions                                                                               |
+| Generate draft                                                                          |
+| Apply plan                                                                              |
+| Discard draft                                                                           |
++-----------------------------------------------------------------------------------------+
+| g generate  s size  t today  a apply  d discard  Tab focus  ? help  Esc back  q quit    |
++-----------------------------------------------------------------------------------------+
 ```
 
-Notes:
+New Planning guided inputs:
 
-- Planning is a future V2 surface, not a synonym for Week View.
-- Planning must not create, edit, migrate, or delete items in V1.
-- Future AI behavior must preview suggestions before saving them.
-- Future AI behavior must operate on filtered local context, not the whole data
-  set by default.
+- `Topic` describes the planning subject.
+- `Project tag` is applied to every generated task.
+- `Volume` cycles through `small`, `medium`, and `large`.
+- `Start today` controls whether the first task is placed in `today`.
+- Small creates up to 10 tasks, medium creates 10 to 20 tasks, and large creates
+  20 to 40 tasks.
+- New Planning places the first task in `today` when enabled, then up to 5 tasks
+  in `week`, up to 20 tasks in `month`, and any remaining tasks in `backlog`.
+- Every generated task title must start with a growing numeric prefix such as
+  `1.`, `2.`, `3.` so the user can follow the plan in order.
+- Editing the generated draft is deferred for V2 MVP. If the draft is wrong,
+  the user regenerates or discards it.
+- AI provider settings are configured through CLI commands only in V2 MVP. This
+  screen only shows the active profile and configuration errors.
+
+Reviewing existing plans is a future idea, not part of the current Planning
+implementation. It is intentionally deferred because the current Planning design
+targets small local models, and those models do not handle broad historical
+review reliably enough yet.
+
+```text
+|-----------------------------------------------+-----------------------------------------|
+| assistant> Select a review scope.                                                       |
+| user> Review the auth project and suggest the next execution steps.                     |
+|                                                                                     v   |
+|-----------------------------------------------------------------------------------------|
++-----------------------------------------------------------------------------------------+
+| Enter send/open  Up/Down scroll  PgUp/PgDn page  Tab focus  ? help  Esc back  q quit    |
++-----------------------------------------------------------------------------------------+
+```
+
+
+AI notes:
+
+- AI never writes directly to monthly JSON files.
+- AI may answer conversationally while planning. When it produces a structured
+  draft, the application validates it, and only an approved draft is applied
+  through Application use cases.
+- AI responses use one JSON envelope. `draft_ready=false` renders `message` as
+  chat, and `draft_ready=true` renders the validated `draft` preview.
+- Planning sends recent user and assistant turns with each prompt so follow-up
+  messages can refer to the current conversation.
+- If the user explicitly asks to create, add, generate, or build tasks, plans,
+  roadmaps, or drafts, Planning requires a structured draft instead of another
+  conversational reply.
+- If the required draft is returned as normal chat, Planning retries once with a
+  draft-repair instruction before showing an error.
+- Long assistant messages wrap inside the conversation panel.
+- Structured draft JSON is rendered as a user-facing preview, not shown as raw
+  JSON conversation text.
+- AI context must be filtered to the selected planning mode and must not send
+  all monthly JSON files by default.
 
 ## Screen 06 - Week View
 

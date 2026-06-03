@@ -44,8 +44,13 @@ public static class TuiContextHelp
             ],
             TuiScreen.Planning =>
             [
-                "Planning is a future AI-assisted workspace",
-                "V1 keeps this screen empty and local-first",
+                "Planning creates new project drafts from guided topic, tag, volume, and today choices",
+                "s: cycle Small, Medium, and Large task volume",
+                "t: toggle first task today",
+                "g: generate a structured planning draft",
+                "AI drafts must be approved before applying",
+                "a: apply current draft",
+                "d: discard current draft",
                 "Esc: return to previous screen",
                 "q: quit"
             ],
