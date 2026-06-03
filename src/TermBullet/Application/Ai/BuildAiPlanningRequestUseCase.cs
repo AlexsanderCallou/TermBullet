@@ -1,13 +1,10 @@
 using System.Text;
-using TermBullet.Domain.Items;
-using TermBullet.Repositories.Interfaces;
 using TermBullet.Services.Ai;
 
 namespace TermBullet.Application.Ai;
 
 public sealed class BuildAiPlanningRequestUseCase(
-    IPlanningAgentPromptLoader agentPromptLoader,
-    IItemRepository itemRepository)
+    IPlanningAgentPromptLoader agentPromptLoader)
 {
     public async Task<AiPlanningModelRequest> ExecuteAsync(
         BuildAiPlanningRequest request,
@@ -17,13 +14,9 @@ public sealed class BuildAiPlanningRequestUseCase(
 
         var userPrompt = NormalizeUserPrompt(request.UserPrompt);
         var tag = NormalizeTag(request.Tag);
-        if (request.Mode == AiPlanningMode.ReviseProject && tag is null)
-        {
-            throw new ArgumentException("Tag is required for revise_project planning.", "tag");
-        }
 
         var agentPrompt = await agentPromptLoader.LoadAsync(cancellationToken);
-        var contextItems = await BuildContextAsync(request.Mode, tag, cancellationToken);
+        IReadOnlyList<AiPlanningContextItem> contextItems = [];
         var messages = new List<AiPlanningMessage>
         {
             new(AiPlanningMessageRole.Agent, agentPrompt)
@@ -38,13 +31,6 @@ public sealed class BuildAiPlanningRequestUseCase(
             messages.Add(new AiPlanningMessage(
                 AiPlanningMessageRole.Context,
                 "This is an interactive planning conversation. Ask concise clarification questions or discuss the plan in normal text until a draft is ready. Return a JSON draft only when you are ready to propose tasks for approval."));
-        }
-
-        if (contextItems.Count > 0)
-        {
-            messages.Add(new AiPlanningMessage(
-                AiPlanningMessageRole.Context,
-                BuildContextMessage(request.Mode, tag, contextItems)));
         }
 
         foreach (var message in NormalizeConversationHistory(request.ConversationHistory))
@@ -89,7 +75,7 @@ public sealed class BuildAiPlanningRequestUseCase(
     private static string BuildResponseEnvelopeTemplate(string modeKey, string? tag)
     {
         var draftTag = string.IsNullOrWhiteSpace(tag)
-            ? (modeKey is "new_weekly" or "revise_weekly" ? "default" : "<project-tag>")
+            ? (modeKey is "new_weekly" ? "default" : "<project-tag>")
             : tag;
 
         return $$"""
@@ -111,7 +97,7 @@ public sealed class BuildAiPlanningRequestUseCase(
               {
                 "type": "create_task",
                 "tag": "{{draftTag}}",
-                "collection": "today|week|month|backlog",
+                "collection": "today",
                 "content": "<short actionable task>",
                 "description": "<optional task detail>",
                 "priority": "none|low|medium|high"
@@ -122,89 +108,15 @@ public sealed class BuildAiPlanningRequestUseCase(
         action_templates:
         - create_tag: { "type": "create_tag", "name": "<non-default-tag>" }
         - create_note: { "type": "create_note", "tag": "{{draftTag}}", "content": "<note title>", "description": "<note body>" }
-        - move_task: { "type": "move_task", "public_ref": "<existing-task-ref>", "collection": "today|week|month|backlog" }
-        - set_priority: { "type": "set_priority", "public_ref": "<existing-task-ref>", "priority": "none|low|medium|high" }
-        - cancel_task: { "type": "cancel_task", "public_ref": "<existing-task-ref>" }
         rules:
         - Return only one final response envelope JSON object.
         - Replace every placeholder before returning JSON.
         - For {{modeKey}}, draft.mode must be exactly "{{modeKey}}".
+        - For create_task, collection must be exactly one of: "today", "week", "month", "backlog".
+        - Never return combined placeholder values such as "today|week|month|backlog".
         - Do not return the action_templates or rules.
         - Never apply changes; draft_ready only means "ready for TermBullet approval".
         """;
-    }
-
-    private async Task<IReadOnlyList<AiPlanningContextItem>> BuildContextAsync(
-        AiPlanningMode mode,
-        string? tag,
-        CancellationToken cancellationToken)
-    {
-        if (mode is AiPlanningMode.NewProject or AiPlanningMode.NewWeekly)
-        {
-            return [];
-        }
-
-        var items = await itemRepository.ListAsync(status: ItemStatus.Open, cancellationToken: cancellationToken);
-        var filtered = mode switch
-        {
-            AiPlanningMode.ReviseWeekly => items.Where(item =>
-                string.Equals(item.Tag, "default", StringComparison.OrdinalIgnoreCase)),
-            AiPlanningMode.ReviseProject => items.Where(item =>
-                string.Equals(item.Tag, tag, StringComparison.OrdinalIgnoreCase)),
-            _ => []
-        };
-
-        return filtered
-            .OrderBy(item => item.Collection)
-            .ThenBy(item => item.PublicRef.Value, StringComparer.OrdinalIgnoreCase)
-            .Select(ToContextItem)
-            .ToArray();
-    }
-
-    private static AiPlanningContextItem ToContextItem(Item item) =>
-        new(
-            item.PublicRef.Value,
-            item.Type,
-            item.Status,
-            item.Collection,
-            item.Content,
-            item.Description,
-            item.Tag);
-
-    private static string BuildContextMessage(
-        AiPlanningMode mode,
-        string? tag,
-        IReadOnlyList<AiPlanningContextItem> items)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine($"mode: {ToModeKey(mode)}");
-        if (!string.IsNullOrWhiteSpace(tag))
-        {
-            builder.AppendLine($"tag: {tag}");
-        }
-
-        builder.AppendLine("context_items:");
-        foreach (var item in items)
-        {
-            builder.Append("- ");
-            builder.Append(item.PublicRef);
-            builder.Append(" | ");
-            builder.Append(item.Type.ToString().ToLowerInvariant());
-            builder.Append(" | ");
-            builder.Append(item.Status.ToString().ToLowerInvariant());
-            builder.Append(" | ");
-            builder.Append(item.Collection.ToString().ToLowerInvariant());
-            builder.Append(" | ");
-            builder.Append(item.Tag);
-            builder.Append(" | ");
-            builder.AppendLine(item.Content);
-            if (!string.IsNullOrWhiteSpace(item.Description))
-            {
-                builder.AppendLine($"  description: {item.Description}");
-            }
-        }
-
-        return builder.ToString().TrimEnd();
     }
 
     private static string NormalizeUserPrompt(string? userPrompt)
@@ -241,8 +153,6 @@ public sealed class BuildAiPlanningRequestUseCase(
         {
             AiPlanningMode.NewProject => "new_project",
             AiPlanningMode.NewWeekly => "new_weekly",
-            AiPlanningMode.ReviseWeekly => "revise_weekly",
-            AiPlanningMode.ReviseProject => "revise_project",
             _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported AI planning mode.")
         };
 }

@@ -452,21 +452,16 @@ Allowed `mode` values for V2 MVP:
 
 - `new_project`
 - `new_weekly`
-- `revise_weekly`
-- `revise_project`
 
 Allowed action types for V2 MVP:
 
 - `create_tag`
 - `create_task`
 - `create_note`
-- `move_task`
-- `set_priority`
-- `cancel_task`
 
 Action fields should use existing item model names where possible:
 
-- `public_ref` identifies existing items in review actions;
+- `public_ref` is reserved for future workflows that reference existing items;
 - `content`, `description`, `collection`, `priority`, and `tag` match item
   fields;
 - new weekly planning must use `tag = "default"`;

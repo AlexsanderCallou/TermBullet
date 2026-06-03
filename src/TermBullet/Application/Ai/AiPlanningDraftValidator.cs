@@ -5,19 +5,14 @@ public sealed class AiPlanningDraftValidator
     private static readonly HashSet<string> AllowedModes = new(StringComparer.OrdinalIgnoreCase)
     {
         "new_project",
-        "new_weekly",
-        "revise_weekly",
-        "revise_project"
+        "new_weekly"
     };
 
     private static readonly HashSet<string> AllowedActionTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "create_tag",
         "create_task",
-        "create_note",
-        "move_task",
-        "set_priority",
-        "cancel_task"
+        "create_note"
     };
 
     private static readonly HashSet<string> TaskCollections = new(StringComparer.OrdinalIgnoreCase)
@@ -103,7 +98,7 @@ public sealed class AiPlanningDraftValidator
             errors.Add("new_project drafts must create or use one non-default tag.");
         }
 
-        if (mode is "new_project" or "revise_project" && createdOrUsedNonDefaultTags.Count > 1)
+        if (mode is "new_project" && createdOrUsedNonDefaultTags.Count > 1)
         {
             errors.Add("Project planning drafts must use one non-default tag.");
         }
@@ -140,20 +135,6 @@ public sealed class AiPlanningDraftValidator
                 Require(action.Tag, actionNumber, "tag", errors);
                 break;
 
-            case "move_task":
-                Require(action.PublicRef, actionNumber, "public_ref", errors);
-                ValidateTaskCollection(action.Collection, actionNumber, errors);
-                break;
-
-            case "set_priority":
-                Require(action.PublicRef, actionNumber, "public_ref", errors);
-                Require(action.Priority, actionNumber, "priority", errors);
-                ValidateOptionalPriority(action.Priority, actionNumber, errors);
-                break;
-
-            case "cancel_task":
-                Require(action.PublicRef, actionNumber, "public_ref", errors);
-                break;
         }
     }
 
@@ -184,15 +165,6 @@ public sealed class AiPlanningDraftValidator
             errors.Add($"Action {actionNumber}: new_project drafts must use a non-default tag.");
         }
 
-        if (mode == "revise_weekly" && type is "create_task" or "create_note" && !IsDefaultTag(action.Tag))
-        {
-            errors.Add($"Action {actionNumber}: revise_weekly drafts must use the default tag for new items.");
-        }
-
-        if (mode == "revise_project" && type is "create_task" or "create_note" && !IsNonDefaultTag(action.Tag))
-        {
-            errors.Add($"Action {actionNumber}: revise_project drafts must use a non-default tag for new items.");
-        }
     }
 
     private static void ValidateTaskCollection(string? collection, int actionNumber, List<string> errors)

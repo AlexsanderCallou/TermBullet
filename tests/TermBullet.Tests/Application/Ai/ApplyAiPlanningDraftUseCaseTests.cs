@@ -82,52 +82,6 @@ public sealed class ApplyAiPlanningDraftUseCaseTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_applies_revise_project_mutations()
-    {
-        var task = Item.Create(
-            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
-            PublicRef.Parse("t-0626-1"),
-            ItemType.Task,
-            "Old task",
-            ItemCollection.Backlog,
-            Now,
-            tag: "chatbot-nutrition");
-        var itemRepository = new FakeItemRepository([task]);
-        var tagRepository = new FakeTagCatalogRepository();
-        var useCase = CreateUseCase(itemRepository, tagRepository);
-        var draft = AiPlanningDraftParser.Parse(
-            """
-            {
-              "mode": "revise_project",
-              "summary": "Review chatbot project.",
-              "actions": [
-                {
-                  "type": "move_task",
-                  "public_ref": "t-0626-1",
-                  "collection": "week"
-                },
-                {
-                  "type": "set_priority",
-                  "public_ref": "t-0626-1",
-                  "priority": "medium"
-                },
-                {
-                  "type": "cancel_task",
-                  "public_ref": "t-0626-1"
-                }
-              ]
-            }
-            """);
-
-        var result = await useCase.ExecuteAsync(draft);
-
-        Assert.Equal(["move_task", "set_priority", "cancel_task"], result.Actions.Select(action => action.Type));
-        Assert.Equal(ItemCollection.Week, task.Collection);
-        Assert.Equal(Priority.Medium, task.Priority);
-        Assert.Equal(ItemStatus.Cancelled, task.Status);
-    }
-
-    [Fact]
     public async Task ExecuteAsync_rejects_invalid_draft_before_persisting()
     {
         var itemRepository = new FakeItemRepository();
@@ -157,59 +111,6 @@ public sealed class ApplyAiPlanningDraftUseCaseTests
         Assert.Empty(tagRepository.Tags);
     }
 
-    [Fact]
-    public async Task ExecuteAsync_rejects_unknown_public_ref_for_review_mutation()
-    {
-        var itemRepository = new FakeItemRepository();
-        var tagRepository = new FakeTagCatalogRepository();
-        var useCase = CreateUseCase(itemRepository, tagRepository);
-        var draft = AiPlanningDraftParser.Parse(
-            """
-            {
-              "mode": "revise_project",
-              "summary": "Review project.",
-              "actions": [
-                {
-                  "type": "move_task",
-                  "public_ref": "t-0626-99",
-                  "collection": "week"
-                }
-              ]
-            }
-            """);
-
-        var exception = await Assert.ThrowsAsync<ItemNotFoundException>(
-            () => useCase.ExecuteAsync(draft));
-
-        Assert.Contains("not found", exception.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Empty(itemRepository.Items);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_rejects_revise_project_creating_items_across_multiple_tags()
-    {
-        var itemRepository = new FakeItemRepository();
-        var tagRepository = new FakeTagCatalogRepository();
-        var useCase = CreateUseCase(itemRepository, tagRepository);
-        var draft = AiPlanningDraftParser.Parse(
-            """
-            {
-              "mode": "revise_project",
-              "summary": "Review project.",
-              "actions": [
-                { "type": "create_task", "tag": "project-a", "collection": "week", "content": "Next A" },
-                { "type": "create_task", "tag": "project-b", "collection": "week", "content": "Next B" }
-              ]
-            }
-            """);
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => useCase.ExecuteAsync(draft));
-
-        Assert.Contains("one non-default tag", exception.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Empty(itemRepository.Items);
-    }
-
     private static ApplyAiPlanningDraftUseCase CreateUseCase(
         FakeItemRepository itemRepository,
         FakeTagCatalogRepository tagRepository)
@@ -220,10 +121,7 @@ public sealed class ApplyAiPlanningDraftUseCaseTests
         return new ApplyAiPlanningDraftUseCase(
             new AiPlanningDraftValidator(),
             new CreateTagUseCase(tagRepository, clock),
-            new CreateItemUseCase(itemRepository, clock, idGenerator),
-            new MoveItemUseCase(itemRepository, clock),
-            new SetItemPriorityUseCase(itemRepository, clock),
-            new CancelItemUseCase(itemRepository, clock));
+            new CreateItemUseCase(itemRepository, clock, idGenerator));
     }
 
     private sealed class FakeItemRepository(IReadOnlyCollection<Item>? seed = null) : IItemRepository

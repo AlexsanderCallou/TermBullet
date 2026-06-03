@@ -2,9 +2,7 @@ namespace TermBullet.Tui.Screens;
 
 public enum PlanningScreenMode
 {
-    Hub,
-    NewPlanning,
-    RevisePlanning
+    NewPlanning
 }
 
 public sealed class PlanningViewModel
@@ -38,49 +36,23 @@ public sealed class PlanningViewModel
     public string Footer { get; }
 
     public static PlanningViewModel ForHub() =>
-        new(
-            PlanningScreenMode.Hub,
-            ["> New Planning", "  Revise Planning"],
-            [
-                "New Planning creates a fresh AI draft from user intent.",
-                "Revise Planning reviews existing work and proposes changes before applying them."
-            ],
-            [],
-            [],
-            " Enter open  Tab/1-2 focus  ? help  Esc back  q quit");
+        ForNewPlanning();
 
     public static PlanningViewModel ForNewPlanning() =>
         new(
             PlanningScreenMode.NewPlanning,
             [
-                "> Project Plan",
-                "  Weekly Plan",
-                "output: tasks + notes",
-                "tag: project tag or default",
-                "scope: new work"
+                "Topic: -",
+                "Project tag: -",
+                "Volume: Medium (10-20 tasks)",
+                "Start today: Yes",
+                "Distribution: today, week, month, backlog"
             ],
-            ["Apply plan", "Discard draft"],
+            ["Generate draft", "Apply plan", "Discard draft"],
             [
-                "assistant> Choose Project Plan for closed-scope work.",
-                "assistant> Choose Weekly Plan for personal default-tag planning."
+                "assistant> Fill the guided fields, then generate a structured draft.",
+                "assistant> The model writes tasks; TermBullet controls count, tags, and placement."
             ],
-            ["Write a message..."],
-            " Enter send/open  a apply  d discard  Up/Down scroll  PgUp/PgDn page  Tab/1-4 focus  ? help  Esc back  q quit");
-
-    public static PlanningViewModel ForRevisePlanning() =>
-        new(
-            PlanningScreenMode.RevisePlanning,
-            [
-                "> Weekly Review",
-                "  Project Review",
-                "selected tag: -",
-                "allowed actions: create, move, prioritize, cancel"
-            ],
-            ["Apply changes", "Discard draft"],
-            [
-                "assistant> Select Weekly Review for default-tag work.",
-                "assistant> Select Project Review to focus one project tag."
-            ],
-            ["Write a message..."],
-            " Enter send/open  a apply  d discard  Up/Down scroll  PgUp/PgDn page  Tab/1-4 focus  ? help  Esc back  q quit");
+            ["Topic and tag are edited in the Setup panel."],
+            " g generate  s size  t today  a apply  d discard  Tab/1-4 focus  ? help  Esc back  q quit");
 }

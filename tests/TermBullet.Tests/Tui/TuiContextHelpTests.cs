@@ -55,12 +55,12 @@ public sealed class TuiContextHelpTests
     }
 
     [Fact]
-    public void Planning_help_describes_planning_hub_and_approval()
+    public void Planning_help_describes_guided_new_project_planning_and_approval()
     {
         var lines = TuiContextHelp.GetLines(TuiScreen.Planning);
 
-        Assert.Contains(lines, line => line.Contains("New Planning", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(lines, line => line.Contains("Revise Planning", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(lines, line => line.Contains("new project drafts", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(lines, line => line.Contains("volume", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(lines, line => line.Contains("approved", StringComparison.OrdinalIgnoreCase));
     }
 

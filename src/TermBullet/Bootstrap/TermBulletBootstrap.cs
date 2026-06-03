@@ -179,8 +179,7 @@ public static class TermBulletBootstrap
         var provider = providerFactory.Create(config);
         var useCase = new GenerateAiPlanningResponseUseCase(
             new BuildAiPlanningRequestUseCase(
-                new PlanningAgentPromptLoader(installDirectory),
-                itemRepository),
+                new PlanningAgentPromptLoader(installDirectory)),
             provider,
             new AiPlanningDraftValidator());
 
@@ -207,10 +206,7 @@ public static class TermBulletBootstrap
         var useCase = new ApplyAiPlanningDraftUseCase(
             new AiPlanningDraftValidator(),
             new CreateTagUseCase(tagCatalogRepository, clock),
-            new CreateItemUseCase(itemRepository, clock, new GuidIdGenerator()),
-            new MoveItemUseCase(itemRepository, clock),
-            new SetItemPriorityUseCase(itemRepository, clock),
-            new CancelItemUseCase(itemRepository, clock));
+            new CreateItemUseCase(itemRepository, clock, new GuidIdGenerator()));
 
         return await useCase.ExecuteAsync(draft, cancellationToken);
     }

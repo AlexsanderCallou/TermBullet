@@ -92,7 +92,7 @@ public sealed class TermBulletCliAppTests : IDisposable
         var exitCode = await app.InvokeAsync(["--version"]);
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("1.2.0", dependencies.Output.ToString());
+        Assert.Contains("1.3.0", dependencies.Output.ToString());
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public sealed class TermBulletCliAppTests : IDisposable
         var exitCode = await app.InvokeAsync(["-v"]);
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("1.2.0", dependencies.Output.ToString());
+        Assert.Contains("1.3.0", dependencies.Output.ToString());
     }
 
     [Fact]
@@ -323,22 +323,6 @@ public sealed class TermBulletCliAppTests : IDisposable
         Assert.Contains("summary: Weekly plan.", output);
         Assert.Contains("1. create_task", output);
         Assert.Contains("content: Review open tasks", output);
-    }
-
-    [Fact]
-    public async Task InvokeAsync_rejects_revise_project_ai_plan_without_tag()
-    {
-        var dependencies = CreateDependencies();
-        var app = CreateApp(
-            dependencies,
-            runtimePaths: CreateRuntimePaths(),
-            startupAction: _ => Task.CompletedTask,
-            generateAiPlanningDraft: (_, _) => throw new InvalidOperationException("Should not be called."));
-
-        var exitCode = await app.InvokeAsync(["ai", "plan", "revise-project", "--prompt", "Review project."]);
-
-        Assert.Equal(1, exitCode);
-        Assert.Contains("Tag is required", dependencies.Error.ToString());
     }
 
     [Fact]

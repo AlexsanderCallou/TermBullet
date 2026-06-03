@@ -349,11 +349,15 @@ configuration. The user can register multiple profiles, such as the recommended
 local Ollama profile and a hosted OpenAI-compatible profile, and select one
 active profile. V2 MVP manages these profiles through CLI commands only.
 
-The Planning TUI has two main flows:
+The Planning TUI currently has one flow:
 
-- New Planning: creates a new project plan or weekly personal plan from user
-  intent.
-- Revise Planning: reviews existing default-tag work or one selected project tag.
+- New Planning: creates a new project plan or weekly personal plan from guided
+  user inputs.
+
+Reviewing existing plans is a future idea, not part of the current Planning
+implementation. It is intentionally deferred because the current workflow is
+optimized for small local models, and those models do not handle broad
+historical review reliably enough yet.
 
 The CLI may expose the same planning modes through `termbullet ai chat`. CLI
 chat uses the active AI profile unless the user selects another registered
@@ -380,8 +384,7 @@ Allowed V2 MVP draft actions:
 - cancel stale tasks.
 
 Project Plan may create one project tag, one scope note, and the required tasks.
-Weekly Plan creates tasks under the protected `default` tag. Weekly Review
-reviews open `default` tasks. Project Review reviews work for one selected tag.
+Weekly Plan creates tasks under the protected `default` tag.
 
 When the user explicitly requests a tag or collection distribution, the draft
 must preserve that request unless validation rejects it. Ordered plans are

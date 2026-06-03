@@ -7,10 +7,7 @@ namespace TermBullet.Application.Ai;
 public sealed class ApplyAiPlanningDraftUseCase(
     AiPlanningDraftValidator validator,
     CreateTagUseCase createTagUseCase,
-    CreateItemUseCase createItemUseCase,
-    MoveItemUseCase moveItemUseCase,
-    SetItemPriorityUseCase setItemPriorityUseCase,
-    CancelItemUseCase cancelItemUseCase)
+    CreateItemUseCase createItemUseCase)
 {
     public async Task<AiPlanningDraftApplyResult> ExecuteAsync(
         AiPlanningDraft draft,
@@ -78,47 +75,6 @@ public sealed class ApplyAiPlanningDraftUseCase(
                         note.PublicRef,
                         NormalizeRequired(action.Tag, "tag"),
                         ToCollectionKey(note.Collection)));
-                    break;
-
-                case "move_task":
-                    var moved = await moveItemUseCase.ExecuteAsync(
-                        new MoveItemRequest
-                        {
-                            PublicRef = NormalizeRequired(action.PublicRef, "public_ref"),
-                            Collection = ParseTaskCollection(action.Collection)
-                        },
-                        cancellationToken);
-                    appliedActions.Add(new AiPlanningDraftAppliedAction(
-                        type,
-                        moved.PublicRef,
-                        moved.Tag,
-                        ToCollectionKey(moved.Collection)));
-                    break;
-
-                case "set_priority":
-                    var prioritized = await setItemPriorityUseCase.ExecuteAsync(
-                        new SetItemPriorityRequest
-                        {
-                            PublicRef = NormalizeRequired(action.PublicRef, "public_ref"),
-                            Priority = ParsePriority(action.Priority)
-                        },
-                        cancellationToken);
-                    appliedActions.Add(new AiPlanningDraftAppliedAction(
-                        type,
-                        prioritized.PublicRef,
-                        prioritized.Tag,
-                        ToCollectionKey(prioritized.Collection)));
-                    break;
-
-                case "cancel_task":
-                    var cancelled = await cancelItemUseCase.ExecuteAsync(
-                        NormalizeRequired(action.PublicRef, "public_ref"),
-                        cancellationToken);
-                    appliedActions.Add(new AiPlanningDraftAppliedAction(
-                        type,
-                        cancelled.PublicRef,
-                        cancelled.Tag,
-                        ToCollectionKey(cancelled.Collection)));
                     break;
 
                 default:

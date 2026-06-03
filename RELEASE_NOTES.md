@@ -1,5 +1,28 @@
 # TermBullet Release Notes
 
+## v1.3.0 - Guided AI Planning
+
+TermBullet V1.3.0 adds optional AI-assisted guided planning for creating new
+project plans with small local models.
+
+### Added
+
+- AI profile configuration commands and OpenAI-compatible provider support.
+- Guided Planning TUI for creating new project drafts from topic, project tag,
+  task volume, and today-start choices.
+- Structured AI planning draft generation, preview, approval, and apply
+  workflow.
+- Canonical planning agent prompt shipped with published binaries.
+- README guidance for local Ollama setup with `llama3.2:1b`.
+
+### Changed
+
+- Planning is scoped to new project creation only; existing-plan review is
+  deferred for future work because small local models do not handle broad
+  historical review reliably enough yet.
+- AI draft validation now accepts only create actions and repairs invalid
+  collection placeholders once before failing.
+
 ## v1.2.0 - Tags and Monthly Carry-Over
 
 TermBullet V1.2.0 makes tags a first-class planning surface and finalizes the

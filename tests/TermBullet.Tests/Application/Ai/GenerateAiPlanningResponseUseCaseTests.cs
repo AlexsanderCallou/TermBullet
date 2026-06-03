@@ -99,11 +99,67 @@ public sealed class GenerateAiPlanningResponseUseCaseTests
             && message.Content.Contains("response envelope JSON object", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task ExecuteAsync_repairs_required_draft_when_first_draft_copies_collection_placeholder()
+    {
+        var provider = new FakeAiPlanningProvider(
+            """
+            {
+              "mode": "new_project",
+              "summary": "Rust study roadmap.",
+              "actions": [
+                {
+                  "type": "create_tag",
+                  "name": "estudos-rust"
+                },
+                {
+                  "type": "create_task",
+                  "tag": "estudos-rust",
+                  "collection": "today|week|month|backlog",
+                  "content": "1. Start Rust ownership study"
+                }
+              ]
+            }
+            """,
+            """
+            {
+              "mode": "new_project",
+              "summary": "Rust study roadmap.",
+              "actions": [
+                {
+                  "type": "create_tag",
+                  "name": "estudos-rust"
+                },
+                {
+                  "type": "create_task",
+                  "tag": "estudos-rust",
+                  "collection": "today",
+                  "content": "1. Start Rust ownership study"
+                }
+              ]
+            }
+            """);
+        var useCase = CreateUseCase(provider);
+
+        var result = await useCase.ExecuteAsync(new BuildAiPlanningRequest
+        {
+            Mode = AiPlanningMode.NewProject,
+            UserPrompt = "Create Rust study tasks.",
+            RequireStructuredDraft = true
+        });
+
+        Assert.NotNull(result.Draft);
+        Assert.Equal("today", result.Draft.Actions[1].Collection);
+        Assert.Equal(2, provider.Requests.Count);
+        Assert.Contains(provider.Requests[1].Messages, message =>
+            message.Role == AiPlanningMessageRole.User
+            && message.Content.Contains("today|week|month|backlog", StringComparison.Ordinal));
+    }
+
     private static GenerateAiPlanningResponseUseCase CreateUseCase(FakeAiPlanningProvider provider) =>
         new(
             new BuildAiPlanningRequestUseCase(
-                new FakePlanningAgentPromptLoader("agent prompt"),
-                new FakeItemRepository()),
+                new FakePlanningAgentPromptLoader("agent prompt")),
             provider,
             new AiPlanningDraftValidator());
 

@@ -125,30 +125,6 @@ public sealed class AiPlanningDraftValidatorTests
     }
 
     [Fact]
-    public void Validate_rejects_revise_project_move_without_public_ref()
-    {
-        var draft = AiPlanningDraftParser.Parse(
-            """
-            {
-              "mode": "revise_project",
-              "summary": "Review project.",
-              "actions": [
-                {
-                  "type": "move_task",
-                  "collection": "week"
-                }
-              ]
-            }
-            """);
-        var validator = new AiPlanningDraftValidator();
-
-        var result = validator.Validate(draft);
-
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error => error.Contains("public_ref", StringComparison.Ordinal));
-    }
-
-    [Fact]
     public void Validate_accepts_java_roadmap_scenario_distribution()
     {
         var draft = AiPlanningDraftParser.Parse(

@@ -48,13 +48,10 @@ V2 MVP behavior scenarios:
   longer work for `backlog`, the draft must create the requested tag, one scope
   note, and ordered tasks in the requested collections.
 - Nutrition chatbot project: when the user asks to build a chatbot project, the
-  draft must create a project tag, one scope note, and initial tasks. Future
-  additions should happen through `revise-project` for that tag, not by
-  recreating the plan.
+  draft must create a project tag, one scope note, and initial tasks.
 - Gym habit tracking: when the user explicitly asks for a tag for an ongoing
   personal habit, the draft must create that non-default tag and weekly
-  tracking tasks. Recurring tasks are not part of V2 MVP; later weekly updates
-  use `revise-project` for the habit tag.
+  tracking tasks. Recurring tasks are not part of V2 MVP.
 - Local AI setup: Ollama is the recommended local model runtime for users.
   Hosted providers and other services may be used through OpenAI-compatible
   profiles, but the README should present Ollama as the local path.
@@ -62,7 +59,7 @@ V2 MVP behavior scenarios:
 #### V2.0 - Planning Contracts and ADR
 
 - Keep ADR-0018 aligned with the approved AI workflow.
-- Keep `screens.md` aligned with Planning Hub, New Planning, and Revise Planning.
+- Keep `screens.md` aligned with guided New Planning.
 - Keep `DATA_MODEL.md` aligned with AI proposal contracts and history events.
 - Keep the canonical planning agent prompt aligned with the accepted V2
   behavior scenarios.
@@ -125,10 +122,9 @@ Implemented foundation:
 
 - Added structured planning draft DTOs with ordered actions.
 - Added parser for canonical JSON draft responses.
-- Added validation for modes `new_project`, `new_weekly`, `revise_weekly`, and
-  `revise_project`.
-- Added validation for allowed action types: `create_tag`, `create_task`,
-  `create_note`, `move_task`, `set_priority`, and `cancel_task`.
+- Added validation for modes `new_project` and `new_weekly`.
+- Added validation for allowed action types: `create_tag`, `create_task`, and
+  `create_note`.
 - Unsupported actions such as delete, event creation, and direct note body
   editing are rejected before any apply workflow exists.
 - Project drafts must use a non-default tag and weekly drafts must use
@@ -151,11 +147,10 @@ Status: in progress.
 
 Implemented foundation:
 
-- Implemented Planning Hub with `New Planning` and `Revise Planning`.
-- Implemented New Planning workspace shell with Project Plan and Weekly Plan
-  modes.
-- Implemented Revise Planning workspace shell with Weekly Review and Project
-  Review modes.
+- Implemented guided New Planning as the only current Planning workflow.
+- Implemented New Planning guided workspace with topic, project tag, task
+  volume, start-today, deterministic distribution, and structured draft
+  generation.
 - Implemented Draft Actions shell with Apply and Discard actions visible.
 - Wired TUI prompt submission to the AI draft generation use case.
 - Wired TUI apply and discard actions to the current generated draft.
@@ -194,22 +189,14 @@ Remaining:
 - Add stronger preflight validation for mid-apply failures when new action types
   are added.
 
-#### V2.6 - Revise Planning
+#### Future - Plan Review
 
-Status: MVP implemented.
+Status: deferred.
 
-Implemented foundation:
-
-- Weekly Review uses open `default` tasks as context.
-- Project Review uses open items for one selected non-default tag as context.
-- Request assembly filters context to the selected review scope.
-- Review drafts can create tasks, create notes, move tasks, set priority, and
-  cancel stale tasks.
-
-Remaining:
-
-- Add tests that archived/monthly context is only included when explicitly
-  required by the selected scope.
+Reviewing existing plans is a future idea, not part of the current Planning
+scope. It is intentionally deferred because the current workflow is optimized
+for small local models, and those models do not handle broad historical review
+reliably enough yet.
 
 #### V2.7 - CLI Support
 
@@ -219,7 +206,6 @@ Implemented foundation:
 
 - Added `termbullet ai plan <mode> --prompt ...` to generate a validated draft
   preview through the active AI profile.
-- `ai plan revise-project` requires `--tag`.
 - The real CLI wiring loads `<install-dir>/conf.json`, the active AI provider,
   and `<install-dir>/agents/planning-bulletjournal-agent.md`.
 - `ai plan` previews the structured draft by default.
@@ -241,8 +227,8 @@ Remaining:
 #### V2.8 - Release Readiness
 
 - Run `dotnet restore`, `dotnet build`, and `dotnet test`.
-- Run manual TUI smoke tests for Planning Hub, New Planning, Revise Planning,
-  draft approval, and AI unavailable states.
+- Run manual TUI smoke tests for guided New Planning, draft approval, and AI
+  unavailable states.
 - Update README, release notes, and deployment assets.
 - Publish V2 only after local-first non-AI flows remain unaffected.
 

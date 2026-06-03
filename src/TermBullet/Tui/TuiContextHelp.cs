@@ -44,9 +44,10 @@ public static class TuiContextHelp
             ],
             TuiScreen.Planning =>
             [
-                "Enter: open New Planning or Revise Planning",
-                "New Planning creates project or weekly drafts",
-                "Revise Planning reviews default-tag or project work",
+                "Planning creates new project drafts from guided topic, tag, volume, and today choices",
+                "s: cycle Small, Medium, and Large task volume",
+                "t: toggle first task today",
+                "g: generate a structured planning draft",
                 "AI drafts must be approved before applying",
                 "a: apply current draft",
                 "d: discard current draft",

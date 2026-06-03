@@ -315,8 +315,6 @@ active profile or leaving AI unconfigured.
 ```bash
 termbullet ai plan new-project --prompt "Plan the billing module"
 termbullet ai plan new-weekly --prompt "Organize my week"
-termbullet ai plan revise-weekly --prompt "Suggest next steps"
-termbullet ai plan revise-project --tag auth --prompt "Suggest next steps"
 ```
 
 Generates a structured AI planning draft preview using the active AI profile.
@@ -336,12 +334,9 @@ Allowed mode values:
 
 - `new-project`
 - `new-weekly`
-- `revise-weekly`
-- `revise-project`
 
 Rules:
 
-- `revise-project` requires `--tag`.
 - The active AI profile is loaded from `<install-dir>/conf.json`.
 - The planning agent prompt is loaded from
   `<install-dir>/agents/planning-bulletjournal-agent.md`.
@@ -397,24 +392,18 @@ Optional arguments:
 ```bash
 termbullet ai chat --profile cloud --mode new-project
 termbullet ai chat --profile local --mode new-weekly
-termbullet ai chat --mode revise-weekly
-termbullet ai chat --mode revise-project --tag auth
 ```
 
 Allowed `--mode` values:
 
 - `new-project`
 - `new-weekly`
-- `revise-weekly`
-- `revise-project`
 
 Interactive commands:
 
 ```text
 /mode new-project
 /mode new-weekly
-/mode revise-weekly
-/mode revise-project auth
 /apply
 /discard
 /exit
@@ -440,7 +429,6 @@ Rules:
 - `/apply` requires explicit confirmation before persisting changes.
 - `/apply` can only persist the current validated draft.
 - `/discard` drops the current draft without changing data.
-- `revise-project` requires one selected non-default tag.
 - `ai chat` must not expose API keys in logs, errors, or transcript output.
 - if the planning agent prompt is missing or unreadable, `ai chat` must return a
   clear error and must not call the AI provider.

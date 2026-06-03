@@ -124,8 +124,7 @@ public sealed class GenerateAiPlanningDraftUseCaseTests
     private static GenerateAiPlanningDraftUseCase CreateUseCase(FakeAiPlanningProvider provider) =>
         new(
             new BuildAiPlanningRequestUseCase(
-                new FakePlanningAgentPromptLoader("agent prompt"),
-                new FakeItemRepository()),
+                new FakePlanningAgentPromptLoader("agent prompt")),
             provider,
             new AiPlanningDraftValidator());
 

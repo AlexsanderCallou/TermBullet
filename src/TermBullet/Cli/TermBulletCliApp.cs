@@ -43,7 +43,7 @@ public sealed class TermBulletCliApp(
         return InvokeInternalAsync(args, cancellationToken);
     }
 
-    public const string Version = "1.2.0";
+    public const string Version = "1.3.0";
 
     private async Task<int> InvokeInternalAsync(string[] args, CancellationToken cancellationToken)
     {
@@ -761,12 +761,12 @@ public sealed class TermBulletCliApp(
     {
         var modeOption = new Option<string>("--mode")
         {
-            Description = "Planning mode: new-project, new-weekly, revise-weekly, revise-project",
+            Description = "Planning mode: new-project, new-weekly",
             DefaultValueFactory = _ => "new-project"
         };
         var tagOption = new Option<string?>("--tag")
         {
-            Description = "Project tag for revise-project"
+            Description = "Project tag for new-project"
         };
 
         var command = new Command("chat", "Start an interactive AI planning chat")
@@ -781,10 +781,6 @@ public sealed class TermBulletCliApp(
             {
                 var mode = ParseAiPlanningMode(parseResult.GetValue(modeOption));
                 var tag = NormalizeOptional(parseResult.GetValue(tagOption));
-                if (mode == AiPlanningMode.ReviseProject && tag is null)
-                {
-                    throw new ArgumentException("Tag is required for revise-project planning.");
-                }
 
                 await RunAiChatAsync(mode, tag, standardOutput, cancellationToken);
                 return 0;
@@ -929,7 +925,7 @@ public sealed class TermBulletCliApp(
     {
         var modeArgument = new Argument<string>("mode")
         {
-            Description = "Planning mode: new-project, new-weekly, revise-weekly, revise-project"
+            Description = "Planning mode: new-project, new-weekly"
         };
         var promptOption = new Option<string>("--prompt")
         {
@@ -938,7 +934,7 @@ public sealed class TermBulletCliApp(
         };
         var tagOption = new Option<string?>("--tag")
         {
-            Description = "Project tag for revise-project"
+            Description = "Project tag for new-project"
         };
         var applyOption = new Option<bool>("--apply")
         {
@@ -964,10 +960,6 @@ public sealed class TermBulletCliApp(
             {
                 var mode = ParseAiPlanningMode(parseResult.GetValue(modeArgument));
                 var tag = NormalizeOptional(parseResult.GetValue(tagOption));
-                if (mode == AiPlanningMode.ReviseProject && tag is null)
-                {
-                    throw new ArgumentException("Tag is required for revise-project planning.");
-                }
 
                 var result = await generateAiPlanningDraft!(new BuildAiPlanningRequest
                 {
@@ -1353,8 +1345,6 @@ public sealed class TermBulletCliApp(
         {
             "new-project" => AiPlanningMode.NewProject,
             "new-weekly" => AiPlanningMode.NewWeekly,
-            "revise-weekly" => AiPlanningMode.ReviseWeekly,
-            "revise-project" => AiPlanningMode.ReviseProject,
             _ => throw new ArgumentException($"Unsupported AI planning mode: {value}.")
         };
     }
@@ -1369,10 +1359,6 @@ public sealed class TermBulletCliApp(
 
         var mode = ParseAiPlanningMode(parts[1]);
         var tag = parts.Length > 2 ? parts[2] : null;
-        if (mode == AiPlanningMode.ReviseProject && string.IsNullOrWhiteSpace(tag))
-        {
-            throw new ArgumentException("Tag is required for revise-project planning.");
-        }
 
         return (mode, tag);
     }
@@ -1382,8 +1368,6 @@ public sealed class TermBulletCliApp(
         {
             AiPlanningMode.NewProject => "new-project",
             AiPlanningMode.NewWeekly => "new-weekly",
-            AiPlanningMode.ReviseWeekly => "revise-weekly",
-            AiPlanningMode.ReviseProject => "revise-project",
             _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported AI planning mode.")
         };
 

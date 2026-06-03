@@ -43,7 +43,7 @@ license is Apache License 2.0 in [LICENSE](LICENSE).
 Current release:
 
 ```text
-v1.2.0 - Tags and Monthly Carry-Over
+v1.3.0 - Guided AI Planning
 ```
 
 Latest release:
@@ -141,7 +141,7 @@ The install directory must allow writing `conf.json`. If it does not,
 TermBullet exits with a clear permission error so the user can adjust
 permissions or reinstall into a writable directory.
 
-V2 AI Planning will also install the canonical planning agent prompt beside the
+AI Planning also installs the canonical planning agent prompt beside the
 executable:
 
 ```text
@@ -180,7 +180,7 @@ The full command tree is documented in [CLI.md](CLI.md).
 
 ## AI Planning Setup
 
-V2 AI Planning is optional. TermBullet keeps working without AI, internet
+AI Planning is optional. TermBullet keeps working without AI, internet
 access, or external accounts.
 
 For local models, the recommended setup is Ollama. It gives a simple local
@@ -240,10 +240,11 @@ V1 delivers:
 - search;
 - basic editing;
 - migration and movement;
-- local data path discovery.
+- local data path discovery;
+- optional AI-assisted guided planning with local or OpenAI-compatible profiles.
 
-V1 does not include AI execution, Google Calendar, machine sync, cloud accounts,
-or a PostgreSQL runtime dependency.
+V1 does not include Google Calendar, machine sync, cloud accounts, or a
+PostgreSQL runtime dependency.
 
 The product direction, roadmap, item model, and acceptance criteria are in
 [PRODUCT.md](PRODUCT.md).
@@ -274,13 +275,13 @@ dotnet run --project src/TermBullet -- [command] [arguments] [options]
 Build local release assets:
 
 ```bash
-VERSION=1.2.0 ./publish.sh
+VERSION=1.3.0 ./publish.sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\publish.ps1 -Version 1.2.0
+.\publish.ps1 -Version 1.3.0
 ```
 
 When running from source, `conf.json` is created beside the built executable

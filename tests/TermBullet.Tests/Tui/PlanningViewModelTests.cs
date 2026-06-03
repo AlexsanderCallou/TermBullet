@@ -5,37 +5,27 @@ namespace TermBullet.Tests.Tui;
 public sealed class PlanningViewModelTests
 {
     [Fact]
-    public void ForHub_shows_new_and_revise_planning_options()
+    public void ForHub_uses_new_project_planning()
     {
         var vm = PlanningViewModel.ForHub();
 
-        Assert.Equal(PlanningScreenMode.Hub, vm.Mode);
-        Assert.Contains("> New Planning", vm.PrimaryLines);
-        Assert.Contains("  Revise Planning", vm.PrimaryLines);
-        Assert.Contains(vm.SecondaryLines, line => line.Contains("fresh AI draft", StringComparison.Ordinal));
+        Assert.Equal(PlanningScreenMode.NewPlanning, vm.Mode);
+        Assert.Contains("Topic: -", vm.PrimaryLines);
+        Assert.Contains("Generate draft", vm.SecondaryLines);
     }
 
     [Fact]
-    public void ForNewPlanning_matches_project_and_weekly_modes()
+    public void ForNewPlanning_matches_guided_project_planning()
     {
         var vm = PlanningViewModel.ForNewPlanning();
 
         Assert.Equal(PlanningScreenMode.NewPlanning, vm.Mode);
-        Assert.Contains("> Project Plan", vm.PrimaryLines);
-        Assert.Contains("  Weekly Plan", vm.PrimaryLines);
+        Assert.Contains("Topic: -", vm.PrimaryLines);
+        Assert.Contains("Project tag: -", vm.PrimaryLines);
+        Assert.Contains("Volume: Medium (10-20 tasks)", vm.PrimaryLines);
+        Assert.Contains("Start today: Yes", vm.PrimaryLines);
+        Assert.Contains("Generate draft", vm.SecondaryLines);
         Assert.Contains("Apply plan", vm.SecondaryLines);
-        Assert.Contains("Write a message...", vm.PromptLines);
-    }
-
-    [Fact]
-    public void ForRevisePlanning_matches_review_modes()
-    {
-        var vm = PlanningViewModel.ForRevisePlanning();
-
-        Assert.Equal(PlanningScreenMode.RevisePlanning, vm.Mode);
-        Assert.Contains("> Weekly Review", vm.PrimaryLines);
-        Assert.Contains("  Project Review", vm.PrimaryLines);
-        Assert.Contains("Apply changes", vm.SecondaryLines);
-        Assert.Contains(vm.PrimaryLines, line => line.Contains("allowed actions", StringComparison.Ordinal));
+        Assert.Contains(vm.PromptLines, line => line.Contains("Setup panel", StringComparison.Ordinal));
     }
 }

@@ -15,15 +15,16 @@ public static class PlanningScreen
         Action onRefresh,
         CancellationToken cancellationToken)
     {
-        var mode = PlanningScreenMode.Hub;
-        var navigation = new Tui.Navigation.TuiNavigationState(panelCount: 2);
-        var selectedHubIndex = 0;
+        var mode = PlanningScreenMode.NewPlanning;
+        var navigation = new Tui.Navigation.TuiNavigationState(panelCount: 4);
         var focusedPanelIndex = 0;
         var conversationLines = new List<string>();
-        var conversationHistory = new List<AiPlanningMessage>();
         GenerateAiPlanningDraftResult? currentDraft = null;
         string? statusLine = null;
-        TextField? promptField = null;
+        TextField? guidedTopicField = null;
+        TextField? guidedTagField = null;
+        var guidedForm = new GuidedPlanningForm();
+        IReadOnlyList<TextField> textInputFields = [];
 
         var topBar = new Label(" TermBullet - Planning")
         {
@@ -52,13 +53,10 @@ public static class PlanningScreen
         void RenderPlanning()
         {
             contentHost.RemoveAll();
-            promptField = null;
-            var vm = mode switch
-            {
-                PlanningScreenMode.NewPlanning => PlanningViewModel.ForNewPlanning(),
-                PlanningScreenMode.RevisePlanning => PlanningViewModel.ForRevisePlanning(),
-                _ => PlanningViewModel.ForHub()
-            };
+            guidedTopicField = null;
+            guidedTagField = null;
+            textInputFields = [];
+            var vm = PlanningViewModel.ForNewPlanning();
 
             footer.Text = $" {vm.Footer}";
 
@@ -68,110 +66,114 @@ public static class PlanningScreen
                 statusLine = null;
             }
 
-            if (vm.Mode == PlanningScreenMode.Hub)
+            navigation = new Tui.Navigation.TuiNavigationState(panelCount: 4);
+            if (!navigation.FocusPanel(focusedPanelIndex + 1))
             {
-                navigation = new Tui.Navigation.TuiNavigationState(panelCount: 2);
-                if (!navigation.FocusPanel(focusedPanelIndex + 1))
-                {
-                    focusedPanelIndex = 0;
-                }
-
-                BuildHub(contentHost, vm, navigation, selectedHubIndex);
+                focusedPanelIndex = 0;
             }
-            else
-            {
-                navigation = new Tui.Navigation.TuiNavigationState(panelCount: 4);
-                if (!navigation.FocusPanel(focusedPanelIndex + 1))
+
+            BuildGuidedPlanningWorkspace(
+                contentHost,
+                vm,
+                navigation,
+                guidedForm,
+                conversationLines.Count > 0 ? conversationLines : vm.ConversationLines,
+                currentDraft,
+                (topicField, tagField) =>
                 {
-                    focusedPanelIndex = 0;
-                }
-
-                BuildWorkspace(
-                    contentHost,
-                    vm,
-                    navigation,
-                    conversationLines.Count > 0 ? conversationLines : vm.ConversationLines,
-                    currentDraft,
-                    field => promptField = field,
-                    prompt =>
-                    {
-                        if (generateAiPlanningResponse is null)
-                        {
-                            conversationLines.Add("system> AI planning is not available.");
-                            RenderPlanning();
-                            return;
-                        }
-
-                        var requestMode = mode == PlanningScreenMode.RevisePlanning
-                            ? AiPlanningMode.ReviseWeekly
-                            : AiPlanningMode.NewProject;
-                        var requireStructuredDraft = AiPlanningDraftIntent.RequiresStructuredDraft(prompt);
-                        conversationLines.Add($"you> {prompt}");
-                        conversationHistory.Add(new AiPlanningMessage(AiPlanningMessageRole.User, prompt));
-                        conversationLines.Add("assistant> working...");
-                        RenderPlanning();
-
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                var result = await generateAiPlanningResponse(new BuildAiPlanningRequest
-                                {
-                                    Mode = requestMode,
-                                    UserPrompt = prompt,
-                                    ConversationHistory = conversationHistory
-                                        .Take(Math.Max(0, conversationHistory.Count - 1))
-                                        .ToArray(),
-                                    RequireStructuredDraft = requireStructuredDraft
-                                }, cancellationToken);
-                                TGui.MainLoop?.Invoke(() =>
-                                {
-                                    conversationLines.Remove("assistant> working...");
-                                    if (result.Draft is not null)
-                                    {
-                                        currentDraft = new GenerateAiPlanningDraftResult(
-                                            result.Draft,
-                                            result.ProviderModel,
-                                            result.ModelRequest);
-                                        var draftMessage = $"draft ready: {result.Draft.Actions.Count} actions.";
-                                        conversationLines.Add($"assistant> {draftMessage}");
-                                        conversationHistory.Add(new AiPlanningMessage(
-                                            AiPlanningMessageRole.Assistant,
-                                            $"{draftMessage} {result.Draft.Summary}"));
-                                    }
-                                    else
-                                    {
-                                        conversationLines.Add($"assistant> {result.AssistantMessage}");
-                                        if (!string.IsNullOrWhiteSpace(result.AssistantMessage))
-                                        {
-                                            conversationHistory.Add(new AiPlanningMessage(
-                                                AiPlanningMessageRole.Assistant,
-                                                result.AssistantMessage));
-                                        }
-                                    }
-
-                                    RenderPlanning();
-                                });
-                            }
-                            catch (Exception exception) when (exception is not OperationCanceledException)
-                            {
-                                TGui.MainLoop?.Invoke(() =>
-                                {
-                                    conversationLines.Remove("assistant> working...");
-                                    conversationLines.Add($"error> {exception.Message}");
-                                    RenderPlanning();
-                                });
-                            }
-                        }, cancellationToken);
-                    });
-            }
+                    guidedTopicField = topicField;
+                    guidedTagField = tagField;
+                    textInputFields = [topicField, tagField];
+                });
         }
 
         RenderPlanning();
 
+        void SyncGuidedFormFromFields()
+        {
+            if (guidedTopicField is not null)
+            {
+                guidedForm.Topic = guidedTopicField.Text?.ToString()?.Trim() ?? string.Empty;
+            }
+
+            if (guidedTagField is not null)
+            {
+                guidedForm.ProjectTag = guidedTagField.Text?.ToString()?.Trim() ?? string.Empty;
+            }
+        }
+
+        void GenerateGuidedDraft()
+        {
+            SyncGuidedFormFromFields();
+            if (generateAiPlanningResponse is null)
+            {
+                conversationLines.Add("system> AI planning is not available.");
+                RenderPlanning();
+                return;
+            }
+
+            var validationError = guidedForm.GetValidationError();
+            if (validationError is not null)
+            {
+                conversationLines.Add($"system> {validationError}");
+                RenderPlanning();
+                return;
+            }
+
+            var projectTag = guidedForm.ProjectTag;
+            var prompt = BuildGuidedPlanningPrompt(guidedForm);
+            conversationLines.Clear();
+            currentDraft = null;
+            conversationLines.Add($"system> generating {guidedForm.VolumeLabel.ToLowerInvariant()} plan for {projectTag}...");
+            conversationLines.Add("assistant> working...");
+            RenderPlanning();
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var result = await generateAiPlanningResponse(new BuildAiPlanningRequest
+                    {
+                        Mode = AiPlanningMode.NewProject,
+                        UserPrompt = prompt,
+                        ConversationHistory = [],
+                        RequireStructuredDraft = true
+                    }, cancellationToken);
+                    TGui.MainLoop?.Invoke(() =>
+                    {
+                        conversationLines.Remove("assistant> working...");
+                        if (result.Draft is not null)
+                        {
+                            currentDraft = new GenerateAiPlanningDraftResult(
+                                result.Draft,
+                                result.ProviderModel,
+                                result.ModelRequest);
+                            conversationLines.Add($"assistant> draft ready: {result.Draft.Actions.Count} actions.");
+                        }
+                        else
+                        {
+                            conversationLines.Add($"error> {result.AssistantMessage ?? "AI planning response did not include a structured draft."}");
+                        }
+
+                        RenderPlanning();
+                    });
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    TGui.MainLoop?.Invoke(() =>
+                    {
+                        conversationLines.Remove("assistant> working...");
+                        conversationLines.Add($"error> {exception.Message}");
+                        RenderPlanning();
+                    });
+                }
+            }, cancellationToken);
+        }
+
         root.KeyPress += args =>
         {
-            if (promptField?.HasFocus == true && PlanningShortcutPolicy.IsPromptTextInput(args.KeyEvent))
+            if (textInputFields.Any(field => field.HasFocus)
+                && PlanningShortcutPolicy.IsPromptTextInput(args.KeyEvent))
             {
                 return;
             }
@@ -183,10 +185,10 @@ public static class PlanningScreen
                 return;
             }
 
+            SyncGuidedFormFromFields();
             var handled = HandlePlanningKey(
                 args.KeyEvent,
                 ref mode,
-                ref selectedHubIndex,
                 ref focusedPanelIndex,
                 navigation,
                 onBack,
@@ -235,8 +237,28 @@ public static class PlanningScreen
                 () =>
                 {
                     currentDraft = null;
-                    conversationHistory.Clear();
                     conversationLines.Add("system> draft discarded.");
+                    RenderPlanning();
+                },
+                GenerateGuidedDraft,
+                () =>
+                {
+                    if (mode != PlanningScreenMode.NewPlanning)
+                    {
+                        return;
+                    }
+
+                    guidedForm.CycleVolume();
+                    RenderPlanning();
+                },
+                () =>
+                {
+                    if (mode != PlanningScreenMode.NewPlanning)
+                    {
+                        return;
+                    }
+
+                    guidedForm.StartToday = !guidedForm.StartToday;
                     RenderPlanning();
                 },
                 RenderPlanning);
@@ -247,13 +269,15 @@ public static class PlanningScreen
     private static bool HandlePlanningKey(
         KeyEvent keyEvent,
         ref PlanningScreenMode mode,
-        ref int selectedHubIndex,
         ref int focusedPanelIndex,
         Tui.Navigation.TuiNavigationState navigation,
         Action onBack,
         Action onQuit,
         Action onApply,
         Action onDiscard,
+        Action onGenerateGuidedDraft,
+        Action onCycleGuidedVolume,
+        Action onToggleGuidedToday,
         Action render)
     {
         switch (keyEvent.Key)
@@ -261,13 +285,8 @@ public static class PlanningScreen
             case Key.q:
                 onQuit();
                 return true;
-            case Key.Esc when mode == PlanningScreenMode.Hub:
-                onBack();
-                return true;
             case Key.Esc:
-                mode = PlanningScreenMode.Hub;
-                focusedPanelIndex = 0;
-                render();
+                onBack();
                 return true;
             case Key.Tab:
                 navigation.MoveNextPanel();
@@ -279,157 +298,118 @@ public static class PlanningScreen
                 focusedPanelIndex = navigation.FocusedPanelIndex;
                 render();
                 return true;
-            case Key.CursorUp when mode == PlanningScreenMode.Hub:
-                selectedHubIndex = Math.Max(0, selectedHubIndex - 1);
-                render();
-                return true;
-            case Key.CursorDown when mode == PlanningScreenMode.Hub:
-                selectedHubIndex = Math.Min(1, selectedHubIndex + 1);
-                render();
-                return true;
-            case Key.Enter when mode == PlanningScreenMode.Hub:
-                mode = selectedHubIndex == 0
-                    ? PlanningScreenMode.NewPlanning
-                    : PlanningScreenMode.RevisePlanning;
-                focusedPanelIndex = 3;
-                render();
-                return true;
-            case Key a when a == (Key)'a' && mode != PlanningScreenMode.Hub:
+            case Key a when a == (Key)'a':
                 onApply();
                 return true;
-            case Key d when d == (Key)'d' && mode != PlanningScreenMode.Hub:
+            case Key d when d == (Key)'d':
                 onDiscard();
+                return true;
+            case Key g when g == (Key)'g' && mode == PlanningScreenMode.NewPlanning:
+                onGenerateGuidedDraft();
+                return true;
+            case Key s when s == (Key)'s' && mode == PlanningScreenMode.NewPlanning:
+                onCycleGuidedVolume();
+                return true;
+            case Key t when t == (Key)'t' && mode == PlanningScreenMode.NewPlanning:
+                onToggleGuidedToday();
                 return true;
         }
 
         return false;
     }
 
-    private static void BuildHub(
+    private static void BuildGuidedPlanningWorkspace(
         View host,
         PlanningViewModel vm,
         Tui.Navigation.TuiNavigationState navigation,
-        int selectedHubIndex)
-    {
-        var primaryLines = vm.PrimaryLines.ToArray();
-        primaryLines[0] = selectedHubIndex == 0 ? "> New Planning" : "  New Planning";
-        primaryLines[1] = selectedHubIndex == 1 ? "> Revise Planning" : "  Revise Planning";
-
-        var modePanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, "Planning Mode", navigation, 0))
-        {
-            X = 0,
-            Y = 0,
-            Width = Dim.Percent(35),
-            Height = Dim.Fill()
-        };
-        var modeList = new ListView(TuiScreenUtilities.SanitizeListItems(primaryLines))
-        {
-            X = 0,
-            Y = 0,
-            Width = Dim.Fill(),
-            Height = Dim.Fill()
-        };
-        modePanel.Add(modeList);
-
-        var previewPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(2, "Preview", navigation, 1))
-        {
-            X = Pos.Right(modePanel),
-            Y = 0,
-            Width = Dim.Fill(),
-            Height = Dim.Fill()
-        };
-        var previewList = new ListView(TuiScreenUtilities.SanitizeListItems(vm.SecondaryLines))
-        {
-            X = 0,
-            Y = 0,
-            Width = Dim.Fill(),
-            Height = Dim.Fill()
-        };
-        previewPanel.Add(previewList);
-
-        host.Add(modePanel, previewPanel);
-        TuiScreenUtilities.UpdatePanelTitles([modePanel, previewPanel], ["Planning Mode", "Preview"], navigation);
-        TuiScreenUtilities.FocusCurrentPanel([modeList, previewList], navigation);
-    }
-
-    private static void BuildWorkspace(
-        View host,
-        PlanningViewModel vm,
-        Tui.Navigation.TuiNavigationState navigation,
+        GuidedPlanningForm form,
         IReadOnlyList<string> conversationLines,
         GenerateAiPlanningDraftResult? currentDraft,
-        Action<TextField> onPromptFieldCreated,
-        Action<string> onPrompt)
+        Action<TextField, TextField> onFieldsCreated)
     {
-        var setupPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, vm.Mode == PlanningScreenMode.NewPlanning ? "Setup" : "Review Scope", navigation, 0))
+        var setupPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, "Setup", navigation, 0))
         {
             X = 0,
             Y = 0,
             Width = Dim.Percent(50),
-            Height = Dim.Percent(30)
+            Height = Dim.Percent(42)
         };
-        var setupList = BuildList(vm.PrimaryLines);
-        setupPanel.Add(setupList);
 
-        var actionsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(2, "Draft Actions", navigation, 1))
+        var topicLabel = new Label("Topic")
+        {
+            X = 0,
+            Y = 0,
+            Width = 12
+        };
+        var topicField = new TextField(form.Topic)
+        {
+            X = 13,
+            Y = 0,
+            Width = Dim.Fill(),
+            Height = 1
+        };
+        var tagLabel = new Label("Project tag")
+        {
+            X = 0,
+            Y = 2,
+            Width = 12
+        };
+        var tagField = new TextField(form.ProjectTag)
+        {
+            X = 13,
+            Y = 2,
+            Width = Dim.Fill(),
+            Height = 1
+        };
+        var setupHelp = BuildList([
+            "s: cycle task volume",
+            "t: toggle first task today",
+            "g: generate structured draft",
+            "All task titles must start with 1., 2., 3. in order."
+        ]);
+        setupHelp.X = 0;
+        setupHelp.Y = 4;
+        setupHelp.Width = Dim.Fill();
+        setupHelp.Height = Dim.Fill();
+        setupPanel.Add(topicLabel, topicField, tagLabel, tagField, setupHelp);
+
+        var rulesPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(2, "Rules", navigation, 1))
         {
             X = Pos.Right(setupPanel),
             Y = 0,
             Width = Dim.Fill(),
-            Height = Dim.Percent(30)
+            Height = Dim.Percent(42)
         };
-        var actionsList = BuildList(BuildDraftActionLines(vm.SecondaryLines, currentDraft));
-        actionsPanel.Add(actionsList);
+        var rulesList = BuildList(BuildGuidedRuleLines(form));
+        rulesPanel.Add(rulesList);
 
-        var conversationPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Conversation", navigation, 2))
+        var previewPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Draft Preview", navigation, 2))
         {
             X = 0,
             Y = Pos.Bottom(setupPanel),
             Width = Dim.Fill(),
             Height = Dim.Fill(4)
         };
-        var conversationList = BuildList(BuildConversationLines(conversationLines, currentDraft));
-        conversationPanel.Add(conversationList);
+        var previewList = BuildList(BuildConversationLines(conversationLines, currentDraft));
+        previewPanel.Add(previewList);
 
-        var promptPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(4, "Prompt", navigation, 3))
+        var actionsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(4, "Actions", navigation, 3))
         {
             X = 0,
             Y = Pos.AnchorEnd(5),
             Width = Dim.Fill(),
             Height = 4
         };
-        var promptField = new TextField("")
-        {
-            X = 0,
-            Y = 0,
-            Width = Dim.Fill(),
-            Height = 1
-        };
-        promptField.KeyPress += args =>
-        {
-            if (args.KeyEvent.Key != Key.Enter)
-            {
-                return;
-            }
+        var actionsList = BuildList(BuildDraftActionLines(vm.SecondaryLines, currentDraft));
+        actionsPanel.Add(actionsList);
 
-            var value = promptField.Text?.ToString() ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                promptField.Text = string.Empty;
-                onPrompt(value.Trim());
-            }
-
-            args.Handled = true;
-        };
-        promptPanel.Add(promptField);
-        onPromptFieldCreated(promptField);
-
-        host.Add(setupPanel, actionsPanel, conversationPanel, promptPanel);
+        host.Add(setupPanel, rulesPanel, previewPanel, actionsPanel);
         TuiScreenUtilities.UpdatePanelTitles(
-            [setupPanel, actionsPanel, conversationPanel, promptPanel],
-            [vm.Mode == PlanningScreenMode.NewPlanning ? "Setup" : "Review Scope", "Draft Actions", "Conversation", "Prompt"],
+            [setupPanel, rulesPanel, previewPanel, actionsPanel],
+            ["Setup", "Rules", "Draft Preview", "Actions"],
             navigation);
-        TuiScreenUtilities.FocusCurrentPanel([setupList, actionsList, conversationList, promptField], navigation);
+        TuiScreenUtilities.FocusCurrentPanel([topicField, rulesList, previewList, actionsList], navigation);
+        onFieldsCreated(topicField, tagField);
     }
 
     private static ListView BuildList(IReadOnlyList<string> lines) =>
@@ -464,4 +444,138 @@ public static class PlanningScreen
         IReadOnlyList<string> lines,
         GenerateAiPlanningDraftResult? currentDraft) =>
         PlanningConversationFormatter.Format(lines, currentDraft);
+
+    private static IReadOnlyList<string> BuildGuidedRuleLines(GuidedPlanningForm form)
+    {
+        var (todayCount, weekCount, monthCount, backlogCount) = form.EstimateDistribution();
+
+        return
+        [
+            $"Volume: {form.VolumeLabel}",
+            $"Target range: {form.TargetRangeLabel}",
+            $"Target tasks: {form.TargetTaskCount}",
+            $"Start today: {(form.StartToday ? "Yes" : "No")}",
+            "",
+            $"Today: {todayCount}",
+            $"Week: max 5 ({weekCount})",
+            $"Month: max 20 ({monthCount})",
+            $"Backlog: remaining ({backlogCount})",
+            "",
+            "TermBullet controls count, tag, and collections.",
+            "The model only writes ordered task content."
+        ];
+    }
+
+    private static string BuildGuidedPlanningPrompt(GuidedPlanningForm form)
+    {
+        var (todayCount, weekCount, monthCount, backlogCount) = form.EstimateDistribution();
+
+        return string.Join(Environment.NewLine, [
+            "Create a new project planning draft from these fixed guided inputs.",
+            $"Topic: {form.Topic}",
+            $"Project tag: {form.ProjectTag}",
+            $"Task volume: {form.VolumeLabel}",
+            $"Task count target: {form.TargetTaskCount}",
+            $"Allowed task count range: {form.TargetRangeLabel}",
+            $"Start today: {(form.StartToday ? "yes" : "no")}",
+            "",
+            "Hard constraints:",
+            "- Return a structured draft, not chat.",
+            "- Create only task actions.",
+            $"- Every task must use tag \"{form.ProjectTag}\".",
+            "- Every task content must start with a strictly increasing numeric prefix: 1. 2. 3. 4.",
+            "- The prefix order must describe the execution order.",
+            $"- Put {todayCount} task(s) in today.",
+            $"- Put {weekCount} task(s) in week, never more than 5.",
+            $"- Put {monthCount} task(s) in month, never more than 20.",
+            $"- Put {backlogCount} task(s) in backlog.",
+            "- Do not create notes or events.",
+            "- Do not ask follow-up questions."
+        ]);
+    }
+}
+
+internal sealed class GuidedPlanningForm
+{
+    private static readonly GuidedPlanningVolume[] VolumeOrder =
+    [
+        GuidedPlanningVolume.Small,
+        GuidedPlanningVolume.Medium,
+        GuidedPlanningVolume.Large
+    ];
+
+    public string Topic { get; set; } = string.Empty;
+
+    public string ProjectTag { get; set; } = string.Empty;
+
+    public GuidedPlanningVolume Volume { get; private set; } = GuidedPlanningVolume.Medium;
+
+    public bool StartToday { get; set; } = true;
+
+    public string VolumeLabel => Volume switch
+    {
+        GuidedPlanningVolume.Small => "Small",
+        GuidedPlanningVolume.Medium => "Medium",
+        GuidedPlanningVolume.Large => "Large",
+        _ => "Medium"
+    };
+
+    public string TargetRangeLabel => Volume switch
+    {
+        GuidedPlanningVolume.Small => "up to 10 tasks",
+        GuidedPlanningVolume.Medium => "10-20 tasks",
+        GuidedPlanningVolume.Large => "20-40 tasks",
+        _ => "10-20 tasks"
+    };
+
+    public int TargetTaskCount => Volume switch
+    {
+        GuidedPlanningVolume.Small => 8,
+        GuidedPlanningVolume.Medium => 15,
+        GuidedPlanningVolume.Large => 30,
+        _ => 15
+    };
+
+    public void CycleVolume()
+    {
+        var nextIndex = (Array.IndexOf(VolumeOrder, Volume) + 1) % VolumeOrder.Length;
+        Volume = VolumeOrder[nextIndex];
+    }
+
+    public string? GetValidationError()
+    {
+        if (string.IsNullOrWhiteSpace(Topic))
+        {
+            return "Topic is required.";
+        }
+
+        if (string.IsNullOrWhiteSpace(ProjectTag))
+        {
+            return "Project tag is required.";
+        }
+
+        return null;
+    }
+
+    public (int Today, int Week, int Month, int Backlog) EstimateDistribution()
+    {
+        var remaining = TargetTaskCount;
+        var today = StartToday && remaining > 0 ? 1 : 0;
+        remaining -= today;
+
+        var week = Math.Min(remaining, 5);
+        remaining -= week;
+
+        var month = Math.Min(remaining, 20);
+        remaining -= month;
+
+        return (today, week, month, remaining);
+    }
+}
+
+internal enum GuidedPlanningVolume
+{
+    Small,
+    Medium,
+    Large
 }

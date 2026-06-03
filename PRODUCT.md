@@ -208,25 +208,29 @@ Deferred TUI screens:
 
 ### V2 - AI Planning
 
-- Planning workspace with an AI-assisted terminal-like chat;
+- Planning workspace with guided planning inputs for fresh project plans;
 - BYOK AI setup managed through CLI commands;
 - named AI profiles with one active profile at a time;
 - CLI `ai chat` as a terminal-first planning interface using the same modes as
   the TUI;
 - a canonical planning and Bullet Journal specialist agent loaded for every AI
   planning request;
-- conversational planning that can ask clarifying questions before a draft is
-  ready;
+- conversational planning for CLI flows that can ask clarifying questions before
+  a draft is ready;
 - New Planning flow for fresh work;
-- Revise Planning flow for reviewing existing work;
 - structured drafts that must be approved before any persistence.
 
 New Planning supports:
 
-- Project Plan for closed-scope projects. The approved plan may create a project
-  tag, a project scope note, and the tasks needed for the project;
-- Weekly Plan for smaller ongoing personal work. The approved plan creates tasks
-  under the protected `default` tag and does not require a project start or end.
+- guided project planning from a topic, project tag, task volume, and whether
+  the first task should start today;
+- task volume ranges: `small` up to 10 tasks, `medium` from 10 to 20 tasks, and
+  `large` from 20 to 40 tasks;
+- deterministic distribution: first task in `today` when enabled, then up to 5
+  tasks in `week`, up to 20 tasks in `month`, and the remaining tasks in
+  `backlog`;
+- ordered task content where every generated task starts with a growing numeric
+  prefix such as `1.`, `2.`, `3.`.
 
 Planning interpretation rules:
 
@@ -240,15 +244,12 @@ Planning interpretation rules:
 - if the plan is likely to exceed the current month, future tracking work should
   go to `backlog`;
 - ordered user requests are represented by the ordered draft preview and the
-  ordered action list, without adding a new persisted ordering field in V2 MVP;
-- continuing a tagged plan later should use Revise Planning for that tag.
+  ordered action list, without adding a new persisted ordering field in V2 MVP.
 
-Revise Planning supports:
-
-- Weekly Review for existing open `default` tasks;
-- Project Review for existing work attached to one selected project tag;
-- proposals to create tasks, create notes, move tasks, set priority, and cancel
-  stale tasks.
+Reviewing existing plans is a future idea, not part of the current Planning
+scope. It is intentionally deferred because the current design is optimized for
+small local models, and those models do not handle broad historical review
+reliably enough yet.
 
 AI should operate on filtered context from local data. It should not send all
 JSON files by default. AI never writes directly; it may respond with normal

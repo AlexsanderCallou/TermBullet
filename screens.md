@@ -737,16 +737,9 @@ Role: AI-assisted planning workspace. Planning is where the user asks
 TermBullet to turn a goal, project scope, or weekly intent into a validated
 proposal that can create or reorganize local items after explicit approval.
 
-Planning has two entry options:
-
-- New Planning: create a new project plan or a weekly personal plan.
-- Revise Planning: review existing default-tag work or an existing project tag.
-
-The current TUI implementation includes the Planning Hub plus New Planning and
-Revise Planning workspaces. Prompt submission calls the configured AI planning
-provider, renders either conversational assistant text or a validated draft
-preview, and supports applying or discarding the current draft. Rich scrollback
-behavior remains a V2 hardening item.
+Planning currently has one purpose: create a new guided project plan. The user
+fills fixed choices, then TermBullet asks the configured AI planning provider
+for a validated draft preview. The draft can be applied or discarded.
 
 Entry points:
 
@@ -754,100 +747,78 @@ Entry points:
 
 Navigation:
 
-- `CursorUp` and `CursorDown` scroll chat messages or move through focused
-  lists.
-- `PgUp` and `PgDn` page through long chat history.
 - `Tab` and `Shift+Tab` move focus between numbered panels.
+- `g` generates a structured draft.
+- `s` cycles task volume.
+- `t` toggles the first task in Today.
 - `Enter` sends the prompt or activates the selected action.
 - `Esc` returns to the dashboard.
 - `?` opens contextual help.
 - `q` quits.
 
-Planning hub target ASCII layout:
+Planning target ASCII layout:
 
 ```text
 + TermBullet - Planning ------------------------------------------------------------------+
-| 1 Planning Mode                                                                         |
-| > New Planning                                                                          |
-|   Revise Planning                                                                       |
-|                                                                                         |
-| 2 Preview                                                                               |
-| New Planning creates a fresh AI draft from user intent.                                 |
-| Revise Planning reviews existing work and proposes changes before applying them.         |
-+-----------------------------------------------------------------------------------------+
-| Enter open  Tab focus  ? help  Esc back  q quit                                         |
-+-----------------------------------------------------------------------------------------+
-```
-
-New Planning target ASCII layout:
-
-```text
-+ TermBullet - New Planning --------------------------------------------------------------+
-| 1 Setup                                      | 2 Draft Actions                           |
-| > Project Plan                              |   Apply plan                              |
-|   Weekly Plan                               |   Discard draft                           |
-| output: tasks + notes                       |                                           |
-| tag: new project tag or default             |                                           |
-| scope: new work                             |                                           |
-| ai: local                                   |                                           |
+| 1 Setup                                      | 2 Rules                                   |
+| Topic        Rust programming               | Volume: Medium                            |
+| Project tag  studies-rust                   | Target range: 10-20 tasks                 |
+| s: cycle task volume                        | Target tasks: 15                          |
+| t: toggle first task today                  | Start today: Yes                          |
+| g: generate structured draft                | Today: 1                                  |
+| All task titles start with 1., 2., 3.       | Week: max 5 (5)                           |
+|                                             | Month: max 20 (9)                         |
+|                                             | Backlog: remaining (0)                    |
 |---------------------------------------------+-------------------------------------------|
-| 3 Conversation                                                                          |
-| assistant> Tell me the project outcome, constraints, and what done means.               |
-| user> Build the first version of the billing module by the end of the month.            |
-| assistant> Draft ready: 1 tag, 1 scope note, 7 tasks.                                   |
+| 3 Draft Preview                                                                         |
+| system> generating medium plan for studies-rust...                                      |
+| assistant> draft ready: 15 actions.                                                     |
+| draft> 1. Install the Rust toolchain                                                    |
+| draft> 2. Learn cargo project basics                                                    |
 |                                                                                     v   |
 |-----------------------------------------------------------------------------------------|
-| 4 Prompt                                                                                |
-| Write a message...                                                                      |
+| 4 Actions                                                                               |
+| Generate draft                                                                          |
+| Apply plan                                                                              |
+| Discard draft                                                                           |
 +-----------------------------------------------------------------------------------------+
-| Enter send/open  Up/Down scroll  PgUp/PgDn page  Tab focus  ? help  Esc back  q quit    |
+| g generate  s size  t today  a apply  d discard  Tab focus  ? help  Esc back  q quit    |
 +-----------------------------------------------------------------------------------------+
 ```
 
-New Planning modes:
+New Planning guided inputs:
 
-- Project Plan handles closed-scope project planning. Approved drafts may
-  create one project tag, one scope note, and the necessary tasks for that tag.
-- Weekly Plan handles smaller ongoing personal planning. Approved drafts create
-  tasks under the protected `default` tag.
-- New Planning does not show Today, Month, Forgotten, active tags, or project
-  tracking context by default because it creates new work instead of revising
-  existing work.
+- `Topic` describes the planning subject.
+- `Project tag` is applied to every generated task.
+- `Volume` cycles through `small`, `medium`, and `large`.
+- `Start today` controls whether the first task is placed in `today`.
+- Small creates up to 10 tasks, medium creates 10 to 20 tasks, and large creates
+  20 to 40 tasks.
+- New Planning places the first task in `today` when enabled, then up to 5 tasks
+  in `week`, up to 20 tasks in `month`, and any remaining tasks in `backlog`.
+- Every generated task title must start with a growing numeric prefix such as
+  `1.`, `2.`, `3.` so the user can follow the plan in order.
 - Editing the generated draft is deferred for V2 MVP. If the draft is wrong,
-  the user continues the conversation or discards it.
+  the user regenerates or discards it.
 - AI provider settings are configured through CLI commands only in V2 MVP. This
   screen only shows the active profile and configuration errors.
 
-Revise Planning target ASCII layout:
+Reviewing existing plans is a future idea, not part of the current Planning
+implementation. It is intentionally deferred because the current Planning design
+targets small local models, and those models do not handle broad historical
+review reliably enough yet.
 
 ```text
-+ TermBullet - Revise Planning -----------------------------------------------------------+
-| 1 Review Scope                                | 2 Draft Actions                         |
-| > Weekly Review                               |   Apply changes                         |
-|   Project Review                              |   Discard draft                         |
-| selected tag: auth                            |                                         |
-| allowed actions: create, move, prioritize, cancel                                        |
 |-----------------------------------------------+-----------------------------------------|
-| 3 Conversation                                                                          |
 | assistant> Select a review scope.                                                       |
 | user> Review the auth project and suggest the next execution steps.                     |
-| assistant> Draft ready: move 2 tasks, create 3 tasks, cancel 1 stale task.              |
 |                                                                                     v   |
 |-----------------------------------------------------------------------------------------|
-| 4 Prompt                                                                                |
-| Write a message...                                                                      |
 +-----------------------------------------------------------------------------------------+
 | Enter send/open  Up/Down scroll  PgUp/PgDn page  Tab focus  ? help  Esc back  q quit    |
 +-----------------------------------------------------------------------------------------+
 ```
 
-Revise Planning modes:
-
-- Weekly Review reviews open `default` tasks and can propose missing tasks,
-  priority changes, collection moves, or cancellations.
-- Project Review reviews existing work for one selected tag and can propose next
-  steps, task movement, priority changes, cancellations, and project notes.
-- Revise Planning does not delete items in V2 MVP.
 
 AI notes:
 
