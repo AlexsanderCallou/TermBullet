@@ -14,13 +14,51 @@ Config shape:
 
 ```json
 {
-  "data_root": "C:\\Users\\Alexsander\\Documents\\TermBullet"
+  "data_root": "C:\\Users\\Alexsander\\Documents\\TermBullet",
+  "ai": {
+    "active_profile": "local",
+    "profiles": {
+      "local": {
+        "provider": "openai-compatible",
+        "model": "llama3.1",
+        "base_url": "http://localhost:11434/v1",
+        "api_key_source": "none"
+      },
+      "cloud": {
+        "provider": "openai-compatible",
+        "model": "gpt-4.1-mini",
+        "base_url": "https://api.openai.com/v1",
+        "api_key_source": "environment",
+        "api_key_env": "TERMBULLET_OPENAI_API_KEY"
+      }
+    }
+  }
 }
 ```
 
 The install directory must be writable. If TermBullet cannot write
 `conf.json`, startup fails with a clear permission error. There is no automatic
 fallback config location in V1.
+
+The `ai` section is planned for V2. AI configuration is managed only through CLI
+commands in the V2 MVP. The TUI reads the active profile and reports missing or
+invalid configuration, but it does not edit provider settings.
+
+AI profiles are named connection presets. A user may register more than one
+profile, such as the recommended local Ollama profile and a hosted
+OpenAI-compatible profile, and select which profile is active. API keys should
+not be printed by normal CLI output. Environment variables are the preferred key
+source.
+
+The V2 planning agent prompt is installed beside the executable:
+
+```text
+<install-dir>/agents/planning-bulletjournal-agent.md
+```
+
+This path is not user-configurable in V2 MVP. The file is a product asset, not
+user data. Runtime configuration chooses the AI profile, while the application
+always loads the canonical planning agent before calling the model.
 
 ## Principles
 
@@ -261,6 +299,8 @@ Important event types:
 - `cancelled`
 - `migrate`
 - `forgotten`
+- `carried_over`
+- `ai_plan_applied` (planned V2 history hardening)
 - `deleted`
 
 Delete behavior:
@@ -299,7 +339,7 @@ internal ID, public ref, type, collection, content, description, priority, and
 tag. The current-month copy increments `version`, updates `updated_at`, and gets
 a `carried_over` history event. Events do not carry over.
 
-Recommended forgotten history event:
+Recommended carry-over history event:
 
 ```json
 {
@@ -337,6 +377,124 @@ Recommended migration history data:
   "to_collection": "week"
 }
 ```
+
+## AI Planning Data Contracts
+
+V2 AI planning uses structured proposals before persistence. Proposals are not
+monthly JSON records by themselves; they are transient drafts produced by AI,
+validated by the application, and applied only after user approval.
+Interactive AI planning may also produce transient conversational assistant
+messages before a draft is ready. Those messages are not draft records and are
+not persisted to monthly JSON files.
+The requested planning mode from the CLI or TUI is authoritative. If a provider
+returns a draft with otherwise valid project actions but an inconsistent `mode`
+field, TermBullet normalizes the draft mode to the requested mode before
+validation.
+Every AI request includes a pipeline-generated `response_envelope_template`
+control message. The template is not persisted; it tells the model which JSON
+object shape to fill, including chat messages, draft readiness, the requested
+mode, allowed action fields, collections, and priority values.
+
+AI provider responses use one envelope shape:
+
+```json
+{
+  "kind": "chat",
+  "message": "Concise assistant response.",
+  "draft_ready": false,
+  "draft": null
+}
+```
+
+When a draft is ready, `draft_ready` is `true` and `draft` contains the normal
+AI planning draft shape. The `draft_ready` flag only controls whether TermBullet
+renders a draft preview for user approval; it never means the model may apply
+changes.
+
+Every AI planning request must include the canonical planning agent prompt from:
+
+```text
+<install-dir>/agents/planning-bulletjournal-agent.md
+```
+
+If the agent prompt cannot be loaded, TermBullet must not call the model.
+
+Draft shape:
+
+```json
+{
+  "mode": "new_project",
+  "summary": "Create the billing module plan.",
+  "actions": [
+    {
+      "type": "create_tag",
+      "name": "billing"
+    },
+    {
+      "type": "create_note",
+      "tag": "billing",
+      "content": "Billing module scope",
+      "description": "Outcome, constraints, and definition of done."
+    },
+    {
+      "type": "create_task",
+      "tag": "billing",
+      "collection": "week",
+      "content": "Map invoice lifecycle",
+      "description": "List states, transitions, and failure cases.",
+      "priority": "high"
+    }
+  ]
+}
+```
+
+Allowed `mode` values for V2 MVP:
+
+- `new_project`
+- `new_weekly`
+
+Allowed action types for V2 MVP:
+
+- `create_tag`
+- `create_task`
+- `create_note`
+
+Action fields should use existing item model names where possible:
+
+- `public_ref` is reserved for future workflows that reference existing items;
+- `content`, `description`, `collection`, `priority`, and `tag` match item
+  fields;
+- new weekly planning must use `tag = "default"`;
+- project planning and project review must use one non-default tag.
+
+Draft ordering and collection rules:
+
+- action order is the user-visible plan order and the intended apply order;
+- V2 MVP does not add a persisted task ordering field;
+- `create_task.collection` must be one of `today`, `week`, `month`, or
+  `backlog`;
+- `create_note` always creates a note item in the normal notes collection while
+  keeping the proposal `tag`;
+- if the draft creates a new tag, later actions in the same draft may reference
+  that tag;
+- if the user explicitly requests a tag, every created task and note in that
+  plan must use the requested normalized tag;
+- if the user explicitly requests collection distribution, the draft must keep
+  that distribution unless validation rejects it.
+
+`create_event`, item deletion, and note body editing are deferred until they are
+explicitly designed.
+
+When an approved AI draft is applied, the application validates the complete
+draft first and then executes actions in order through normal Application use
+cases. Individual item changes record their normal history events such as
+`created`, `migrate`, `edited`, or `cancelled`.
+
+V2 alpha does not promise transaction-level rollback for a failure that happens
+after some actions were already persisted. Monthly JSON files remain readable,
+safe writes still use backup/atomic replacement, and the future hardening target
+is an `ai_plan_applied` history event with planning mode, action count, and a
+human-readable summary.
 
 ## AI and Sync
 
