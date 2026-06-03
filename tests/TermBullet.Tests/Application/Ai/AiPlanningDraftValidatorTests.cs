@@ -156,6 +156,7 @@ public sealed class AiPlanningDraftValidatorTests
         Assert.Contains(draft.Actions, action => action.Collection == "backlog");
     }
 
+<<<<<<< HEAD
     [Theory]
     [InlineData("this_week")]
     [InlineData("this-week")]
@@ -191,6 +192,8 @@ public sealed class AiPlanningDraftValidatorTests
         Assert.Empty(result.Errors);
     }
 
+=======
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
     [Fact]
     public void Validate_accepts_nutrition_chatbot_project_scenario()
     {

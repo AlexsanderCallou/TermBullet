@@ -45,7 +45,10 @@ public static class TermBulletBootstrap
         var startupMaintenanceUseCase = new RunStartupMaintenanceUseCase(clock, itemRepository);
         var installDirectory = Path.GetDirectoryName(runtimePaths.ConfigPath)
             ?? throw new InvalidOperationException("Runtime config path is invalid.");
+<<<<<<< HEAD
         var aiConfigurationFileService = new AiConfigurationFileService(runtimePaths.DataRoot);
+=======
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 
         return new TermBulletCliApp(
             new ClearStoredHistoryUseCase(historyMaintenanceService, clock),
@@ -85,10 +88,14 @@ public static class TermBulletBootstrap
                 tagCatalogRepository,
                 clock,
                 cancellationToken),
+<<<<<<< HEAD
             testAiProfileConnection: (profileName, cancellationToken) => TestAiProfileConnectionAsync(
                 aiConfigurationFileService,
                 profileName,
                 cancellationToken),
+=======
+            testAiProfileConnection: TestAiProfileConnectionAsync,
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
             startupAction: startupAction ?? startupMaintenanceUseCase.ExecuteAsync);
     }
 
@@ -153,6 +160,7 @@ public static class TermBulletBootstrap
         IItemRepository itemRepository,
         string installDirectory,
         CancellationToken cancellationToken = default)
+<<<<<<< HEAD
     {
         var result = await GenerateAiPlanningResponseAsync(
             WithStructuredDraftRequired(request),
@@ -263,6 +271,104 @@ public static class TermBulletBootstrap
             Ai = new AiConfiguration(activeProfile, profiles)
         };
         var provider = new AiPlanningProviderFactory(() => CreateAiHttpClient(testConfig)).Create(testConfig);
+
+        return await provider.SendAsync(new AiPlanningModelRequest(
+            AiPlanningMode.NewWeekly,
+            Tag: null,
+            Messages:
+            [
+                new(AiPlanningMessageRole.Agent, "You are validating TermBullet AI connectivity. Reply with OK."),
+                new(AiPlanningMessageRole.User, "Reply with OK.")
+            ],
+            ContextItems: [],
+            RequireStructuredDraft: false,
+            MaxOutputTokens: 8), cancellationToken);
+    }
+
+    private sealed class SystemClock : IClock
+=======
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
+    {
+        var result = await GenerateAiPlanningResponseAsync(
+            WithStructuredDraftRequired(request),
+            itemRepository,
+            installDirectory,
+            cancellationToken);
+        if (result.Draft is null)
+        {
+            throw new InvalidOperationException("AI planning response did not include a structured draft.");
+        }
+
+        return new GenerateAiPlanningDraftResult(result.Draft, result.ProviderModel, result.ModelRequest);
+    }
+
+    private static async Task<GenerateAiPlanningResponseResult> GenerateAiPlanningResponseAsync(
+        BuildAiPlanningRequest request,
+        IItemRepository itemRepository,
+        string installDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        var configService = new TermBulletConfigService(installDirectory);
+        var config = await configService.LoadAsync(cancellationToken)
+            ?? throw new InvalidOperationException("AI is not configured. Add an AI profile before using planning.");
+        var providerFactory = new AiPlanningProviderFactory(() => new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(270)
+        });
+        var provider = providerFactory.Create(config);
+        var useCase = new GenerateAiPlanningResponseUseCase(
+            new BuildAiPlanningRequestUseCase(
+                new PlanningAgentPromptLoader(installDirectory)),
+            provider,
+            new AiPlanningDraftValidator());
+
+        return await useCase.ExecuteAsync(request, cancellationToken);
+    }
+
+    private static BuildAiPlanningRequest WithStructuredDraftRequired(BuildAiPlanningRequest request) =>
+        new()
+        {
+            Mode = request.Mode,
+            Tag = request.Tag,
+            UserPrompt = request.UserPrompt,
+            ConversationHistory = request.ConversationHistory,
+            RequireStructuredDraft = true
+        };
+
+    private static async Task<AiPlanningDraftApplyResult> ApplyAiPlanningDraftAsync(
+        AiPlanningDraft draft,
+        IItemRepository itemRepository,
+        ITagCatalogRepository tagCatalogRepository,
+        IClock clock,
+        CancellationToken cancellationToken = default)
+    {
+        var useCase = new ApplyAiPlanningDraftUseCase(
+            new AiPlanningDraftValidator(),
+            new CreateTagUseCase(tagCatalogRepository, clock),
+            new CreateItemUseCase(itemRepository, clock, new GuidIdGenerator()));
+
+        return await useCase.ExecuteAsync(draft, cancellationToken);
+    }
+
+    private static async Task<AiPlanningProviderResponse> TestAiProfileConnectionAsync(
+        TermBulletConfig config,
+        string profileName,
+        CancellationToken cancellationToken = default)
+    {
+        var profiles = config.Ai?.Profiles ?? new Dictionary<string, AiProfile>();
+        if (!profiles.ContainsKey(profileName))
+        {
+            throw new InvalidOperationException($"AI profile not found: {profileName}");
+        }
+
+        var testConfig = config with
+        {
+            Ai = new AiConfiguration(profileName, profiles)
+        };
+        var provider = new AiPlanningProviderFactory(() => new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(90)
+        }).Create(testConfig);
 
         return await provider.SendAsync(new AiPlanningModelRequest(
             AiPlanningMode.NewWeekly,

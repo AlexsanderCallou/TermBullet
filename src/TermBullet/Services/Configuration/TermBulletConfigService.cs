@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -52,6 +53,62 @@ public sealed class TermBulletConfigService(string installDirectory)
         try
         {
             Directory.CreateDirectory(InstallDirectory);
+=======
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace TermBullet.Services.Configuration;
+
+public sealed class TermBulletConfigService(string installDirectory)
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    public string InstallDirectory { get; } = Path.GetFullPath(installDirectory);
+
+    public string ConfigPath => Path.Combine(InstallDirectory, "conf.json");
+
+    public async Task<TermBulletConfig?> LoadAsync(CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(ConfigPath))
+        {
+            return null;
+        }
+
+        ConfigDocument? document;
+        try
+        {
+            var json = await File.ReadAllTextAsync(ConfigPath, cancellationToken);
+            document = JsonSerializer.Deserialize<ConfigDocument>(json, JsonOptions);
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException($"conf.json is malformed: {ConfigPath}", exception);
+        }
+
+        if (document is null || string.IsNullOrWhiteSpace(document.DataRoot))
+        {
+            throw new InvalidOperationException($"conf.json must include a non-empty data_root value: {ConfigPath}");
+        }
+
+        return new TermBulletConfig(document.DataRoot, ToAiConfiguration(document.Ai));
+    }
+
+    public async Task SaveAsync(TermBulletConfig config, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        if (string.IsNullOrWhiteSpace(config.DataRoot))
+        {
+            throw new ArgumentException("data_root is required.", nameof(config));
+        }
+
+        try
+        {
+            Directory.CreateDirectory(InstallDirectory);
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
             var document = new ConfigDocument
             {
                 DataRoot = config.DataRoot,
@@ -102,12 +159,15 @@ public sealed class TermBulletConfigService(string installDirectory)
 
         [JsonPropertyName("api_key_env")]
         public string? ApiKeyEnv { get; set; }
+<<<<<<< HEAD
 
         [JsonPropertyName("api_key")]
         public string? ApiKey { get; set; }
 
         [JsonPropertyName("timeout_seconds")]
         public int? TimeoutSeconds { get; set; }
+=======
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
     }
 
     private static AiConfiguration? ToAiConfiguration(AiConfigDocument? document)
@@ -133,9 +193,13 @@ public sealed class TermBulletConfigService(string installDirectory)
                 pair.Value.Model.Trim(),
                 NormalizeOptional(pair.Value.BaseUrl),
                 NormalizeOptional(pair.Value.ApiKeySource) ?? "environment",
+<<<<<<< HEAD
                 NormalizeOptional(pair.Value.ApiKeyEnv),
                 NormalizeOptional(pair.Value.ApiKey),
                 pair.Value.TimeoutSeconds);
+=======
+                NormalizeOptional(pair.Value.ApiKeyEnv));
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
         }
 
         return new AiConfiguration(NormalizeOptional(document.ActiveProfile), profiles);
@@ -161,9 +225,13 @@ public sealed class TermBulletConfigService(string installDirectory)
                         Model = pair.Value.Model,
                         BaseUrl = NormalizeOptional(pair.Value.BaseUrl),
                         ApiKeySource = NormalizeOptional(pair.Value.ApiKeySource) ?? "environment",
+<<<<<<< HEAD
                         ApiKeyEnv = NormalizeOptional(pair.Value.ApiKeyEnv),
                         ApiKey = NormalizeOptional(pair.Value.ApiKey),
                         TimeoutSeconds = pair.Value.TimeoutSeconds
+=======
+                        ApiKeyEnv = NormalizeOptional(pair.Value.ApiKeyEnv)
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
                     },
                     StringComparer.OrdinalIgnoreCase)
         };
