@@ -40,6 +40,7 @@ The install directory must be writable. If TermBullet cannot write
 `conf.json`, startup fails with a clear permission error. There is no automatic
 fallback config location in V1.
 
+<<<<<<< HEAD
 AI configuration is stored in the selected data root:
 
 ```text
@@ -63,6 +64,29 @@ Supported settings:
 
 Normal CLI output must not print API key values. Hosted-provider secrets should
 use `api_key_env`.
+
+The V2 planning agent prompt is installed beside the executable:
+
+```text
+<install-dir>/agents/planning-bulletjournal-agent.md
+```
+
+This path is not user-configurable in V2 MVP. The file is a product asset, not
+user data. Runtime configuration chooses the AI profile, while the application
+always loads the canonical planning agent before calling the model.
+
+## Principles
+=======
+The `ai` section is planned for V2. AI configuration is managed only through CLI
+commands in the V2 MVP. The TUI reads the active profile and reports missing or
+invalid configuration, but it does not edit provider settings.
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
+
+AI profiles are named connection presets. A user may register more than one
+profile, such as the recommended local Ollama profile and a hosted
+OpenAI-compatible profile, and select which profile is active. API keys should
+not be printed by normal CLI output. Environment variables are the preferred key
+source.
 
 The V2 planning agent prompt is installed beside the executable:
 
@@ -352,11 +376,19 @@ the current month, and refreshes the local index. Carried items keep their
 internal ID, public ref, type, collection, content, description, priority, and
 tag. The current-month copy increments `version`, updates `updated_at`, and gets
 a `carried_over` history event. Events do not carry over.
+<<<<<<< HEAD
 
 Recommended carry-over history event:
 
 ```json
 {
+=======
+
+Recommended carry-over history event:
+
+```json
+{
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
   "event_type": "carried_over",
   "item_id": "0f3a9d94-4df0-47f7-95c1-0f967c22f4db",
   "public_ref": "t-0426-1",
@@ -420,6 +452,37 @@ AI provider responses use one envelope shape:
 }
 ```
 
+<<<<<<< HEAD
+## AI Planning Data Contracts
+
+V2 AI planning uses structured proposals before persistence. Proposals are not
+monthly JSON records by themselves; they are transient drafts produced by AI,
+validated by the application, and applied only after user approval.
+Interactive AI planning may also produce transient conversational assistant
+messages before a draft is ready. Those messages are not draft records and are
+not persisted to monthly JSON files.
+The requested planning mode from the CLI or TUI is authoritative. If a provider
+returns a draft with otherwise valid project actions but an inconsistent `mode`
+field, TermBullet normalizes the draft mode to the requested mode before
+validation.
+Every AI request includes a pipeline-generated `response_envelope_template`
+control message. The template is not persisted; it tells the model which JSON
+object shape to fill, including chat messages, draft readiness, the requested
+mode, allowed action fields, collections, and priority values.
+
+AI provider responses use one envelope shape:
+
+```json
+{
+  "kind": "chat",
+  "message": "Concise assistant response.",
+  "draft_ready": false,
+  "draft": null
+}
+```
+
+=======
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 When a draft is ready, `draft_ready` is `true` and `draft` contains the normal
 AI planning draft shape. The `draft_ready` flag only controls whether TermBullet
 renders a draft preview for user approval; it never means the model may apply

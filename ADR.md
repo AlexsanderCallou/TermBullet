@@ -27,6 +27,7 @@ Long-form ADRs may be split into `docs/adr/` later if more detail is needed.
 | 0016 | Accepted | First run stores `conf.json` in the install directory. |
 | 0017 | Accepted | Items have one tag, and non-default tagged work carries into the current month. |
 | 0018 | Accepted | V2 AI planning uses approved structured drafts before applying changes. |
+<<<<<<< HEAD
 | 0019 | Accepted | AI provider profiles are stored in `<data_root>/.aiconf`. |
 
 ## ADR-0001 - Local-First Product
@@ -101,6 +102,81 @@ V1 uses:
 - note;
 - event.
 
+=======
+
+## ADR-0001 - Local-First Product
+
+V1 must work without internet, accounts, AI, external calendars, or cloud.
+External services are optional future extensions.
+
+Consequences:
+
+- local JSON files are the operational source;
+- domain must not depend on external providers;
+- future integrations attach through ports/adapters.
+
+Rejected: cloud-first and local-as-cache.
+
+## ADR-0002 - CLI and TUI as First-Class Interfaces
+
+The executable opens the TUI when no command is provided, and the CLI remains a
+complete interface for essential operations.
+
+Consequences:
+
+- CLI and TUI call the same Application use cases;
+- command design must be documented and predictable;
+- business rules do not live in either interface.
+
+Rejected: TUI-only and CLI-only.
+
+## ADR-0003 - Simple Folder Architecture
+
+Use Domain, Application, Repositories, Services, CLI, TUI, and Bootstrap
+boundaries.
+
+Central rule:
+
+```text
+CLI and TUI must reuse Application use cases.
+```
+
+Rejected: procedural monolith and framework-driven architecture.
+
+## ADR-0004 - Internal ID and Public Ref
+
+Each item has:
+
+- stable internal global ID;
+- human-facing public ref.
+
+Public ref format:
+
+```text
+<type>-<MMYY>-<sequence>
+```
+
+Examples:
+
+```text
+t-0426-1
+n-0426-1
+e-0426-1
+```
+
+Internal ID is the integrity basis for persistence and future sync.
+
+Rejected: only sequential numbers, only UUIDs, and title-as-identifier.
+
+## ADR-0005 - Initial Item Model
+
+V1 uses:
+
+- task;
+- note;
+- event.
+
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 Required initial collections:
 
 - Today;
@@ -177,8 +253,12 @@ For local models, Ollama is the recommended user-facing setup. Hosted providers
 and other compatible services use the same OpenAI-compatible profile contract,
 but they are optional alternatives instead of separate product paths.
 
+<<<<<<< HEAD
 AI connection profiles are configured in `<data_root>/.aiconf`. The CLI provides
 `test-ai` for validation and `set-ai` for switching the default profile. The TUI
+=======
+AI connection profiles are configured through CLI commands in V2 MVP. The TUI
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 may show the active profile and configuration errors, but it does not edit AI
 connection settings.
 
@@ -401,6 +481,7 @@ validation, autonomous CLI execution without confirmation, deleting items from A
 proposals in V2 MVP, editing AI provider settings from the TUI in V2 MVP, and
 making AI required for the local-first product.
 
+<<<<<<< HEAD
 ## ADR-0019 - AI Profiles Use `.aiconf`
 
 Status: Accepted.
@@ -438,6 +519,8 @@ Consequences:
 Rejected: managing AI profiles primarily through many CLI mutation commands, and
 storing AI provider settings in install-directory `conf.json`.
 
+=======
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 ## Future ADR Candidates
 
 - release automation;

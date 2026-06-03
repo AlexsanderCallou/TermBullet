@@ -13,6 +13,10 @@ public sealed record AiProfile(
     string Model,
     string? BaseUrl = null,
     string ApiKeySource = "environment",
+<<<<<<< HEAD
     string? ApiKeyEnv = null,
     string? ApiKey = null,
     int? TimeoutSeconds = null);
+=======
+    string? ApiKeyEnv = null);
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125

@@ -80,6 +80,7 @@ public sealed class OpenAiCompatiblePlanningProvider(
             return;
         }
 
+<<<<<<< HEAD
         if (string.Equals(keySource, "literal", StringComparison.OrdinalIgnoreCase))
         {
             if (string.IsNullOrWhiteSpace(profile.ApiKey))
@@ -91,6 +92,8 @@ public sealed class OpenAiCompatiblePlanningProvider(
             return;
         }
 
+=======
+>>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
         if (!string.Equals(keySource, "environment", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException($"Unsupported API key source: {profile.ApiKeySource}");
