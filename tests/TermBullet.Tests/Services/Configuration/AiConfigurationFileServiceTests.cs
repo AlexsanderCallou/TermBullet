@@ -101,9 +101,9 @@ public sealed class AiConfigurationFileServiceTests : IDisposable
         var config = await service.LoadConfigAsync();
         Assert.Equal("local-llama-fast", config.Ai?.ActiveProfile);
         var activeProfile = config.Ai?.Profiles["local-llama-fast"];
-        Assert.Equal(64, activeProfile?.TestMaxTokens);
-        Assert.Equal(600, activeProfile?.ChatMaxTokens);
-        Assert.Equal(1200, activeProfile?.PlanningMaxTokens);
+        Assert.Null(activeProfile?.TestMaxTokens);
+        Assert.Null(activeProfile?.ChatMaxTokens);
+        Assert.Null(activeProfile?.PlanningMaxTokens);
     }
 
     [Fact]

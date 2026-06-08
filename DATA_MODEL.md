@@ -43,17 +43,16 @@ Supported settings:
 - `default`
 - `timeout_seconds`
 - `reasoning`
-- `test_max_tokens`
-- `chat_max_tokens`
-- `planning_max_tokens`
+- `test_max_tokens` (optional, for providers that require explicit limits)
+- `chat_max_tokens` (optional, for providers that require explicit limits)
+- `planning_max_tokens` (optional, for providers that require explicit limits)
 
 Normal CLI output must not print API key values. Hosted-provider secrets should
 use `api_key_env`. The recommended profile is OpenCode Zen with
-`deepseek-v4-flash-free`, `reasoning=true`, a larger `test_max_tokens`, and
-larger planning/chat budgets so internal reasoning does not consume the whole
-response. Local direct-response models remain supported and normally use
-`reasoning=false` with smaller token budgets, but no local model is recommended
-by default.
+`deepseek-v4-flash-free` and `reasoning=true`. Token limits are optional and
+only needed for providers that require explicit max_tokens values. Local
+direct-response models remain supported and normally use `reasoning=false`,
+but no local model is recommended by default.
 
 The V2 planning agent prompt is installed beside the executable:
 

@@ -212,9 +212,6 @@ base_url=https://opencode.ai/zen/v1
 api_key_env=OPENCODE_API_KEY
 default=true
 reasoning=true
-test_max_tokens=128
-chat_max_tokens=1200
-planning_max_tokens=3000
 timeout_seconds=240
 ```
 

@@ -56,7 +56,7 @@ public sealed class OpenAiCompatiblePlanningProviderTests
         Assert.Equal("Plan Java studies.", messages[2].GetProperty("content").GetString());
         var responseFormat = document.RootElement.GetProperty("response_format");
         Assert.Equal("json_object", responseFormat.GetProperty("type").GetString());
-        Assert.Equal(700, document.RootElement.GetProperty("max_tokens").GetInt32());
+        Assert.False(document.RootElement.TryGetProperty("max_tokens", out _));
         Assert.Equal(0.2, document.RootElement.GetProperty("temperature").GetDouble());
     }
 
@@ -121,7 +121,7 @@ public sealed class OpenAiCompatiblePlanningProviderTests
 
         using var document = JsonDocument.Parse(Assert.IsType<string>(handler.RequestBody));
         Assert.False(document.RootElement.TryGetProperty("response_format", out _));
-        Assert.Equal(300, document.RootElement.GetProperty("max_tokens").GetInt32());
+        Assert.False(document.RootElement.TryGetProperty("max_tokens", out _));
     }
 
     [Fact]

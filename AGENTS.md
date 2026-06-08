@@ -135,6 +135,11 @@ When no command is provided, the app opens the TUI.
 - Avoid mouse-dependent flows.
 - Keep layout dense but legible.
 - Use Application use cases.
+- Before modifying a TUI screen, propose the layout change in ASCII art or
+  text description and wait for maintainer approval before implementing.
+- Screens with text input fields must use physical buttons for actions instead
+  of letter-key shortcuts to avoid input conflicts. Buttons are laid out
+  horizontally with a maximum of 4 per line.
 
 The TUI direction is a personal cockpit for planning and execution, visually
 inspired by LazyDocker/LazyGit and dense like btop.

@@ -148,7 +148,7 @@ public sealed class OpenAiCompatiblePlanningProvider(
             if (string.Equals(choice?.FinishReason, "length", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
-                    "AI provider response content is empty (finish_reason=length). Increase chat_max_tokens, planning_max_tokens, or test_max_tokens for this profile.");
+                    "AI provider response was truncated (finish_reason=length). The response exceeded the available token limit. Try again or set chat_max_tokens/planning_max_tokens in .aiconf if your provider requires explicit limits.");
             }
 
             throw new InvalidOperationException("AI provider response content is empty.");
@@ -157,7 +157,7 @@ public sealed class OpenAiCompatiblePlanningProvider(
         return new AiPlanningProviderResponse(content.Trim(), document?.Model ?? fallbackModel);
     }
 
-    private static int ResolveMaxTokens(AiPlanningModelRequest request, AiProfile profile)
+    private static int? ResolveMaxTokens(AiPlanningModelRequest request, AiProfile profile)
     {
         if (request.MaxOutputTokens is > 0)
         {
@@ -166,10 +166,10 @@ public sealed class OpenAiCompatiblePlanningProvider(
 
         if (request.RequireStructuredDraft)
         {
-            return profile.PlanningMaxTokens ?? (profile.Reasoning ? 3000 : 700);
+            return profile.PlanningMaxTokens;
         }
 
-        return profile.ChatMaxTokens ?? (profile.Reasoning ? 1200 : 300);
+        return profile.ChatMaxTokens;
     }
 
     private static string TrimForError(string text)
@@ -187,7 +187,7 @@ public sealed class OpenAiCompatiblePlanningProvider(
         string Model,
         IReadOnlyList<ProviderMessage> Messages,
         ResponseFormat? ResponseFormat,
-        int MaxTokens,
+        int? MaxTokens,
         double Temperature);
 
     private sealed record ResponseFormat(string Type);

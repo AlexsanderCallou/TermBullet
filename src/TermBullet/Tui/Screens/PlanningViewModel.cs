@@ -54,5 +54,5 @@ public sealed class PlanningViewModel
                 "assistant> The model writes tasks; TermBullet controls count, tags, and placement."
             ],
             ["Topic and tag are edited in the Setup panel."],
-            " g generate  s size  t today  a apply  d discard  Tab/1-4 focus  ? help  Esc back  q quit");
+            " Tab/1-4 focus  ? help  Esc back  q quit");
 }

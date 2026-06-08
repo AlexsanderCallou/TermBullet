@@ -106,29 +106,24 @@ and deterministic distribution. That was useful for weaker local models, but
 the recommended OpenCode Zen `deepseek-v4-flash-free` profile can support a more
 natural planning flow.
 
-#### Topic 2.1 - AI-Decided Plan Size and Breakdown
+#### Topic 2.1 - AI-Decided Plan Size and Detail Levels
 
 Problem:
 
-- Small/medium/large task volume is too rigid.
+- Small/medium/large task volume was too rigid.
 - The user often knows the topic and desired outcome, but not the right number
   of tasks.
-- The current deterministic distribution can fight the model's ability to plan
+- The deterministic distribution could fight the model's ability to plan
   sensible milestones.
 
-Direction to evaluate:
+Resolved:
 
-- Let AI choose the task count based on topic complexity and user intent.
-- Keep guardrails instead of fixed choices: maximum task count, required project
-  tag, allowed collections, and explicit user approval.
-- Ask the model to include a short planning rationale in the readable preview,
-  while the structured draft remains machine-validated.
-- Keep numeric task prefixes so the user can follow the plan in order.
-
-Open decisions:
-
-- What is the default maximum task count for AI-decided plans: 20, 30, or 40?
-- Should the user still be able to force a small/medium/large cap when desired?
+- Replaced task volume with detail levels: `high` (each task = one atomic
+  action) and `low` (each task = ~1 day or ~2h of work).
+- AI decides the total task count based on topic complexity and detail level.
+- Collection guardrails remain: today max 1, week max 5, month max 20, backlog
+  unlimited.
+- Numeric task prefixes preserved for ordered preview.
 
 #### Topic 2.2 - Planning With Existing Open Work
 
