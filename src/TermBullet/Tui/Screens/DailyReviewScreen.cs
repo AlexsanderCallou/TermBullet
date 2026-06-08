@@ -1,18 +1,20 @@
 using Terminal.Gui;
+using NStack;
 using TermBullet.Tui.Navigation;
+using TGui = Terminal.Gui.Application;
 
 namespace TermBullet.Tui.Screens;
 
 public static class DailyReviewScreen
 {
-    private static readonly string[] DecisionLabels =
+    private static readonly ustring[] DecisionLabels =
     [
-        "keep today",
-        "move to week",
-        "move to month",
-        "move to backlog",
-        "mark done",
-        "cancel"
+        "Keep today",
+        "Move to week",
+        "Move to month",
+        "Move to backlog",
+        "Mark done",
+        "Cancel task"
     ];
 
     public static void Build(
@@ -27,7 +29,6 @@ public static class DailyReviewScreen
     {
         var selectedIndex = rows.Count > 0 ? 0 : -1;
         var selectedItem = selectedIndex >= 0 ? rows[selectedIndex] : null;
-        var selectedDecision = DailyReviewDecision.KeepToday;
         onSelectedItemChanged(selectedItem);
 
         var topBar = new Label(" TermBullet - Daily Review")
@@ -36,7 +37,7 @@ public static class DailyReviewScreen
             Y = 0,
             Width = Dim.Fill()
         };
-        var footer = new Label(" Enter apply  o open  k keep  w/m/b move  x done  z cancel  Tab/1-3 focus  ? help  Esc back  q quit")
+        var footer = new Label(" Enter decide  o open  Tab/1-2 focus  ? help  Esc back  q quit")
         {
             X = 0,
             Y = Pos.AnchorEnd(1),
@@ -47,8 +48,8 @@ public static class DailyReviewScreen
         {
             X = 0,
             Y = 1,
-            Width = Dim.Percent(52),
-            Height = Dim.Fill(8)
+            Width = Dim.Percent(58),
+            Height = Dim.Fill(1)
         };
         var taskList = new ListView(TuiScreenUtilities.SanitizeListItems(BuildRows(rows)))
         {
@@ -59,28 +60,12 @@ public static class DailyReviewScreen
         };
         tasksPanel.Add(taskList);
 
-        var decisionPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(2, "Decision", navigation, 1))
+        var detailsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(2, "Details", navigation, 1))
         {
             X = Pos.Right(tasksPanel),
             Y = 1,
             Width = Dim.Fill(),
-            Height = Dim.Fill(8)
-        };
-        var decisionList = new ListView(TuiScreenUtilities.SanitizeListItems(BuildDecisionRows(selectedDecision)))
-        {
-            X = 0,
-            Y = 0,
-            Width = Dim.Fill(),
-            Height = Dim.Fill()
-        };
-        decisionPanel.Add(decisionList);
-
-        var detailsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Details", navigation, 2))
-        {
-            X = 0,
-            Y = Pos.Bottom(tasksPanel),
-            Width = Dim.Fill(),
-            Height = 7
+            Height = Dim.Fill(1)
         };
         var detailsList = new ListView(TuiScreenUtilities.SanitizeListItems(BuildDetails(selectedItem)))
         {
@@ -91,11 +76,11 @@ public static class DailyReviewScreen
         };
         detailsPanel.Add(detailsList);
 
-        var panels = new[] { tasksPanel, decisionPanel, detailsPanel };
-        var panelTitles = new[] { "Stale Today Tasks", "Decision", "Details" };
-        var focusTargets = new View[] { taskList, decisionList, detailsList };
+        var panels = new[] { tasksPanel, detailsPanel };
+        var panelTitles = new[] { "Stale Today Tasks", "Details" };
+        var focusTargets = new View[] { taskList, detailsList };
 
-        root.Add(topBar, tasksPanel, decisionPanel, detailsPanel, footer);
+        root.Add(topBar, tasksPanel, detailsPanel, footer);
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
         TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
 
@@ -105,12 +90,6 @@ public static class DailyReviewScreen
             selectedItem = selectedIndex >= 0 && selectedIndex < rows.Count ? rows[selectedIndex] : null;
             TuiScreenUtilities.RefreshListView(detailsList, BuildDetails(selectedItem));
             onSelectedItemChanged(selectedItem);
-        };
-
-        decisionList.SelectedItemChanged += _ =>
-        {
-            selectedDecision = FromDecisionIndex(decisionList.SelectedItem);
-            TuiScreenUtilities.RefreshListView(decisionList, BuildDecisionRows(selectedDecision));
         };
 
         bool HandleKey(KeyEvent keyEvent, bool includeEnter)
@@ -139,28 +118,10 @@ public static class DailyReviewScreen
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                     return true;
                 case Key.Enter when includeEnter:
-                    onApplyDecision(selectedItem, selectedDecision);
+                    ShowDecisionDialog(selectedItem, onApplyDecision);
                     return true;
                 case Key o when o == (Key)'o':
                     onOpenDetail(selectedItem);
-                    return true;
-                case Key k when k == (Key)'k':
-                    onApplyDecision(selectedItem, DailyReviewDecision.KeepToday);
-                    return true;
-                case Key w when w == (Key)'w':
-                    onApplyDecision(selectedItem, DailyReviewDecision.MoveToWeek);
-                    return true;
-                case Key m when m == (Key)'m':
-                    onApplyDecision(selectedItem, DailyReviewDecision.MoveToMonth);
-                    return true;
-                case Key b when b == (Key)'b':
-                    onApplyDecision(selectedItem, DailyReviewDecision.MoveToBacklog);
-                    return true;
-                case Key x when x == (Key)'x':
-                    onApplyDecision(selectedItem, DailyReviewDecision.MarkDone);
-                    return true;
-                case Key z when z == (Key)'z':
-                    onApplyDecision(selectedItem, DailyReviewDecision.Cancel);
                     return true;
                 case Key.Esc:
                     onBack();
@@ -207,11 +168,6 @@ public static class DailyReviewScreen
             .ToArray();
     }
 
-    private static string[] BuildDecisionRows(DailyReviewDecision selectedDecision) =>
-        DecisionLabels
-            .Select((label, index) => $"{(index == (int)selectedDecision ? "(x)" : "( )")} {label}")
-            .ToArray();
-
     private static string[] BuildDetails(DailyReviewRow? row)
     {
         if (row is null)
@@ -223,10 +179,90 @@ public static class DailyReviewScreen
         [
             $"ref: {row.Item.PublicRef}",
             $"last today review: {row.LastTodayPlacementDate:yyyy-MM-dd}",
+            $"status: {row.Item.Status}",
+            $"collection: {row.Item.Collection}",
             $"tag: {row.Item.Tag}",
             $"priority: {row.Item.Priority}",
+            " ",
             row.Item.Content
         ];
+    }
+
+    private static void ShowDecisionDialog(
+        DailyReviewRow? row,
+        Action<DailyReviewRow?, DailyReviewDecision> onApplyDecision)
+    {
+        if (row is null)
+        {
+            return;
+        }
+
+        var selectedDecision = DailyReviewDecision.KeepToday;
+        var saveButton = new Button("Save", is_default: true);
+        var cancelButton = new Button("Cancel");
+        var dialog = new Dialog("Daily Review Decision", 64, 17, saveButton, cancelButton);
+        var summary = new Label($"{row.Item.PublicRef} {row.Item.Content}")
+        {
+            X = 1,
+            Y = 1,
+            Width = Dim.Fill(2)
+        };
+        var prompt = new Label("Choose what to do with this stale Today task:")
+        {
+            X = 1,
+            Y = 3,
+            Width = Dim.Fill(2)
+        };
+        var decisionGroup = new RadioGroup(DecisionLabels, 0)
+        {
+            X = 1,
+            Y = 5,
+            Width = Dim.Fill(2)
+        };
+
+        var apply = false;
+        saveButton.Clicked += () =>
+        {
+            selectedDecision = FromDecisionIndex(decisionGroup.SelectedItem);
+            apply = true;
+            TGui.RequestStop();
+        };
+        cancelButton.Clicked += () => TGui.RequestStop();
+        decisionGroup.SelectedItemChanged += _ =>
+        {
+            selectedDecision = FromDecisionIndex(decisionGroup.SelectedItem);
+        };
+        dialog.KeyPress += args =>
+        {
+            switch (args.KeyEvent.Key)
+            {
+                case Key.Space:
+                    decisionGroup.SelectedItem = decisionGroup.SelectedItem >= (int)DailyReviewDecision.Cancel
+                        ? 0
+                        : decisionGroup.SelectedItem + 1;
+                    args.Handled = true;
+                    break;
+                case Key.Enter:
+                    selectedDecision = FromDecisionIndex(decisionGroup.SelectedItem);
+                    apply = true;
+                    TGui.RequestStop();
+                    args.Handled = true;
+                    break;
+                case Key.Esc:
+                    TGui.RequestStop();
+                    args.Handled = true;
+                    break;
+            }
+        };
+
+        dialog.Add(summary, prompt, decisionGroup);
+        decisionGroup.SetFocus();
+        TGui.Run(dialog);
+
+        if (apply)
+        {
+            onApplyDecision(row, selectedDecision);
+        }
     }
 
     private static DailyReviewDecision FromDecisionIndex(int selectedIndex) =>

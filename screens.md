@@ -982,12 +982,11 @@ Entry points:
 Navigation:
 
 - `CursorUp` and `CursorDown` move through stale Today tasks.
-- `Tab` and `Shift+Tab` move focus between Tasks, Decision, and Details.
-- `Space` cycles the selected decision.
-- `Enter` applies the selected decision for the focused task.
-- `>` opens the normal Migrate Item flow for the selected task.
-- `x` marks the selected task done.
-- `z` cancels the selected task.
+- `Tab` and `Shift+Tab` move focus between Tasks and Details.
+- `Enter` opens the Decision popup for the focused task.
+- `o` opens the selected task detail.
+- In the Decision popup, `Save` applies the selected decision.
+- In the Decision popup, `Cancel` or `Esc` closes without changing data.
 - `Esc` returns to the dashboard.
 - `?` opens contextual help.
 
@@ -995,23 +994,29 @@ Target ASCII layout:
 
 ```text
 + TermBullet - Daily Review ------------------------------------------------------------+
-| 1 Stale Today Tasks                         | 2 Decision                             |
-| > [ ] t-0626-3 Study ownership in Rust      | (x) keep today                         |
-|   [ ] t-0626-4 Build CLI parser sample      | ( ) move to week                       |
-|   [ ] t-0626-5 Read async chapter           | ( ) move to month                      |
-|                                             | ( ) move to backlog                    |
-|                                             | ( ) mark done                          |
-|                                             | ( ) cancel                             |
-|---------------------------------------------+----------------------------------------|
-| 3 Details                                                                            |
-| ref: t-0626-3                                                                        |
-| collection: today                                                                    |
-| status: open                                                                         |
-| tag: studies-rust                                                                    |
-| last today review: 2026-06-07                                                        |
-| created: 2026-06-06                                                                  |
+| 1 Stale Today Tasks                         | 2 Details                              |
+| > [ ] t-0626-3 Study ownership in Rust      | ref: t-0626-3                          |
+|   [ ] t-0626-4 Build CLI parser sample      | last today review: 2026-06-07          |
+|   [ ] t-0626-5 Read async chapter           | status: open                           |
+|                                             | collection: today                      |
+|                                             | tag: studies-rust                      |
+|                                             | priority: none                         |
+|                                             |                                        |
+|                                             | Study ownership in Rust                |
 +---------------------------------------------------------------------------------------+
-| Enter apply  Space decision  > migrate  x done  z cancel  Tab focus  ? help  Esc back |
+| Enter decide  o open  Tab/1-2 focus  ? help  Esc back                                 |
++---------------------------------------------------------------------------------------+
+
++ Daily Review Decision ---------------------------------------------------------------+
+| t-0626-3 Study ownership in Rust                                                     |
+| Choose what to do with this stale Today task:                                        |
+| (x) Keep today                                                                       |
+| ( ) Move to week                                                                     |
+| ( ) Move to month                                                                    |
+| ( ) Move to backlog                                                                  |
+| ( ) Mark done                                                                        |
+| ( ) Cancel task                                                                      |
+| [ Save ] [ Cancel ]                                                                  |
 +---------------------------------------------------------------------------------------+
 ```
 

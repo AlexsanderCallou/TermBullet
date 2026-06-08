@@ -1048,7 +1048,7 @@ public sealed class TermBulletTuiApp(
             TuiScreen.Week => 3,
             TuiScreen.Month => 3,
             TuiScreen.Backlog => 3,
-            TuiScreen.DailyReview => 3,
+            TuiScreen.DailyReview => 2,
             TuiScreen.Forgotten => 3,
             TuiScreen.Notes => 3,
             TuiScreen.Calendar => 4,
