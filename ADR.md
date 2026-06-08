@@ -428,16 +428,18 @@ Accepted settings:
 - `default`
 - `timeout_seconds`
 - `reasoning`
-- `test_max_tokens`
-- `chat_max_tokens`
-- `planning_max_tokens`
+- `test_max_tokens` (optional, for providers that require explicit limits)
+- `chat_max_tokens` (optional, for providers that require explicit limits)
+- `planning_max_tokens` (optional, for providers that require explicit limits)
 
 Consequences:
 
 - AI provider settings move out of install-directory `conf.json`;
 - the data root contains both operational data and user-editable AI settings;
-- direct-response models and hosted reasoning models can coexist through
-  per-profile token budgets;
+- direct-response models and hosted reasoning models can coexist in the same
+  configuration file;
+- token limits are optional and only needed for providers that require explicit
+  max_tokens values;
 - `termbullet test-ai` validates the selected profile and creates a commented
   template when `.aiconf` is missing;
 - `termbullet set-ai <name>` switches the default profile;

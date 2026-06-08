@@ -286,9 +286,6 @@ base_url=https://opencode.ai/zen/v1
 api_key_env=OPENCODE_API_KEY
 default=true
 reasoning=true
-test_max_tokens=128
-chat_max_tokens=1200
-planning_max_tokens=3000
 timeout_seconds=240
 ```
 
@@ -319,9 +316,6 @@ model=gpt-4.1-mini
 base_url=https://api.openai.com/v1
 api_key_env=OPENAI_API_KEY
 reasoning=false
-test_max_tokens=64
-chat_max_tokens=600
-planning_max_tokens=1200
 timeout_seconds=180
 ```
 
@@ -353,9 +347,9 @@ Required keys:
 Optional behavior keys:
 
 - `reasoning`
-- `test_max_tokens`
-- `chat_max_tokens`
-- `planning_max_tokens`
+- `test_max_tokens` (optional, for providers that require explicit limits)
+- `chat_max_tokens` (optional, for providers that require explicit limits)
+- `planning_max_tokens` (optional, for providers that require explicit limits)
 - `timeout_seconds`
 
 If a single profile exists, it is active automatically. If multiple profiles

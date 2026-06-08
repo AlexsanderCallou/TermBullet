@@ -6,12 +6,6 @@ public sealed class AiConfigurationFileService(string dataRoot)
 {
     public const string FileName = ".aiconf";
     private const int DefaultTimeoutSeconds = 180;
-    private const int DefaultTestMaxTokens = 64;
-    private const int DefaultChatMaxTokens = 600;
-    private const int DefaultPlanningMaxTokens = 1200;
-    private const int ReasoningTestMaxTokens = 128;
-    private const int ReasoningChatMaxTokens = 1200;
-    private const int ReasoningPlanningMaxTokens = 3000;
 
     public string FilePath => Path.Combine(dataRoot, FileName);
 
@@ -202,9 +196,6 @@ public sealed class AiConfigurationFileService(string dataRoot)
         api_key_env=OPENCODE_API_KEY
         default=true
         reasoning=true
-        test_max_tokens=128
-        chat_max_tokens=1200
-        planning_max_tokens=3000
         timeout_seconds=240
 
         # [local-custom]
@@ -218,10 +209,8 @@ public sealed class AiConfigurationFileService(string dataRoot)
         # planning_max_tokens=1200
         # timeout_seconds=180
         #
-        # Reasoning models may need larger token budgets:
-        # test_max_tokens=128
-        # chat_max_tokens=1200
-        # planning_max_tokens=3000
+        # Token limits are optional. Only set them if your provider requires
+        # explicit max_tokens values.
         """;
 
     private static string Render(AiConfiguration configuration)
@@ -254,9 +243,18 @@ public sealed class AiConfigurationFileService(string dataRoot)
 
             builder.AppendLine($"default={string.Equals(pair.Key, configuration.ActiveProfile, StringComparison.OrdinalIgnoreCase).ToString().ToLowerInvariant()}");
             builder.AppendLine($"reasoning={profile.Reasoning.ToString().ToLowerInvariant()}");
-            builder.AppendLine($"test_max_tokens={profile.TestMaxTokens ?? GetDefaultTestMaxTokens(profile.Reasoning)}");
-            builder.AppendLine($"chat_max_tokens={profile.ChatMaxTokens ?? GetDefaultChatMaxTokens(profile.Reasoning)}");
-            builder.AppendLine($"planning_max_tokens={profile.PlanningMaxTokens ?? GetDefaultPlanningMaxTokens(profile.Reasoning)}");
+            if (profile.TestMaxTokens.HasValue)
+            {
+                builder.AppendLine($"test_max_tokens={profile.TestMaxTokens.Value}");
+            }
+            if (profile.ChatMaxTokens.HasValue)
+            {
+                builder.AppendLine($"chat_max_tokens={profile.ChatMaxTokens.Value}");
+            }
+            if (profile.PlanningMaxTokens.HasValue)
+            {
+                builder.AppendLine($"planning_max_tokens={profile.PlanningMaxTokens.Value}");
+            }
             builder.AppendLine($"timeout_seconds={profile.TimeoutSeconds ?? DefaultTimeoutSeconds}");
             builder.AppendLine();
         }
@@ -334,21 +332,12 @@ public sealed class AiConfigurationFileService(string dataRoot)
                 Normalize(ApiKey),
                 TimeoutSeconds ?? DefaultTimeoutSeconds,
                 Reasoning,
-                TestMaxTokens ?? GetDefaultTestMaxTokens(Reasoning),
-                ChatMaxTokens ?? GetDefaultChatMaxTokens(Reasoning),
-                PlanningMaxTokens ?? GetDefaultPlanningMaxTokens(Reasoning));
+                TestMaxTokens,
+                ChatMaxTokens,
+                PlanningMaxTokens);
         }
 
         private static string? Normalize(string? value) =>
             string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
-
-    private static int GetDefaultTestMaxTokens(bool reasoning) =>
-        reasoning ? ReasoningTestMaxTokens : DefaultTestMaxTokens;
-
-    private static int GetDefaultChatMaxTokens(bool reasoning) =>
-        reasoning ? ReasoningChatMaxTokens : DefaultChatMaxTokens;
-
-    private static int GetDefaultPlanningMaxTokens(bool reasoning) =>
-        reasoning ? ReasoningPlanningMaxTokens : DefaultPlanningMaxTokens;
 }

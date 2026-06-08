@@ -279,7 +279,7 @@ public static class TermBulletBootstrap
             ],
             ContextItems: [],
             RequireStructuredDraft: false,
-            MaxOutputTokens: testProfile.TestMaxTokens ?? (testProfile.Reasoning ? 128 : 64)), cancellationToken);
+            MaxOutputTokens: testProfile.TestMaxTokens ?? 128), cancellationToken);
     }
 
     private sealed class SystemClock : IClock
