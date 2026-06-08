@@ -27,6 +27,7 @@ Long-form ADRs may be split into `docs/adr/` later if more detail is needed.
 | 0016 | Accepted | First run stores `conf.json` in the install directory. |
 | 0017 | Accepted | Items have one tag, and non-default tagged work carries into the current month. |
 | 0018 | Accepted | V2 AI planning uses approved structured drafts before applying changes. |
+| 0019 | Accepted | AI provider profiles are stored in `<data_root>/.aiconf`. |
 
 ## ADR-0001 - Local-First Product
 
@@ -176,7 +177,8 @@ For local models, Ollama is the recommended user-facing setup. Hosted providers
 and other compatible services use the same OpenAI-compatible profile contract,
 but they are optional alternatives instead of separate product paths.
 
-AI connection profiles are configured through CLI commands in V2 MVP. The TUI
+AI connection profiles are configured in `<data_root>/.aiconf`. The CLI provides
+`test-ai` for validation and `set-ai` for switching the default profile. The TUI
 may show the active profile and configuration errors, but it does not edit AI
 connection settings.
 
@@ -398,6 +400,49 @@ Rejected: direct AI writes to JSON files, free-form text execution without
 validation, autonomous CLI execution without confirmation, deleting items from AI
 proposals in V2 MVP, editing AI provider settings from the TUI in V2 MVP, and
 making AI required for the local-first product.
+
+## ADR-0019 - AI Profiles Use `.aiconf`
+
+Status: Accepted.
+
+TermBullet stores AI provider profiles in:
+
+```text
+<data_root>/.aiconf
+```
+
+The file is user-editable text. Lines starting with `#` are comments. Each
+profile starts with `[profile-name]`, followed by `key=value` settings. The
+active profile is selected by `default=true`; if only one profile exists, it is
+active automatically.
+
+Accepted settings:
+
+- `provider`
+- `model`
+- `base_url`
+- `api_key`
+- `api_key_env`
+- `default`
+- `timeout_seconds`
+- `reasoning`
+- `test_max_tokens`
+- `chat_max_tokens`
+- `planning_max_tokens`
+
+Consequences:
+
+- AI provider settings move out of install-directory `conf.json`;
+- the data root contains both operational data and user-editable AI settings;
+- local direct-response models and hosted reasoning models can coexist through
+  per-profile token budgets;
+- `termbullet test-ai` validates the selected profile and creates a commented
+  template when `.aiconf` is missing;
+- `termbullet set-ai <name>` switches the default profile;
+- the TUI reads the active profile but does not edit provider settings.
+
+Rejected: managing AI profiles primarily through many CLI mutation commands, and
+storing AI provider settings in install-directory `conf.json`.
 
 ## Future ADR Candidates
 

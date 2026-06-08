@@ -680,6 +680,7 @@ public sealed class TermBulletTuiApp(
                             Quit);
                         break;
 
+
                     case TuiScreen.Tags:
                         selectedItem = null;
                         TagsScreen.Build(

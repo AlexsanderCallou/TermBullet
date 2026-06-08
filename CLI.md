@@ -41,10 +41,11 @@ termbullet
 ├── untag
 ├── priority
 ├── search
+├── test-ai
+├── set-ai
 ├── ai
 │   ├── chat
-│   ├── plan
-│   └── profile
+│   └── plan
 ├── history
 │   └── clear
 └── path
@@ -223,90 +224,120 @@ On first execution, TermBullet asks for the base data directory, validates
 read/write permissions, and saves the selection in `<install-dir>/conf.json`.
 There are no user-editable product keys.
 
-## Planned V2 AI Configuration Commands
+## AI Configuration
 
-AI connection configuration is CLI-only in V2 MVP. The TUI reads the selected
-profile but does not edit AI provider settings.
-
-### `ai profile add`
-
-```bash
-termbullet ai profile add local \
-  --provider openai-compatible \
-  --model llama3.1 \
-  --base-url http://localhost:11434/v1 \
-  --no-api-key
-```
-
-Adds or updates a named AI connection profile in `<install-dir>/conf.json`.
-Environment variables are the preferred API key source.
-
-For local models, Ollama is the recommended setup. Its default
-OpenAI-compatible base URL is:
+AI connection settings live in the data root:
 
 ```text
-http://localhost:11434/v1
+<data_root>/.aiconf
+```
+
+The file is plain text. Lines starting with `#` are comments. Each profile starts
+with `[profile-name]`, followed by `key=value` settings.
+
+If `.aiconf` does not exist, run:
+
+```bash
+termbullet test-ai
+```
+
+TermBullet creates a commented template and exits with an instruction to edit it.
+
+Example local Ollama configuration:
+
+```ini
+[local-gemma]
+provider=openai-compatible
+model=gemma3:4b
+base_url=http://localhost:11434/v1
+api_key=ollama
+default=true
+reasoning=false
+test_max_tokens=64
+chat_max_tokens=600
+planning_max_tokens=1200
+timeout_seconds=180
+
+[local-llama-fast]
+provider=openai-compatible
+model=llama3.2:1b
+base_url=http://localhost:11434/v1
+api_key=ollama
+reasoning=false
+test_max_tokens=64
+chat_max_tokens=600
+planning_max_tokens=1200
+timeout_seconds=180
 ```
 
 Hosted provider example:
 
-```bash
-termbullet ai profile add cloud \
-  --provider openai-compatible \
-  --model gpt-4.1-mini \
-  --base-url https://api.openai.com/v1 \
-  --api-key-env TERMBULLET_OPENAI_API_KEY
+```ini
+[hosted-fast]
+provider=openai-compatible
+model=gpt-4.1-mini
+base_url=https://api.openai.com/v1
+api_key_env=OPENAI_API_KEY
+reasoning=false
+test_max_tokens=64
+chat_max_tokens=600
+planning_max_tokens=1200
+timeout_seconds=180
 ```
 
-### `ai profile list`
+Hosted reasoning model example:
 
-```bash
-termbullet ai profile list
+```ini
+[cloud-reasoning]
+provider=openai-compatible
+model=deepseek-v4-flash-free
+base_url=https://opencode.ai/zen/v1
+api_key_env=OPENCODE_API_KEY
+reasoning=true
+test_max_tokens=128
+chat_max_tokens=1200
+planning_max_tokens=3000
+timeout_seconds=240
 ```
 
-Shows registered profile names, provider, model, and active status. It must not
-print API keys.
+Required keys:
 
-Example output:
+- `provider`
+- `model`
+- `base_url` for `openai-compatible`
+- either `api_key` or `api_key_env`
 
-```text
-* local  openai-compatible   llama3.1
-  cloud  openai-compatible   gpt-4.1-mini
-```
+Optional behavior keys:
 
-### `ai profile use`
+- `reasoning`
+- `test_max_tokens`
+- `chat_max_tokens`
+- `planning_max_tokens`
+- `timeout_seconds`
 
-```bash
-termbullet ai profile use local
-```
+If a single profile exists, it is active automatically. If multiple profiles
+exist, exactly one must have `default=true`.
 
-Sets the active AI profile used by Planning.
-
-### `ai profile show`
-
-```bash
-termbullet ai profile show local
-```
-
-Shows one profile without exposing secret values.
-
-### `ai profile test`
-
-```bash
-termbullet ai profile test local
-```
-
-Validates provider, model, base URL, key source, and provider communication with
-a short chat-completions request. A failed test returns a clear actionable error.
-
-### `ai profile remove`
+### `test-ai`
 
 ```bash
-termbullet ai profile remove local
+termbullet test-ai
+termbullet test-ai local-gemma
 ```
 
-Removes a profile. Removing the active profile must require selecting another
-active profile or leaving AI unconfigured.
+Validates `.aiconf`, resolves the active or requested profile, checks required
+settings, and sends a short provider request. `test-ai` uses the profile's
+`test_max_tokens`, which should be higher for reasoning models. A failed test
+returns a clear actionable error.
+
+### `set-ai`
+
+```bash
+termbullet set-ai local-gemma
+```
+
+Sets the default profile in `.aiconf`. It rewrites the file with the same profile
+settings and updates `default=true`.
 
 ## V2 AI Planning Commands
 
@@ -337,7 +368,7 @@ Allowed mode values:
 
 Rules:
 
-- The active AI profile is loaded from `<install-dir>/conf.json`.
+- The active AI profile is loaded from `<data_root>/.aiconf`.
 - The planning agent prompt is loaded from
   `<install-dir>/agents/planning-bulletjournal-agent.md`.
 - Provider output must parse as a valid structured draft before it is printed.
@@ -411,7 +442,7 @@ Interactive commands:
 
 Rules:
 
-- `ai chat` uses the active profile from `<install-dir>/conf.json`.
+- `ai chat` uses the active profile from `<data_root>/.aiconf`.
 - `ai chat` must load `<install-dir>/agents/planning-bulletjournal-agent.md`
   before calling the model.
 - AI output uses a response envelope JSON object. `draft_ready=false` displays

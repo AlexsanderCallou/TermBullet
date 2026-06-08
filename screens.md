@@ -841,6 +841,44 @@ AI notes:
 - AI context must be filtered to the selected planning mode and must not send
   all monthly JSON files by default.
 
+Reviewing existing plans is a future idea, not part of the current Planning
+implementation. It is intentionally deferred because the current Planning design
+targets small local models, and those models do not handle broad historical
+review reliably enough yet.
+
+```text
+|-----------------------------------------------+-----------------------------------------|
+| assistant> Select a review scope.                                                       |
+| user> Review the auth project and suggest the next execution steps.                     |
+|                                                                                     v   |
+|-----------------------------------------------------------------------------------------|
++-----------------------------------------------------------------------------------------+
+| Enter send/open  Up/Down scroll  PgUp/PgDn page  Tab focus  ? help  Esc back  q quit    |
++-----------------------------------------------------------------------------------------+
+```
+
+
+AI notes:
+
+- AI never writes directly to monthly JSON files.
+- AI may answer conversationally while planning. When it produces a structured
+  draft, the application validates it, and only an approved draft is applied
+  through Application use cases.
+- AI responses use one JSON envelope. `draft_ready=false` renders `message` as
+  chat, and `draft_ready=true` renders the validated `draft` preview.
+- Planning sends recent user and assistant turns with each prompt so follow-up
+  messages can refer to the current conversation.
+- If the user explicitly asks to create, add, generate, or build tasks, plans,
+  roadmaps, or drafts, Planning requires a structured draft instead of another
+  conversational reply.
+- If the required draft is returned as normal chat, Planning retries once with a
+  draft-repair instruction before showing an error.
+- Long assistant messages wrap inside the conversation panel.
+- Structured draft JSON is rendered as a user-facing preview, not shown as raw
+  JSON conversation text.
+- AI context must be filtered to the selected planning mode and must not send
+  all monthly JSON files by default.
+
 ## Screen 06 - Week View
 
 Status: implemented.

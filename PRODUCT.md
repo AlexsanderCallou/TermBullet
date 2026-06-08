@@ -209,8 +209,9 @@ Deferred TUI screens:
 ### V2 - AI Planning
 
 - Planning workspace with guided planning inputs for fresh project plans;
-- BYOK AI setup managed through CLI commands;
-- named AI profiles with one active profile at a time;
+- BYOK AI setup managed through `<data_root>/.aiconf`;
+- named AI profiles with one active profile selected by `default=true` or
+  `set-ai`;
 - CLI `ai chat` as a terminal-first planning interface using the same modes as
   the TUI;
 - a canonical planning and Bullet Journal specialist agent loaded for every AI
@@ -264,7 +265,39 @@ TUI only shows whether AI is configured and which profile is active.
 
 For local models, Ollama is the recommended user setup in V2. Hosted providers
 and other compatible services remain supported through named
+OpenAI-compatible profiles in `.aiconf`, but they are not required for local
+usage.
+Profiles can declare whether a model is a reasoning model and can tune test,
+chat, and planning token budgets independently, allowing small local models and
+hosted reasoning models to coexist in the same configuration file.
+
+CLI `ai chat` uses the active AI profile by default and supports interactive
+planning commands such as mode selection, conversational replies, draft preview,
+discard, and explicit apply. It is a planning interface, not unrestricted
+autonomous execution.
+Interactive AI planning keeps recent conversation turns in the active session so
+follow-up prompts can refer to prior assistant replies before a draft is ready.
+Explicit creation prompts for tasks, plans, roadmaps, or drafts must produce a
+structured draft for approval instead of continuing as open-ended chat.
+If the model answers a required draft request with normal chat, TermBullet makes
+one automatic repair attempt that asks the model to return only the filled draft
+JSON template.
+
+The planning agent prompt is installed at
+`<install-dir>/agents/planning-bulletjournal-agent.md`. TermBullet must load it
+for every AI planning request. If the agent cannot be loaded, AI planning fails
+before any provider call.
+
+AI connection settings are not edited inside the TUI in V2 MVP. Users configure
+provider, model, optional base URL, and API key source through CLI commands. The
+TUI only shows whether AI is configured and which profile is active.
+
+For local models, Ollama is the recommended user setup in V2. Hosted providers
+and other compatible services remain supported through named
 OpenAI-compatible profiles, but they are not required for local usage.
+Profiles can declare whether a model is a reasoning model and can tune test,
+chat, and planning token budgets independently, allowing small local models and
+hosted reasoning models to coexist in the same configuration file.
 
 CLI `ai chat` uses the active AI profile by default and supports interactive
 planning commands such as mode selection, conversational replies, draft preview,

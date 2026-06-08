@@ -92,7 +92,7 @@ public sealed class TermBulletCliAppTests : IDisposable
         var exitCode = await app.InvokeAsync(["--version"]);
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("1.3.0", dependencies.Output.ToString());
+        Assert.Contains("2.0.0", dependencies.Output.ToString());
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public sealed class TermBulletCliAppTests : IDisposable
         var exitCode = await app.InvokeAsync(["-v"]);
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("1.3.0", dependencies.Output.ToString());
+        Assert.Contains("2.0.0", dependencies.Output.ToString());
     }
 
     [Fact]
@@ -124,6 +124,89 @@ public sealed class TermBulletCliAppTests : IDisposable
         Assert.Contains("config: C:\\TermBullet\\conf.json", output);
         Assert.Contains("data_root: C:\\TermBulletData", output);
         Assert.Contains("data: C:\\TermBulletData\\data", output);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_test_ai_creates_template_when_missing()
+    {
+        var dependencies = CreateDependencies();
+        var runtimePaths = CreateRuntimePaths();
+        var app = CreateApp(dependencies, runtimePaths: runtimePaths, startupAction: _ => Task.CompletedTask);
+
+        var exitCode = await app.InvokeAsync(["test-ai"]);
+
+        Assert.Equal(1, exitCode);
+        Assert.True(File.Exists(Path.Combine(runtimePaths.DataRoot, ".aiconf")));
+        Assert.Contains("AI configuration file was created", dependencies.Error.ToString());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_set_ai_updates_default_profile_in_aiconf()
+    {
+        var dependencies = CreateDependencies();
+        var runtimePaths = CreateRuntimePaths();
+        Directory.CreateDirectory(runtimePaths.DataRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(runtimePaths.DataRoot, ".aiconf"),
+            """
+            [local-gemma]
+            provider=openai-compatible
+            model=gemma3:4b
+            base_url=http://localhost:11434/v1
+            api_key=ollama
+            default=true
+
+            [local-llama-fast]
+            provider=openai-compatible
+            model=llama3.2:1b
+            base_url=http://localhost:11434/v1
+            api_key=ollama
+            """);
+        var app = CreateApp(dependencies, runtimePaths: runtimePaths, startupAction: _ => Task.CompletedTask);
+
+        var exitCode = await app.InvokeAsync(["set-ai", "local-llama-fast"]);
+
+        Assert.Equal(0, exitCode);
+        var config = await new AiConfigurationFileService(runtimePaths.DataRoot).LoadConfigAsync();
+        Assert.Equal("local-llama-fast", config.Ai?.ActiveProfile);
+        Assert.Contains("active AI profile: local-llama-fast", dependencies.Output.ToString());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_test_ai_uses_active_aiconf_profile()
+    {
+        var dependencies = CreateDependencies();
+        var runtimePaths = CreateRuntimePaths();
+        Directory.CreateDirectory(runtimePaths.DataRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(runtimePaths.DataRoot, ".aiconf"),
+            """
+            [local-gemma]
+            provider=openai-compatible
+            model=gemma3:4b
+            base_url=http://localhost:11434/v1
+            api_key=ollama
+            default=true
+            timeout_seconds=180
+            """);
+        var testedProfile = string.Empty;
+        var app = CreateApp(
+            dependencies,
+            runtimePaths: runtimePaths,
+            startupAction: _ => Task.CompletedTask,
+            testAiProfileConnection: (profileName, _) =>
+            {
+                testedProfile = profileName ?? string.Empty;
+                return Task.FromResult(new AiPlanningProviderResponse("ok", "gemma3:4b"));
+            });
+
+        var exitCode = await app.InvokeAsync(["test-ai"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal("local-gemma", testedProfile);
+        var output = dependencies.Output.ToString();
+        Assert.Contains("profile valid: local-gemma", output);
+        Assert.Contains("provider reachable: gemma3:4b", output);
     }
 
     [Fact]
@@ -264,9 +347,9 @@ public sealed class TermBulletCliAppTests : IDisposable
             dependencies,
             runtimePaths: runtimePaths,
             startupAction: _ => Task.CompletedTask,
-            testAiProfileConnection: (_, profileName, _) =>
+            testAiProfileConnection: (profileName, _) =>
             {
-                testedProfile = profileName;
+                testedProfile = profileName ?? string.Empty;
                 return Task.FromResult(new AiPlanningProviderResponse("ok", "llama3.1"));
             });
 
@@ -547,7 +630,7 @@ public sealed class TermBulletCliAppTests : IDisposable
         Func<BuildAiPlanningRequest, CancellationToken, Task<GenerateAiPlanningDraftResult>>? generateAiPlanningDraft = null,
         Func<BuildAiPlanningRequest, CancellationToken, Task<GenerateAiPlanningResponseResult>>? generateAiPlanningResponse = null,
         Func<AiPlanningDraft, CancellationToken, Task<AiPlanningDraftApplyResult>>? applyAiPlanningDraft = null,
-        Func<TermBulletConfig, string, CancellationToken, Task<AiPlanningProviderResponse>>? testAiProfileConnection = null,
+        Func<string?, CancellationToken, Task<AiPlanningProviderResponse>>? testAiProfileConnection = null,
         TextReader? input = null)
     {
         return new TermBulletCliApp(

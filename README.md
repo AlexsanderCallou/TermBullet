@@ -43,7 +43,7 @@ license is Apache License 2.0 in [LICENSE](LICENSE).
 Current release:
 
 ```text
-v1.3.0 - Guided AI Planning
+v2.0.0 - Hybrid AI Profiles
 ```
 
 Latest release:
@@ -196,34 +196,70 @@ ollama pull llama3.2:1b
 ollama run llama3.2:1b
 ```
 
-Register the local profile:
+Create or edit the AI configuration file:
 
-```bash
-termbullet ai profile add local \
-  --provider openai-compatible \
-  --model llama3.2:1b \
-  --base-url http://localhost:11434/v1 \
-  --no-api-key
-
-termbullet ai profile use local
-termbullet ai profile test local
+```text
+<data_root>/.aiconf
 ```
 
-Hosted providers can also be used when they expose an OpenAI-compatible API:
+Running `termbullet test-ai` creates a commented template when `.aiconf` does
+not exist.
 
-```bash
-termbullet ai profile add cloud \
-  --provider openai-compatible \
-  --model gpt-4.1-mini \
-  --base-url https://api.openai.com/v1 \
-  --api-key-env TERMBULLET_OPENAI_API_KEY
+Recommended local Ollama profile:
 
-termbullet ai profile use cloud
-termbullet ai profile test cloud
+```ini
+[local-gemma]
+provider=openai-compatible
+model=gemma3:4b
+base_url=http://localhost:11434/v1
+api_key=ollama
+default=true
+reasoning=false
+test_max_tokens=64
+chat_max_tokens=600
+planning_max_tokens=1200
+timeout_seconds=180
 ```
 
-The profile is stored in `<install-dir>/conf.json`. API keys should be provided
-through environment variables, not written directly into the config file.
+Lightweight local fallback:
+
+```ini
+[local-llama-fast]
+provider=openai-compatible
+model=llama3.2:1b
+base_url=http://localhost:11434/v1
+api_key=ollama
+reasoning=false
+test_max_tokens=64
+chat_max_tokens=600
+planning_max_tokens=1200
+timeout_seconds=180
+```
+
+Validate and switch profiles:
+
+```bash
+termbullet test-ai
+termbullet set-ai local-gemma
+```
+
+Hosted providers can also be used when they expose an OpenAI-compatible API. For
+hosted keys, prefer `api_key_env=OPENAI_API_KEY` instead of writing a secret into
+`.aiconf`. Reasoning models should set `reasoning=true` and larger token budgets
+so validation and planning have enough room for the model's internal reasoning.
+
+```ini
+[cloud-reasoning]
+provider=openai-compatible
+model=deepseek-v4-flash-free
+base_url=https://opencode.ai/zen/v1
+api_key_env=OPENCODE_API_KEY
+reasoning=true
+test_max_tokens=128
+chat_max_tokens=1200
+planning_max_tokens=3000
+timeout_seconds=240
+```
 
 ## Product Summary
 
@@ -275,13 +311,13 @@ dotnet run --project src/TermBullet -- [command] [arguments] [options]
 Build local release assets:
 
 ```bash
-VERSION=1.3.0 ./publish.sh
+VERSION=2.0.0 ./publish.sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\publish.ps1 -Version 1.3.0
+.\publish.ps1 -Version 2.0.0
 ```
 
 When running from source, `conf.json` is created beside the built executable

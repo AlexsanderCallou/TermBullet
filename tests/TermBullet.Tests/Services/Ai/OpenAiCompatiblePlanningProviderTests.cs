@@ -125,6 +125,41 @@ public sealed class OpenAiCompatiblePlanningProviderTests
     }
 
     [Fact]
+    public async Task SendAsync_uses_profile_chat_and_planning_token_limits()
+    {
+        using var chatHandler = new CapturingHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent("""{"choices":[{"message":{"content":"chat"}}]}""")
+            });
+        using var chatClient = new HttpClient(chatHandler);
+        var profile = LocalProfile() with
+        {
+            ChatMaxTokens = 1200,
+            PlanningMaxTokens = 3000
+        };
+        var chatProvider = new OpenAiCompatiblePlanningProvider(chatClient, profile);
+
+        await chatProvider.SendAsync(CreateRequest(requireStructuredDraft: false));
+
+        using var chatDocument = JsonDocument.Parse(Assert.IsType<string>(chatHandler.RequestBody));
+        Assert.Equal(1200, chatDocument.RootElement.GetProperty("max_tokens").GetInt32());
+
+        using var planningHandler = new CapturingHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent("""{"choices":[{"message":{"content":"{\"kind\":\"chat\"}"}}]}""")
+            });
+        using var planningClient = new HttpClient(planningHandler);
+        var planningProvider = new OpenAiCompatiblePlanningProvider(planningClient, profile);
+
+        await planningProvider.SendAsync(CreateRequest(requireStructuredDraft: true));
+
+        using var planningDocument = JsonDocument.Parse(Assert.IsType<string>(planningHandler.RequestBody));
+        Assert.Equal(3000, planningDocument.RootElement.GetProperty("max_tokens").GetInt32());
+    }
+
+    [Fact]
     public async Task SendAsync_uses_request_max_output_tokens_when_provided()
     {
         using var handler = new CapturingHandler(
@@ -236,6 +271,37 @@ public sealed class OpenAiCompatiblePlanningProviderTests
             () => provider.SendAsync(CreateRequest()));
 
         Assert.Contains("empty", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SendAsync_reports_length_finish_reason_for_empty_reasoning_response()
+    {
+        using var handler = new CapturingHandler(
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent(
+                    """
+                    {
+                      "choices": [
+                        {
+                          "message": {
+                            "content": "",
+                            "reasoning_content": "Thinking..."
+                          },
+                          "finish_reason": "length"
+                        }
+                      ]
+                    }
+                    """)
+            });
+        using var httpClient = new HttpClient(handler);
+        var provider = new OpenAiCompatiblePlanningProvider(httpClient, LocalProfile() with { Reasoning = true });
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => provider.SendAsync(CreateRequest(requireStructuredDraft: false)));
+
+        Assert.Contains("finish_reason=length", exception.Message);
+        Assert.Contains("chat_max_tokens", exception.Message);
     }
 
     [Fact]
