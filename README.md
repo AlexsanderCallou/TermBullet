@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # TermBullet
 
 TermBullet is a local-first terminal planner for tasks, notes, events, and
@@ -112,121 +111,6 @@ operational data under:
 Delete `conf.json` and `<data_root>/data` only when you intentionally want to
 remove local TermBullet data.
 
-=======
-# TermBullet
-
-TermBullet is a local-first terminal planner for tasks, notes, events, and
-personal review workflows.
-
-It provides two first-class interfaces over the same Application use cases:
-
-- **TUI:** keyboard-first visual interface with panel-based screens.
-- **CLI:** fast capture, lookup, and item manipulation from the shell.
-
-> Status: V1 offline core. The active TUI MVP includes Main Dashboard, Search,
-> Item Detail, Planning placeholder, Week, Month, Backlog, Forgotten, Notes,
-> Calendar, Tags, Migrate Item, and Add Item.
-
-## Repository
-
-Official repository:
-
-```text
-https://github.com/AlexsanderCallou/TermBullet
-```
-
-Main development branch:
-
-```text
-Development
-```
-
-TermBullet is English-first and intended for a global open source audience.
-
-## Disclaimer
-
-TermBullet is part of the author's study on using AI to support software coding
-and project delivery. It is recommended for personal use, experimentation, and
-learning only. Professional or production-critical usage is not recommended at
-this stage.
-
-Legal policy and trademark usage are in [TRADEMARKS.md](TRADEMARKS.md). The
-license is Apache License 2.0 in [LICENSE](LICENSE).
-
-## Install
-
-Current release:
-
-```text
-v1.3.0 - Guided AI Planning
-```
-
-Latest release:
-
-```text
-https://github.com/AlexsanderCallou/TermBullet/releases/latest
-```
-
-Windows x64:
-
-```powershell
-irm https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/main/install.ps1 | iex
-```
-
-Linux x64:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/AlexsanderCallou/TermBullet/main/install.sh | sh
-```
-
-After installing, open a new terminal and run:
-
-```bash
-termbullet --help
-```
-
-## Uninstall
-
-TermBullet does not currently include an uninstall command. To remove the
-application safely, delete only the installed executable first and keep your
-data directory unless you are sure you no longer need it.
-
-Windows default install location:
-
-```powershell
-Remove-Item "$env:LOCALAPPDATA\TermBullet\bin\termbullet.exe"
-```
-
-If the installer added TermBullet to your user `PATH`, remove this entry from
-your user environment variables:
-
-```text
-%LOCALAPPDATA%\TermBullet\bin
-```
-
-Linux default install location:
-
-```bash
-rm "$HOME/.local/bin/termbullet"
-```
-
-The runtime config is stored beside the installed executable:
-
-```text
-<install-dir>/conf.json
-```
-
-That config points to your selected `data_root`, where TermBullet stores
-operational data under:
-
-```text
-<data_root>/data
-```
-
-Delete `conf.json` and `<data_root>/data` only when you intentionally want to
-remove local TermBullet data.
-
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 macOS binaries and package manager distribution are planned for later releases.
 
 ## Data Location
@@ -312,7 +196,6 @@ ollama pull llama3.2:1b
 ollama run llama3.2:1b
 ```
 
-<<<<<<< HEAD
 Create or edit the AI configuration file:
 
 ```text
@@ -355,36 +238,6 @@ termbullet set-ai local-gemma
 Hosted providers can also be used when they expose an OpenAI-compatible API. For
 hosted keys, prefer `api_key_env=OPENAI_API_KEY` instead of writing a secret into
 `.aiconf`.
-=======
-Register the local profile:
-
-```bash
-termbullet ai profile add local \
-  --provider openai-compatible \
-  --model llama3.2:1b \
-  --base-url http://localhost:11434/v1 \
-  --no-api-key
-
-termbullet ai profile use local
-termbullet ai profile test local
-```
-
-Hosted providers can also be used when they expose an OpenAI-compatible API:
-
-```bash
-termbullet ai profile add cloud \
-  --provider openai-compatible \
-  --model gpt-4.1-mini \
-  --base-url https://api.openai.com/v1 \
-  --api-key-env TERMBULLET_OPENAI_API_KEY
-
-termbullet ai profile use cloud
-termbullet ai profile test cloud
-```
-
-The profile is stored in `<install-dir>/conf.json`. API keys should be provided
-through environment variables, not written directly into the config file.
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 
 ## Product Summary
 
@@ -392,7 +245,6 @@ V1 delivers:
 
 - tasks, notes, and events;
 - Today, Week, Month, Backlog, Notes, and Events collections;
-<<<<<<< HEAD
 - Forgotten review;
 - Week View;
 - Notes, Calendar, and Tags views;
@@ -424,19 +276,6 @@ The TUI is a personal cockpit for dated work, review, and execution:
 The concrete editable screen reference is [screens.md](screens.md).
 
 ## Development
-=======
-- Forgotten review;
-- Week View;
-- Notes, Calendar, and Tags views;
-- CLI and TUI MVP;
-- local monthly JSON persistence;
-- local JSON index;
-- search;
-- basic editing;
-- migration and movement;
-- local data path discovery;
-- optional AI-assisted guided planning with local or OpenAI-compatible profiles.
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 
 V1 does not include Google Calendar, machine sync, cloud accounts, or a
 PostgreSQL runtime dependency.

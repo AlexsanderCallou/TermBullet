@@ -111,7 +111,6 @@ public sealed class ApplyAiPlanningDraftUseCaseTests
         Assert.Empty(tagRepository.Tags);
     }
 
-<<<<<<< HEAD
     [Theory]
     [InlineData("this_week", ItemCollection.Week)]
     [InlineData("this-week", ItemCollection.Week)]
@@ -146,8 +145,6 @@ public sealed class ApplyAiPlanningDraftUseCaseTests
         Assert.Contains(itemRepository.Items, item => item.Collection == expectedCollection);
     }
 
-=======
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
     private static ApplyAiPlanningDraftUseCase CreateUseCase(
         FakeItemRepository itemRepository,
         FakeTagCatalogRepository tagRepository)

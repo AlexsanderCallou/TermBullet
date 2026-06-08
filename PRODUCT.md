@@ -209,14 +209,9 @@ Deferred TUI screens:
 ### V2 - AI Planning
 
 - Planning workspace with guided planning inputs for fresh project plans;
-<<<<<<< HEAD
 - BYOK AI setup managed through `<data_root>/.aiconf`;
 - named AI profiles with one active profile selected by `default=true` or
   `set-ai`;
-=======
-- BYOK AI setup managed through CLI commands;
-- named AI profiles with one active profile at a time;
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 - CLI `ai chat` as a terminal-first planning interface using the same modes as
   the TUI;
 - a canonical planning and Bullet Journal specialist agent loaded for every AI
@@ -263,7 +258,6 @@ conversation while refining the plan. Provider responses use one JSON envelope:
 `draft_ready=false` carries chat text, while `draft_ready=true` carries a
 structured draft. TermBullet validates that draft, and the user must approve
 before Application use cases create or change items.
-<<<<<<< HEAD
 
 AI connection settings are not edited inside the TUI in V2 MVP. Users configure
 provider, model, optional base URL, and API key source through CLI commands. The
@@ -290,8 +284,6 @@ The planning agent prompt is installed at
 `<install-dir>/agents/planning-bulletjournal-agent.md`. TermBullet must load it
 for every AI planning request. If the agent cannot be loaded, AI planning fails
 before any provider call.
-=======
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 
 AI connection settings are not edited inside the TUI in V2 MVP. Users configure
 provider, model, optional base URL, and API key source through CLI commands. The

@@ -86,11 +86,7 @@ public sealed class ApplyAiPlanningDraftUseCase(
     }
 
     private static ItemCollection ParseTaskCollection(string? value) =>
-<<<<<<< HEAD
         NormalizeCollectionRequired(value) switch
-=======
-        NormalizeRequired(value, "collection") switch
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
         {
             "today" => ItemCollection.Today,
             "week" => ItemCollection.Week,
@@ -100,11 +96,7 @@ public sealed class ApplyAiPlanningDraftUseCase(
         };
 
     private static Priority ParsePriority(string? value) =>
-<<<<<<< HEAD
         AiPlanningDraftNormalizer.NormalizePriority(value) switch
-=======
-        Normalize(value) switch
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
         {
             null => Priority.None,
             "none" => Priority.None,
@@ -118,17 +110,10 @@ public sealed class ApplyAiPlanningDraftUseCase(
         collection.ToString().ToLowerInvariant();
 
     private static string NormalizeRequired(string? value, string fieldName) =>
-<<<<<<< HEAD
         AiPlanningDraftNormalizer.Normalize(value)
         ?? throw new InvalidOperationException($"{fieldName} is required.");
 
     private static string NormalizeCollectionRequired(string? value) =>
         AiPlanningDraftNormalizer.NormalizeCollection(value)
         ?? throw new InvalidOperationException("collection is required.");
-=======
-        Normalize(value) ?? throw new InvalidOperationException($"{fieldName} is required.");
-
-    private static string? Normalize(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToLowerInvariant();
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 }

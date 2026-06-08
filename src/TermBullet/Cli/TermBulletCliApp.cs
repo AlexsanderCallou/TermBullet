@@ -34,7 +34,6 @@ public sealed class TermBulletCliApp(
     Func<BuildAiPlanningRequest, CancellationToken, Task<GenerateAiPlanningDraftResult>>? generateAiPlanningDraft = null,
     Func<BuildAiPlanningRequest, CancellationToken, Task<GenerateAiPlanningResponseResult>>? generateAiPlanningResponse = null,
     Func<AiPlanningDraft, CancellationToken, Task<AiPlanningDraftApplyResult>>? applyAiPlanningDraft = null,
-<<<<<<< HEAD
     Func<string?, CancellationToken, Task<AiPlanningProviderResponse>>? testAiProfileConnection = null,
     TextReader? input = null,
     Func<CancellationToken, Task>? startupAction = null)
@@ -209,191 +208,12 @@ public sealed class TermBulletCliApp(
             rootCommand.Subcommands.Add(BuildSearchCommand(standardOutput, standardError, cancellationToken));
         }
 
-=======
-    Func<TermBulletConfig, string, CancellationToken, Task<AiPlanningProviderResponse>>? testAiProfileConnection = null,
-    TextReader? input = null,
-    Func<CancellationToken, Task>? startupAction = null)
-{
-    public Task<int> InvokeAsync(string[] args, CancellationToken cancellationToken = default)
-    {
-        return InvokeInternalAsync(args, cancellationToken);
-    }
-
-    public const string Version = "1.3.0";
-
-    private async Task<int> InvokeInternalAsync(string[] args, CancellationToken cancellationToken)
-    {
-        if (HasVersionRequest(args))
-        {
-            await output.WriteLineAsync(Version);
-            return 0;
-        }
-
-        if (startupAction is not null)
-        {
-            await startupAction(cancellationToken);
-        }
-
-        var rootCommand = BuildRootCommand(output, error, cancellationToken);
-        var parseResult = rootCommand.Parse(args);
-
-        if (HasHelpRequest(args))
-        {
-            await WriteHelpAsync(parseResult.CommandResult.Command, output);
-            return 0;
-        }
-
-        if (parseResult.Errors.Count > 0)
-        {
-            foreach (var parseError in parseResult.Errors)
-            {
-                await error.WriteLineAsync(parseError.Message);
-            }
-
-            return 1;
-        }
-
-        return await parseResult.InvokeAsync(cancellationToken: cancellationToken);
-    }
-
-    public RootCommand BuildRootCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken = default)
-    {
-        var rootCommand = new RootCommand("TermBullet - Local-First Terminal Planner");
-
-        if (createItemUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildAddCommand(standardOutput, standardError, cancellationToken));
-        }
-
-        if (listItemsUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildListCommand(standardOutput, standardError, cancellationToken));
-        }
-
-        if (showItemUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildShowCommand(standardOutput, standardError, cancellationToken));
-        }
-
-        if (getTodayItemsUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildCollectionCommand(
-                "today",
-                "Show today items.",
-                getTodayItemsUseCase.ExecuteAsync,
-                standardOutput,
-                standardError,
-                cancellationToken));
-        }
-
-        if (getWeekItemsUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildCollectionCommand(
-                "week",
-                "Show week items.",
-                getWeekItemsUseCase.ExecuteAsync,
-                standardOutput,
-                standardError,
-                cancellationToken));
-        }
-
-        if (getMonthItemsUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildCollectionCommand(
-                "month",
-                "Show month items.",
-                getMonthItemsUseCase.ExecuteAsync,
-                standardOutput,
-                standardError,
-                cancellationToken));
-        }
-
-        if (getBacklogItemsUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildCollectionCommand(
-                "backlog",
-                "Show backlog items.",
-                getBacklogItemsUseCase.ExecuteAsync,
-                standardOutput,
-                standardError,
-                cancellationToken));
-        }
-
-        if (editItemUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildEditCommand(standardOutput, standardError, cancellationToken));
-        }
-
-        if (markDoneItemUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildSimpleMutationCommand(
-                "done",
-                "Mark an item as done",
-                markDoneItemUseCase.ExecuteAsync,
-                standardOutput,
-                standardError,
-                cancellationToken));
-        }
-
-        if (cancelItemUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildSimpleMutationCommand(
-                "cancel",
-                "Cancel an item",
-                cancelItemUseCase.ExecuteAsync,
-                standardOutput,
-                standardError,
-                cancellationToken));
-        }
-
-        if (moveItemUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildMoveCommand(standardOutput, standardError, cancellationToken));
-        }
-
-        if (setItemPriorityUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildPriorityCommand(standardOutput, standardError, cancellationToken));
-        }
-
-        if (tagItemUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildTagCommand("tag", "Add a tag to an item", true, standardOutput, standardError, cancellationToken));
-        }
-
-        if (untagItemUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildTagCommand("untag", "Remove a tag from an item", false, standardOutput, standardError, cancellationToken));
-        }
-
-        if (migrateItemUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildMigrateCommand(standardOutput, standardError, cancellationToken));
-        }
-
-        if (deleteItemUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildDeleteCommand(standardOutput, standardError, cancellationToken));
-        }
-
-        if (searchItemsUseCase is not null)
-        {
-            rootCommand.Subcommands.Add(BuildSearchCommand(standardOutput, standardError, cancellationToken));
-        }
-
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
         if (runtimePaths is not null)
         {
             rootCommand.Subcommands.Add(BuildPathCommand(standardOutput));
             rootCommand.Subcommands.Add(BuildAiCommand(standardOutput, standardError, cancellationToken));
-<<<<<<< HEAD
             rootCommand.Subcommands.Add(BuildTestAiCommand(standardOutput, standardError, cancellationToken));
             rootCommand.Subcommands.Add(BuildSetAiCommand(standardOutput, standardError, cancellationToken));
-=======
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
         }
 
         rootCommand.Subcommands.Add(BuildHistoryCommand(standardOutput, standardError, cancellationToken));
@@ -936,410 +756,6 @@ public sealed class TermBulletCliApp(
         return command;
     }
 
-    private Command BuildAiChatCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken)
-    {
-        var modeOption = new Option<string>("--mode")
-        {
-            Description = "Planning mode: new-project, new-weekly",
-            DefaultValueFactory = _ => "new-project"
-        };
-        var tagOption = new Option<string?>("--tag")
-        {
-            Description = "Project tag for new-project"
-        };
-
-        var command = new Command("chat", "Start an interactive AI planning chat")
-        {
-            modeOption,
-            tagOption
-        };
-
-        command.SetAction(async parseResult =>
-        {
-            try
-            {
-                var mode = ParseAiPlanningMode(parseResult.GetValue(modeOption));
-                var tag = NormalizeOptional(parseResult.GetValue(tagOption));
-
-                await RunAiChatAsync(mode, tag, standardOutput, cancellationToken);
-                return 0;
-            }
-            catch (Exception exception)
-            {
-                await standardError.WriteLineAsync(exception.Message);
-                return 1;
-            }
-        });
-
-        return command;
-    }
-
-    private async Task RunAiChatAsync(
-        AiPlanningMode mode,
-        string? tag,
-        TextWriter standardOutput,
-        CancellationToken cancellationToken)
-    {
-        AiPlanningDraft? currentDraft = null;
-        var conversationHistory = new List<AiPlanningMessage>();
-        await standardOutput.WriteLineAsync($"mode: {ToAiPlanningModeKey(mode)}");
-        await standardOutput.WriteLineAsync("commands: /mode <mode> [tag], /apply, /discard, /exit");
-
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            await standardOutput.WriteAsync("you> ");
-            var line = await (input ?? Console.In).ReadLineAsync();
-            if (line is null)
-            {
-                break;
-            }
-
-            var message = line.Trim();
-            if (message.Length == 0)
-            {
-                continue;
-            }
-
-            if (string.Equals(message, "/exit", StringComparison.OrdinalIgnoreCase))
-            {
-                break;
-            }
-
-            if (string.Equals(message, "/discard", StringComparison.OrdinalIgnoreCase))
-            {
-                currentDraft = null;
-                conversationHistory.Clear();
-                await standardOutput.WriteLineAsync("draft discarded");
-                continue;
-            }
-
-            if (message.StartsWith("/mode ", StringComparison.OrdinalIgnoreCase))
-            {
-                (mode, tag) = ParseAiChatModeCommand(message);
-                currentDraft = null;
-                conversationHistory.Clear();
-                await standardOutput.WriteLineAsync($"mode: {ToAiPlanningModeKey(mode)}");
-                continue;
-            }
-
-            if (string.Equals(message, "/apply", StringComparison.OrdinalIgnoreCase))
-            {
-                if (currentDraft is null)
-                {
-                    await standardOutput.WriteLineAsync("no draft to apply");
-                    continue;
-                }
-
-                if (applyAiPlanningDraft is null)
-                {
-                    throw new InvalidOperationException("AI planning draft application is not available.");
-                }
-
-                if (!await ConfirmAiPlanningApplyAsync(standardOutput))
-                {
-                    await standardOutput.WriteLineAsync("apply cancelled");
-                    continue;
-                }
-
-                var applyResult = await applyAiPlanningDraft(currentDraft, cancellationToken);
-                await WriteAiPlanningApplyResultAsync(applyResult, standardOutput);
-                currentDraft = null;
-                conversationHistory.Clear();
-                continue;
-            }
-
-            var historyForRequest = conversationHistory.ToArray();
-            conversationHistory.Add(new AiPlanningMessage(AiPlanningMessageRole.User, message));
-            var requireStructuredDraft = AiPlanningDraftIntent.RequiresStructuredDraft(message);
-            var response = generateAiPlanningResponse is not null
-                ? await generateAiPlanningResponse(new BuildAiPlanningRequest
-                {
-                    Mode = mode,
-                    Tag = tag,
-                    UserPrompt = message,
-                    ConversationHistory = historyForRequest,
-                    RequireStructuredDraft = requireStructuredDraft
-                }, cancellationToken)
-                : ToFlexibleResponse(await generateAiPlanningDraft!(new BuildAiPlanningRequest
-                {
-                    Mode = mode,
-                    Tag = tag,
-                    UserPrompt = message,
-                    ConversationHistory = historyForRequest
-                }, cancellationToken));
-
-            if (response.Draft is null)
-            {
-                await standardOutput.WriteLineAsync($"ai> {response.AssistantMessage}");
-                if (!string.IsNullOrWhiteSpace(response.AssistantMessage))
-                {
-                    conversationHistory.Add(new AiPlanningMessage(
-                        AiPlanningMessageRole.Assistant,
-                        response.AssistantMessage));
-                }
-
-                continue;
-            }
-
-            var result = new GenerateAiPlanningDraftResult(
-                response.Draft,
-                response.ProviderModel,
-                response.ModelRequest);
-            currentDraft = response.Draft;
-            await standardOutput.WriteLineAsync("draft ready");
-            await WriteAiPlanningDraftPreviewAsync(result, standardOutput);
-            conversationHistory.Add(new AiPlanningMessage(
-                AiPlanningMessageRole.Assistant,
-                $"draft ready: {response.Draft.Actions.Count} actions. {response.Draft.Summary}"));
-        }
-    }
-
-    private static GenerateAiPlanningResponseResult ToFlexibleResponse(GenerateAiPlanningDraftResult result) =>
-        new(result.Draft, null, result.ProviderModel ?? string.Empty, result.ModelRequest);
-
-    private Command BuildAiPlanCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken)
-    {
-        var modeArgument = new Argument<string>("mode")
-        {
-            Description = "Planning mode: new-project, new-weekly"
-        };
-        var promptOption = new Option<string>("--prompt")
-        {
-            Description = "Planning prompt",
-            Required = true
-        };
-        var tagOption = new Option<string?>("--tag")
-        {
-            Description = "Project tag for new-project"
-        };
-        var applyOption = new Option<bool>("--apply")
-        {
-            Description = "Apply the generated draft after validation"
-        };
-        var yesOption = new Option<bool>("--yes")
-        {
-            Description = "Confirm draft application without an interactive prompt"
-        };
-
-        var command = new Command("plan", "Generate an AI planning draft preview")
-        {
-            modeArgument,
-            promptOption,
-            tagOption,
-            applyOption,
-            yesOption
-        };
-
-        command.SetAction(async parseResult =>
-        {
-            try
-            {
-                var mode = ParseAiPlanningMode(parseResult.GetValue(modeArgument));
-                var tag = NormalizeOptional(parseResult.GetValue(tagOption));
-
-                var result = await generateAiPlanningDraft!(new BuildAiPlanningRequest
-                {
-                    Mode = mode,
-                    Tag = tag,
-                    UserPrompt = parseResult.GetValue(promptOption)
-                        ?? throw new ArgumentException("Prompt is required.")
-                }, cancellationToken);
-
-                await WriteAiPlanningDraftPreviewAsync(result, standardOutput);
-                if (parseResult.GetValue(applyOption))
-                {
-                    if (!parseResult.GetValue(yesOption)
-                        && !await ConfirmAiPlanningApplyAsync(standardOutput))
-                    {
-                        await standardOutput.WriteLineAsync("apply cancelled");
-                        return 0;
-                    }
-
-                    if (applyAiPlanningDraft is null)
-                    {
-                        throw new InvalidOperationException("AI planning draft application is not available.");
-                    }
-
-                    var applyResult = await applyAiPlanningDraft(result.Draft, cancellationToken);
-                    await WriteAiPlanningApplyResultAsync(applyResult, standardOutput);
-                }
-
-                return 0;
-            }
-            catch (Exception exception)
-            {
-                await standardError.WriteLineAsync(exception.Message);
-                return 1;
-            }
-        });
-
-        return command;
-    }
-
-    private async Task<bool> ConfirmAiPlanningApplyAsync(TextWriter standardOutput)
-    {
-        await standardOutput.WriteAsync("confirm apply draft? ");
-        var answer = await (input ?? Console.In).ReadLineAsync();
-        return string.Equals(answer?.Trim(), "yes", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(answer?.Trim(), "y", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private Command BuildAiProfileAddCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken)
-    {
-        var nameArgument = new Argument<string>("name") { Description = "Profile name" };
-        var providerOption = new Option<string>("--provider")
-        {
-            Description = "AI provider",
-            Required = true
-        };
-        var modelOption = new Option<string>("--model")
-        {
-            Description = "AI model",
-            Required = true
-        };
-        var baseUrlOption = new Option<string?>("--base-url")
-        {
-            Description = "Optional provider base URL"
-        };
-        var apiKeyEnvOption = new Option<string?>("--api-key-env")
-        {
-            Description = "Environment variable containing the API key"
-        };
-        var noApiKeyOption = new Option<bool>("--no-api-key")
-        {
-            Description = "Use a profile that does not require an API key"
-        };
-
-        var command = new Command("add", "Add or update an AI profile")
-        {
-            nameArgument,
-            providerOption,
-            modelOption,
-            baseUrlOption,
-            apiKeyEnvOption,
-            noApiKeyOption
-        };
-
-        command.SetAction(async parseResult =>
-        {
-            try
-            {
-                var name = NormalizeProfileName(parseResult.GetValue(nameArgument));
-                var provider = RequireNonEmpty(parseResult.GetValue(providerOption), "provider");
-                var model = RequireNonEmpty(parseResult.GetValue(modelOption), "model");
-                var baseUrl = NormalizeOptional(parseResult.GetValue(baseUrlOption));
-                var apiKeyEnv = NormalizeOptional(parseResult.GetValue(apiKeyEnvOption));
-                var noApiKey = parseResult.GetValue(noApiKeyOption);
-                if (noApiKey && apiKeyEnv is not null)
-                {
-                    throw new ArgumentException("Use either --api-key-env or --no-api-key, not both.");
-                }
-
-                var config = await LoadConfigOrDefaultAsync(cancellationToken);
-                var profiles = CopyProfiles(config);
-                profiles[name] = new AiProfile(
-                    provider,
-                    model,
-                    baseUrl,
-                    noApiKey ? "none" : "environment",
-                    noApiKey ? null : apiKeyEnv);
-                var activeProfile = string.IsNullOrWhiteSpace(config.Ai?.ActiveProfile)
-                    ? name
-                    : config.Ai.ActiveProfile;
-                await SaveConfigAsync(config with
-                {
-                    Ai = new AiConfiguration(activeProfile, profiles)
-                }, cancellationToken);
-
-                await standardOutput.WriteLineAsync($"profile saved: {name}");
-                return 0;
-            }
-            catch (Exception exception)
-            {
-                await standardError.WriteLineAsync(exception.Message);
-                return 1;
-            }
-        });
-
-        return command;
-    }
-
-    private Command BuildAiProfileListCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken)
-    {
-        var command = new Command("list", "List AI profiles");
-        command.SetAction(async _ =>
-        {
-            try
-            {
-                var config = await LoadConfigOrDefaultAsync(cancellationToken);
-                var profiles = config.Ai?.Profiles ?? new Dictionary<string, AiProfile>();
-                if (profiles.Count == 0)
-                {
-                    await standardOutput.WriteLineAsync("No AI profiles configured.");
-                    return 0;
-                }
-
-                foreach (var pair in profiles.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
-                {
-                    var marker = string.Equals(pair.Key, config.Ai?.ActiveProfile, StringComparison.OrdinalIgnoreCase)
-                        ? "*"
-                        : " ";
-                    await standardOutput.WriteLineAsync(
-                        $"{marker} {pair.Key}  {pair.Value.Provider}  {pair.Value.Model}");
-                }
-
-                return 0;
-            }
-            catch (Exception exception)
-            {
-                await standardError.WriteLineAsync(exception.Message);
-                return 1;
-            }
-        });
-
-        return command;
-    }
-
-<<<<<<< HEAD
-    private Command BuildAiCommand(
-        TextWriter standardOutput,
-        TextWriter standardError,
-        CancellationToken cancellationToken)
-    {
-        var command = new Command("ai", "Manage AI planning configuration");
-        if (generateAiPlanningDraft is not null)
-        {
-            command.Subcommands.Add(BuildAiPlanCommand(standardOutput, standardError, cancellationToken));
-        }
-
-        if (generateAiPlanningResponse is not null || generateAiPlanningDraft is not null)
-        {
-            command.Subcommands.Add(BuildAiChatCommand(standardOutput, standardError, cancellationToken));
-        }
-
-        var profileCommand = new Command("profile", "Manage AI connection profiles");
-        profileCommand.Subcommands.Add(BuildAiProfileAddCommand(standardOutput, standardError, cancellationToken));
-        profileCommand.Subcommands.Add(BuildAiProfileListCommand(standardOutput, standardError, cancellationToken));
-        profileCommand.Subcommands.Add(BuildAiProfileUseCommand(standardOutput, standardError, cancellationToken));
-        profileCommand.Subcommands.Add(BuildAiProfileShowCommand(standardOutput, standardError, cancellationToken));
-        profileCommand.Subcommands.Add(BuildAiProfileTestCommand(standardOutput, standardError, cancellationToken));
-        profileCommand.Subcommands.Add(BuildAiProfileRemoveCommand(standardOutput, standardError, cancellationToken));
-        command.Subcommands.Add(profileCommand);
-        return command;
-    }
-
     private Command BuildTestAiCommand(
         TextWriter standardOutput,
         TextWriter standardError,
@@ -1791,8 +1207,6 @@ public sealed class TermBulletCliApp(
         return command;
     }
 
-=======
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
     private Command BuildAiProfileUseCommand(
         TextWriter standardOutput,
         TextWriter standardError,
@@ -1884,12 +1298,7 @@ public sealed class TermBulletCliApp(
                 await standardOutput.WriteLineAsync($"profile valid: {name}");
                 if (testAiProfileConnection is not null)
                 {
-<<<<<<< HEAD
                     var response = await testAiProfileConnection(name, cancellationToken);
-=======
-                    var config = await LoadConfigOrDefaultAsync(cancellationToken);
-                    var response = await testAiProfileConnection(config, name, cancellationToken);
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
                     await standardOutput.WriteLineAsync($"provider reachable: {response.Model ?? profile.Model}");
                 }
 
@@ -1958,7 +1367,6 @@ public sealed class TermBulletCliApp(
             ?? new TermBulletConfig(runtimePaths!.DataRoot);
     }
 
-<<<<<<< HEAD
     private async Task<TermBulletConfig> LoadAiConfigurationFileAsync(
         bool createTemplateIfMissing,
         CancellationToken cancellationToken)
@@ -1969,8 +1377,6 @@ public sealed class TermBulletCliApp(
             : await service.LoadConfigAsync(cancellationToken);
     }
 
-=======
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
     private async Task SaveConfigAsync(TermBulletConfig config, CancellationToken cancellationToken)
     {
         var service = CreateConfigService();
@@ -1998,7 +1404,6 @@ public sealed class TermBulletCliApp(
         return new TermBulletConfigService(installDirectory);
     }
 
-<<<<<<< HEAD
     private AiConfigurationFileService CreateAiConfigurationFileService() =>
         new(runtimePaths!.DataRoot);
 
@@ -2023,8 +1428,6 @@ public sealed class TermBulletCliApp(
         return profileName;
     }
 
-=======
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
     private static Dictionary<string, AiProfile> CopyProfiles(TermBulletConfig config) =>
         new(config.Ai?.Profiles ?? new Dictionary<string, AiProfile>(), StringComparer.OrdinalIgnoreCase);
 
@@ -2146,15 +1549,12 @@ public sealed class TermBulletCliApp(
             return;
         }
 
-<<<<<<< HEAD
         if (string.Equals(keySource, "literal", StringComparison.OrdinalIgnoreCase))
         {
             _ = RequireNonEmpty(profile.ApiKey, "api_key");
             return;
         }
 
-=======
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
         if (!string.Equals(keySource, "environment", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException($"Unsupported API key source for profile {name}: {profile.ApiKeySource}");
@@ -2187,7 +1587,6 @@ public sealed class TermBulletCliApp(
         {
             await standardOutput.WriteLineAsync($"api_key_env: {profile.ApiKeyEnv}");
         }
-<<<<<<< HEAD
 
         if (!string.IsNullOrWhiteSpace(profile.ApiKey))
         {
@@ -2198,8 +1597,6 @@ public sealed class TermBulletCliApp(
         {
             await standardOutput.WriteLineAsync($"timeout_seconds: {profile.TimeoutSeconds}");
         }
-=======
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
     }
 
     private Command BuildCollectionCommand(

@@ -802,7 +802,6 @@ New Planning guided inputs:
   the user regenerates or discards it.
 - AI provider settings are configured through CLI commands only in V2 MVP. This
   screen only shows the active profile and configuration errors.
-<<<<<<< HEAD
 
 Reviewing existing plans is a future idea, not part of the current Planning
 implementation. It is intentionally deferred because the current Planning design
@@ -841,8 +840,6 @@ AI notes:
   JSON conversation text.
 - AI context must be filtered to the selected planning mode and must not send
   all monthly JSON files by default.
-=======
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 
 Reviewing existing plans is a future idea, not part of the current Planning
 implementation. It is intentionally deferred because the current Planning design

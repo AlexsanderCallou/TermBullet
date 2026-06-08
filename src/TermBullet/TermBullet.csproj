@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -15,24 +14,6 @@
     <DebugType>embedded</DebugType>
   </PropertyGroup>
 
-=======
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <AssemblyName>termbullet</AssemblyName>
-    <RootNamespace>TermBullet</RootNamespace>
-    <Version>1.3.0</Version>
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <DebugType>embedded</DebugType>
-  </PropertyGroup>
-
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="2.0.7" />
     <PackageReference Include="Terminal.Gui" Version="1.19.0" />

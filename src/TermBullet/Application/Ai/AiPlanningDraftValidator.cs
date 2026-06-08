@@ -36,11 +36,7 @@ public sealed class AiPlanningDraftValidator
         ArgumentNullException.ThrowIfNull(draft);
 
         var errors = new List<string>();
-<<<<<<< HEAD
         var mode = AiPlanningDraftNormalizer.Normalize(draft.Mode);
-=======
-        var mode = Normalize(draft.Mode);
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 
         if (mode is null)
         {
@@ -67,11 +63,7 @@ public sealed class AiPlanningDraftValidator
         {
             var action = draft.Actions[index];
             var actionNumber = index + 1;
-<<<<<<< HEAD
             var type = AiPlanningDraftNormalizer.Normalize(action.Type);
-=======
-            var type = Normalize(action.Type);
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 
             if (type is null)
             {
@@ -87,17 +79,10 @@ public sealed class AiPlanningDraftValidator
 
             ValidateAction(action, actionNumber, type, errors);
 
-<<<<<<< HEAD
             var tag = AiPlanningDraftNormalizer.Normalize(action.Tag);
             if (type == "create_tag")
             {
                 tag = AiPlanningDraftNormalizer.Normalize(action.Name);
-=======
-            var tag = Normalize(action.Tag);
-            if (type == "create_tag")
-            {
-                tag = Normalize(action.Name);
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
             }
 
             if (IsNonDefaultTag(tag))
@@ -184,11 +169,7 @@ public sealed class AiPlanningDraftValidator
 
     private static void ValidateTaskCollection(string? collection, int actionNumber, List<string> errors)
     {
-<<<<<<< HEAD
         var normalized = AiPlanningDraftNormalizer.NormalizeCollection(collection);
-=======
-        var normalized = Normalize(collection);
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
         if (normalized is null)
         {
             errors.Add($"Action {actionNumber}: collection is required.");
@@ -203,11 +184,7 @@ public sealed class AiPlanningDraftValidator
 
     private static void ValidateOptionalPriority(string? priority, int actionNumber, List<string> errors)
     {
-<<<<<<< HEAD
         var normalized = AiPlanningDraftNormalizer.NormalizePriority(priority);
-=======
-        var normalized = Normalize(priority);
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
         if (normalized is not null && !Priorities.Contains(normalized))
         {
             errors.Add($"Action {actionNumber}: unsupported priority '{normalized}'.");
@@ -223,19 +200,9 @@ public sealed class AiPlanningDraftValidator
     }
 
     private static bool IsDefaultTag(string? tag) =>
-<<<<<<< HEAD
         string.Equals(AiPlanningDraftNormalizer.Normalize(tag), "default", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsNonDefaultTag(string? tag) =>
         AiPlanningDraftNormalizer.Normalize(tag) is { } normalized
         && !string.Equals(normalized, "default", StringComparison.OrdinalIgnoreCase);
-=======
-        string.Equals(Normalize(tag), "default", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsNonDefaultTag(string? tag) =>
-        Normalize(tag) is { } normalized && !string.Equals(normalized, "default", StringComparison.OrdinalIgnoreCase);
-
-    private static string? Normalize(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToLowerInvariant();
->>>>>>> 31d6ba16bacfc3554d22ce88aea847e70d502125
 }
