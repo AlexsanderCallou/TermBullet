@@ -14,25 +14,7 @@ Config shape:
 
 ```json
 {
-  "data_root": "C:\\Users\\Alexsander\\Documents\\TermBullet",
-  "ai": {
-    "active_profile": "local",
-    "profiles": {
-      "local": {
-        "provider": "openai-compatible",
-        "model": "llama3.1",
-        "base_url": "http://localhost:11434/v1",
-        "api_key_source": "none"
-      },
-      "cloud": {
-        "provider": "openai-compatible",
-        "model": "gpt-4.1-mini",
-        "base_url": "https://api.openai.com/v1",
-        "api_key_source": "environment",
-        "api_key_env": "TERMBULLET_OPENAI_API_KEY"
-      }
-    }
-  }
+  "data_root": "C:\\Users\\Alexsander\\Documents\\TermBullet"
 }
 ```
 
@@ -66,10 +48,12 @@ Supported settings:
 - `planning_max_tokens`
 
 Normal CLI output must not print API key values. Hosted-provider secrets should
-use `api_key_env`. Local direct-response models normally use `reasoning=false`
-with smaller token budgets. Hosted reasoning models should use
-`reasoning=true`, a larger `test_max_tokens`, and larger planning/chat budgets
-so internal reasoning does not consume the whole response.
+use `api_key_env`. The recommended profile is OpenCode Zen with
+`deepseek-v4-flash-free`, `reasoning=true`, a larger `test_max_tokens`, and
+larger planning/chat budgets so internal reasoning does not consume the whole
+response. Local direct-response models remain supported and normally use
+`reasoning=false` with smaller token budgets, but no local model is recommended
+by default.
 
 The V2 planning agent prompt is installed beside the executable:
 

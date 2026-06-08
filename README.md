@@ -183,17 +183,14 @@ The full command tree is documented in [CLI.md](CLI.md).
 AI Planning is optional. TermBullet keeps working without AI, internet
 access, or external accounts.
 
-For local models, the recommended setup is Ollama. It gives a simple local
-server while still using the same OpenAI-compatible profile shape as hosted
-providers.
+The recommended AI setup is OpenCode Zen with the free
+`deepseek-v4-flash-free` model. It exposes an OpenAI-compatible endpoint and
+works well with TermBullet's structured planning flow.
 
-Install Ollama, pull a model, and keep Ollama running. For a lightweight local
-default, TermBullet recommends `llama3.2:1b`: it is small, fast to load, and a
-practical first choice for local planning on modest machines.
+Create an OpenCode Zen API key from the official documentation:
 
-```bash
-ollama pull llama3.2:1b
-ollama run llama3.2:1b
+```text
+https://opencode.ai/docs/zen/
 ```
 
 Create or edit the AI configuration file:
@@ -205,61 +202,45 @@ Create or edit the AI configuration file:
 Running `termbullet test-ai` creates a commented template when `.aiconf` does
 not exist.
 
-Recommended local Ollama profile:
+Recommended OpenCode Zen profile:
 
 ```ini
-[local-gemma]
-provider=openai-compatible
-model=gemma3:4b
-base_url=http://localhost:11434/v1
-api_key=ollama
-default=true
-reasoning=false
-test_max_tokens=64
-chat_max_tokens=600
-planning_max_tokens=1200
-timeout_seconds=180
-```
-
-Lightweight local fallback:
-
-```ini
-[local-llama-fast]
-provider=openai-compatible
-model=llama3.2:1b
-base_url=http://localhost:11434/v1
-api_key=ollama
-reasoning=false
-test_max_tokens=64
-chat_max_tokens=600
-planning_max_tokens=1200
-timeout_seconds=180
-```
-
-Validate and switch profiles:
-
-```bash
-termbullet test-ai
-termbullet set-ai local-gemma
-```
-
-Hosted providers can also be used when they expose an OpenAI-compatible API. For
-hosted keys, prefer `api_key_env=OPENAI_API_KEY` instead of writing a secret into
-`.aiconf`. Reasoning models should set `reasoning=true` and larger token budgets
-so validation and planning have enough room for the model's internal reasoning.
-
-```ini
-[cloud-reasoning]
+[opencode-free]
 provider=openai-compatible
 model=deepseek-v4-flash-free
 base_url=https://opencode.ai/zen/v1
 api_key_env=OPENCODE_API_KEY
+default=true
 reasoning=true
 test_max_tokens=128
 chat_max_tokens=1200
 planning_max_tokens=3000
 timeout_seconds=240
 ```
+
+Validate and switch profiles:
+
+```bash
+termbullet test-ai
+termbullet set-ai opencode-free
+```
+
+Set the environment variable before validation:
+
+```bash
+export OPENCODE_API_KEY="your-api-key"
+```
+
+PowerShell:
+
+```powershell
+$env:OPENCODE_API_KEY="your-api-key"
+```
+
+Other local or hosted providers are still supported when they expose an
+OpenAI-compatible API, but TermBullet does not recommend a local model by
+default. For hosted keys, prefer `api_key_env` instead of writing a secret into
+`.aiconf`.
 
 ## Product Summary
 

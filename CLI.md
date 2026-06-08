@@ -243,34 +243,41 @@ termbullet test-ai
 
 TermBullet creates a commented template and exits with an instruction to edit it.
 
-Example local Ollama configuration:
+Recommended OpenCode Zen configuration:
 
 ```ini
-[local-gemma]
+[opencode-free]
 provider=openai-compatible
-model=gemma3:4b
-base_url=http://localhost:11434/v1
-api_key=ollama
+model=deepseek-v4-flash-free
+base_url=https://opencode.ai/zen/v1
+api_key_env=OPENCODE_API_KEY
 default=true
-reasoning=false
-test_max_tokens=64
-chat_max_tokens=600
-planning_max_tokens=1200
-timeout_seconds=180
-
-[local-llama-fast]
-provider=openai-compatible
-model=llama3.2:1b
-base_url=http://localhost:11434/v1
-api_key=ollama
-reasoning=false
-test_max_tokens=64
-chat_max_tokens=600
-planning_max_tokens=1200
-timeout_seconds=180
+reasoning=true
+test_max_tokens=128
+chat_max_tokens=1200
+planning_max_tokens=3000
+timeout_seconds=240
 ```
 
-Hosted provider example:
+Create an OpenCode Zen API key from:
+
+```text
+https://opencode.ai/docs/zen/
+```
+
+Set the key before validation:
+
+```bash
+export OPENCODE_API_KEY="your-api-key"
+```
+
+PowerShell:
+
+```powershell
+$env:OPENCODE_API_KEY="your-api-key"
+```
+
+Generic hosted provider example:
 
 ```ini
 [hosted-fast]
@@ -285,19 +292,22 @@ planning_max_tokens=1200
 timeout_seconds=180
 ```
 
-Hosted reasoning model example:
+Local OpenAI-compatible providers are supported, but TermBullet does not
+recommend a local model by default.
+
+Local provider example:
 
 ```ini
-[cloud-reasoning]
+[local-custom]
 provider=openai-compatible
-model=deepseek-v4-flash-free
-base_url=https://opencode.ai/zen/v1
-api_key_env=OPENCODE_API_KEY
-reasoning=true
-test_max_tokens=128
-chat_max_tokens=1200
-planning_max_tokens=3000
-timeout_seconds=240
+model=your-local-model
+base_url=http://localhost:11434/v1
+api_key=local
+reasoning=false
+test_max_tokens=64
+chat_max_tokens=600
+planning_max_tokens=1200
+timeout_seconds=180
 ```
 
 Required keys:
@@ -322,7 +332,7 @@ exist, exactly one must have `default=true`.
 
 ```bash
 termbullet test-ai
-termbullet test-ai local-gemma
+termbullet test-ai opencode-free
 ```
 
 Validates `.aiconf`, resolves the active or requested profile, checks required
@@ -333,7 +343,7 @@ returns a clear actionable error.
 ### `set-ai`
 
 ```bash
-termbullet set-ai local-gemma
+termbullet set-ai opencode-free
 ```
 
 Sets the default profile in `.aiconf`. It rewrites the file with the same profile
@@ -385,7 +395,7 @@ Rules:
 Example output:
 
 ```text
-model: llama3.1
+model: deepseek-v4-flash-free
 mode: new_project
 summary: Billing module first version.
 actions:

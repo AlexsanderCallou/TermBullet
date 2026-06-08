@@ -188,66 +188,40 @@ public sealed class AiConfigurationFileService(string dataRoot)
         # Supported providers:
         # - openai-compatible
         #
-        # Ollama example:
-        # base_url=http://localhost:11434/v1
-        # api_key=ollama
-        # reasoning=false
+        # Recommended setup:
+        # - Create an OpenCode Zen API key: https://opencode.ai/docs/zen/
+        # - Set OPENCODE_API_KEY in your environment.
         #
-        # OpenAI-compatible hosted example:
-        # base_url=https://api.openai.com/v1
-        # api_key_env=OPENAI_API_KEY
-        # reasoning=false
-        #
-        # Reasoning models may need larger token budgets:
-        # reasoning=true
-        # test_max_tokens=128
-        # chat_max_tokens=1200
-        # planning_max_tokens=3000
+        # Local OpenAI-compatible providers are supported, but TermBullet does
+        # not recommend a local model by default.
 
-        [local-gemma]
+        [opencode-free]
         provider=openai-compatible
-        model=gemma3:4b
-        base_url=http://localhost:11434/v1
-        api_key=ollama
+        model=deepseek-v4-flash-free
+        base_url=https://opencode.ai/zen/v1
+        api_key_env=OPENCODE_API_KEY
         default=true
-        reasoning=false
-        test_max_tokens=64
-        chat_max_tokens=600
-        planning_max_tokens=1200
-        timeout_seconds=180
+        reasoning=true
+        test_max_tokens=128
+        chat_max_tokens=1200
+        planning_max_tokens=3000
+        timeout_seconds=240
 
-        [local-llama-fast]
-        provider=openai-compatible
-        model=llama3.2:1b
-        base_url=http://localhost:11434/v1
-        api_key=ollama
-        reasoning=false
-        test_max_tokens=64
-        chat_max_tokens=600
-        planning_max_tokens=1200
-        timeout_seconds=180
-
-        # [hosted-fast]
+        # [local-custom]
         # provider=openai-compatible
-        # model=gpt-4.1-mini
-        # base_url=https://api.openai.com/v1
-        # api_key_env=OPENAI_API_KEY
+        # model=your-local-model
+        # base_url=http://localhost:11434/v1
+        # api_key=local
         # reasoning=false
         # test_max_tokens=64
         # chat_max_tokens=600
         # planning_max_tokens=1200
         # timeout_seconds=180
-
-        # [cloud-reasoning]
-        # provider=openai-compatible
-        # model=deepseek-v4-flash-free
-        # base_url=https://opencode.ai/zen/v1
-        # api_key_env=OPENCODE_API_KEY
-        # reasoning=true
+        #
+        # Reasoning models may need larger token budgets:
         # test_max_tokens=128
         # chat_max_tokens=1200
         # planning_max_tokens=3000
-        # timeout_seconds=240
         """;
 
     private static string Render(AiConfiguration configuration)

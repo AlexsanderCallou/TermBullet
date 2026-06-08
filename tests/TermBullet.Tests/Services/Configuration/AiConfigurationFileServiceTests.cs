@@ -61,6 +61,20 @@ public sealed class AiConfigurationFileServiceTests : IDisposable
     }
 
     [Fact]
+    public void CreateTemplate_recommends_opencode_free_profile()
+    {
+        var template = AiConfigurationFileService.CreateTemplate();
+
+        Assert.Contains("[opencode-free]", template);
+        Assert.Contains("model=deepseek-v4-flash-free", template);
+        Assert.Contains("base_url=https://opencode.ai/zen/v1", template);
+        Assert.Contains("api_key_env=OPENCODE_API_KEY", template);
+        Assert.DoesNotContain("ollama", template, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("llama3", template, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("gemma", template, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task SetActiveProfileAsync_rewrites_default_profile()
     {
         var service = new AiConfigurationFileService(_root);

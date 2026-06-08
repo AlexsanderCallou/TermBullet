@@ -2,15 +2,16 @@
 
 ## v2.0.0 - Hybrid AI Profiles
 
-TermBullet V2.0.0 improves AI provider configuration so local direct-response
-models and hosted reasoning models can coexist in the same `.aiconf` file.
+TermBullet V2.0.0 improves AI provider configuration so direct-response models
+and hosted reasoning models can coexist in the same `.aiconf` file.
 
 ### Added
 
 - Hybrid AI profile behavior settings: `reasoning`, `test_max_tokens`,
   `chat_max_tokens`, and `planning_max_tokens`.
 - Larger default token budgets for reasoning profiles.
-- OpenCode/DeepSeek-compatible hosted reasoning profile examples.
+- Recommended OpenCode Zen `deepseek-v4-flash-free` hosted reasoning profile
+  examples.
 
 ### Changed
 
@@ -24,7 +25,7 @@ models and hosted reasoning models can coexist in the same `.aiconf` file.
 ## v1.3.0 - Guided AI Planning
 
 TermBullet V1.3.0 adds optional AI-assisted guided planning for creating new
-project plans with small local models.
+project plans from structured prompts.
 
 ### Added
 
@@ -34,13 +35,13 @@ project plans with small local models.
 - Structured AI planning draft generation, preview, approval, and apply
   workflow.
 - Canonical planning agent prompt shipped with published binaries.
-- README guidance for local Ollama setup with `llama3.2:1b`.
+- README guidance for the initial AI setup.
 
 ### Changed
 
 - Planning is scoped to new project creation only; existing-plan review is
-  deferred for future work because small local models do not handle broad
-  historical review reliably enough yet.
+  deferred for future work because broad historical review is not reliable
+  enough yet.
 - AI draft validation now accepts only create actions and repairs invalid
   collection placeholders once before failing.
 
