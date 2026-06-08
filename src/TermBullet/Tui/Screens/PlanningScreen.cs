@@ -15,7 +15,6 @@ public static class PlanningScreen
         Action onRefresh,
         CancellationToken cancellationToken)
     {
-        var mode = PlanningScreenMode.NewPlanning;
         var navigation = new Tui.Navigation.TuiNavigationState(panelCount: 4);
         var focusedPanelIndex = 0;
         var conversationLines = new List<string>();
@@ -23,6 +22,9 @@ public static class PlanningScreen
         string? statusLine = null;
         TextField? guidedTopicField = null;
         TextField? guidedTagField = null;
+        CheckBox? highDetailCheckBox = null;
+        CheckBox? lowDetailCheckBox = null;
+        CheckBox? startTodayCheckBox = null;
         var guidedForm = new GuidedPlanningForm();
         IReadOnlyList<TextField> textInputFields = [];
 
@@ -55,6 +57,9 @@ public static class PlanningScreen
             contentHost.RemoveAll();
             guidedTopicField = null;
             guidedTagField = null;
+            highDetailCheckBox = null;
+            lowDetailCheckBox = null;
+            startTodayCheckBox = null;
             textInputFields = [];
             var vm = PlanningViewModel.ForNewPlanning();
 
@@ -72,17 +77,76 @@ public static class PlanningScreen
                 focusedPanelIndex = 0;
             }
 
+            var generateButton = new Button("Generate");
+            generateButton.Clicked += GenerateGuidedDraft;
+
+            var applyButton = new Button("Apply");
+            applyButton.Clicked += () =>
+            {
+                if (currentDraft is null)
+                {
+                    conversationLines.Add("system> no draft to apply.");
+                    RenderPlanning();
+                    return;
+                }
+
+                if (applyAiPlanningDraft is null)
+                {
+                    conversationLines.Add("system> draft application is not available.");
+                    RenderPlanning();
+                    return;
+                }
+
+                conversationLines.Add("system> applying draft...");
+                RenderPlanning();
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var result = await applyAiPlanningDraft(currentDraft.Draft, cancellationToken);
+                        TGui.MainLoop?.Invoke(() =>
+                        {
+                            conversationLines.Add($"system> applied {result.Actions.Count} actions.");
+                            currentDraft = null;
+                            onRefresh();
+                            RenderPlanning();
+                        });
+                    }
+                    catch (Exception exception) when (exception is not OperationCanceledException)
+                    {
+                        TGui.MainLoop?.Invoke(() =>
+                        {
+                            conversationLines.Add($"error> {exception.Message}");
+                            RenderPlanning();
+                        });
+                    }
+                }, cancellationToken);
+            };
+
+            var discardButton = new Button("Discard");
+            discardButton.Clicked += () =>
+            {
+                currentDraft = null;
+                conversationLines.Add("system> draft discarded.");
+                RenderPlanning();
+            };
+
+            var actionButtons = new[] { generateButton, applyButton, discardButton };
+
             BuildGuidedPlanningWorkspace(
                 contentHost,
-                vm,
                 navigation,
                 guidedForm,
                 conversationLines.Count > 0 ? conversationLines : vm.ConversationLines,
                 currentDraft,
-                (topicField, tagField) =>
+                actionButtons,
+                (topicField, tagField, highCheck, lowCheck, startTodayCheck) =>
                 {
                     guidedTopicField = topicField;
                     guidedTagField = tagField;
+                    highDetailCheckBox = highCheck;
+                    lowDetailCheckBox = lowCheck;
+                    startTodayCheckBox = startTodayCheck;
                     textInputFields = [topicField, tagField];
                 });
         }
@@ -99,6 +163,20 @@ public static class PlanningScreen
             if (guidedTagField is not null)
             {
                 guidedForm.ProjectTag = guidedTagField.Text?.ToString()?.Trim() ?? string.Empty;
+            }
+
+            if (highDetailCheckBox is not null && highDetailCheckBox.Checked)
+            {
+                guidedForm.DetailLevel = GuidedPlanningDetailLevel.High;
+            }
+            else if (lowDetailCheckBox is not null && lowDetailCheckBox.Checked)
+            {
+                guidedForm.DetailLevel = GuidedPlanningDetailLevel.Low;
+            }
+
+            if (startTodayCheckBox is not null)
+            {
+                guidedForm.StartToday = startTodayCheckBox.Checked;
             }
         }
 
@@ -124,7 +202,7 @@ public static class PlanningScreen
             var prompt = BuildGuidedPlanningPrompt(guidedForm);
             conversationLines.Clear();
             currentDraft = null;
-            conversationLines.Add($"system> generating {guidedForm.VolumeLabel.ToLowerInvariant()} plan for {projectTag}...");
+            conversationLines.Add($"system> generating {guidedForm.DetailLevelLabel.ToLowerInvariant()}-detail plan for {projectTag}...");
             conversationLines.Add("assistant> working...");
             RenderPlanning();
 
@@ -188,79 +266,10 @@ public static class PlanningScreen
             SyncGuidedFormFromFields();
             var handled = HandlePlanningKey(
                 args.KeyEvent,
-                ref mode,
                 ref focusedPanelIndex,
                 navigation,
                 onBack,
                 onQuit,
-                () =>
-                {
-                    if (currentDraft is null)
-                    {
-                        conversationLines.Add("system> no draft to apply.");
-                        RenderPlanning();
-                        return;
-                    }
-
-                    if (applyAiPlanningDraft is null)
-                    {
-                        conversationLines.Add("system> draft application is not available.");
-                        RenderPlanning();
-                        return;
-                    }
-
-                    conversationLines.Add("system> applying draft...");
-                    RenderPlanning();
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var result = await applyAiPlanningDraft(currentDraft.Draft, cancellationToken);
-                            TGui.MainLoop?.Invoke(() =>
-                            {
-                                conversationLines.Add($"system> applied {result.Actions.Count} actions.");
-                                currentDraft = null;
-                                onRefresh();
-                                RenderPlanning();
-                            });
-                        }
-                        catch (Exception exception) when (exception is not OperationCanceledException)
-                        {
-                            TGui.MainLoop?.Invoke(() =>
-                            {
-                                conversationLines.Add($"error> {exception.Message}");
-                                RenderPlanning();
-                            });
-                        }
-                    }, cancellationToken);
-                },
-                () =>
-                {
-                    currentDraft = null;
-                    conversationLines.Add("system> draft discarded.");
-                    RenderPlanning();
-                },
-                GenerateGuidedDraft,
-                () =>
-                {
-                    if (mode != PlanningScreenMode.NewPlanning)
-                    {
-                        return;
-                    }
-
-                    guidedForm.CycleVolume();
-                    RenderPlanning();
-                },
-                () =>
-                {
-                    if (mode != PlanningScreenMode.NewPlanning)
-                    {
-                        return;
-                    }
-
-                    guidedForm.StartToday = !guidedForm.StartToday;
-                    RenderPlanning();
-                },
                 RenderPlanning);
             args.Handled = handled;
         };
@@ -268,16 +277,10 @@ public static class PlanningScreen
 
     private static bool HandlePlanningKey(
         KeyEvent keyEvent,
-        ref PlanningScreenMode mode,
         ref int focusedPanelIndex,
         Tui.Navigation.TuiNavigationState navigation,
         Action onBack,
         Action onQuit,
-        Action onApply,
-        Action onDiscard,
-        Action onGenerateGuidedDraft,
-        Action onCycleGuidedVolume,
-        Action onToggleGuidedToday,
         Action render)
     {
         switch (keyEvent.Key)
@@ -298,21 +301,6 @@ public static class PlanningScreen
                 focusedPanelIndex = navigation.FocusedPanelIndex;
                 render();
                 return true;
-            case Key a when a == (Key)'a':
-                onApply();
-                return true;
-            case Key d when d == (Key)'d':
-                onDiscard();
-                return true;
-            case Key g when g == (Key)'g' && mode == PlanningScreenMode.NewPlanning:
-                onGenerateGuidedDraft();
-                return true;
-            case Key s when s == (Key)'s' && mode == PlanningScreenMode.NewPlanning:
-                onCycleGuidedVolume();
-                return true;
-            case Key t when t == (Key)'t' && mode == PlanningScreenMode.NewPlanning:
-                onToggleGuidedToday();
-                return true;
         }
 
         return false;
@@ -320,12 +308,12 @@ public static class PlanningScreen
 
     private static void BuildGuidedPlanningWorkspace(
         View host,
-        PlanningViewModel vm,
         Tui.Navigation.TuiNavigationState navigation,
         GuidedPlanningForm form,
         IReadOnlyList<string> conversationLines,
         GenerateAiPlanningDraftResult? currentDraft,
-        Action<TextField, TextField> onFieldsCreated)
+        Button[] actionButtons,
+        Action<TextField, TextField, CheckBox, CheckBox, CheckBox> onFieldsCreated)
     {
         var setupPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, "Setup", navigation, 0))
         {
@@ -362,9 +350,6 @@ public static class PlanningScreen
             Height = 1
         };
         var setupHelp = BuildList([
-            "s: cycle task volume",
-            "t: toggle first task today",
-            "g: generate structured draft",
             "All task titles must start with 1., 2., 3. in order."
         ]);
         setupHelp.X = 0;
@@ -380,15 +365,68 @@ public static class PlanningScreen
             Width = Dim.Fill(),
             Height = Dim.Percent(42)
         };
+
+        var detailLabel = new Label("Detail level:")
+        {
+            X = 0,
+            Y = 0,
+            Width = 14
+        };
+        var highDetailCheck = new CheckBox("High")
+        {
+            X = 14,
+            Y = 0,
+            Checked = form.DetailLevel == GuidedPlanningDetailLevel.High
+        };
+        var lowDetailCheck = new CheckBox("Low")
+        {
+            X = Pos.Right(highDetailCheck) + 2,
+            Y = 0,
+            Checked = form.DetailLevel == GuidedPlanningDetailLevel.Low
+        };
+
+        highDetailCheck.Toggled += args =>
+        {
+            if (highDetailCheck.Checked)
+            {
+                lowDetailCheck.Checked = false;
+            }
+            else
+            {
+                highDetailCheck.Checked = true;
+            }
+        };
+
+        lowDetailCheck.Toggled += args =>
+        {
+            if (lowDetailCheck.Checked)
+            {
+                highDetailCheck.Checked = false;
+            }
+            else
+            {
+                lowDetailCheck.Checked = true;
+            }
+        };
+
+        var startTodayCheck = new CheckBox("Start today")
+        {
+            X = 0,
+            Y = 2,
+            Checked = form.StartToday
+        };
+
         var rulesList = BuildList(BuildGuidedRuleLines(form));
-        rulesPanel.Add(rulesList);
+        rulesList.Y = 4;
+        rulesList.Height = Dim.Fill();
+        rulesPanel.Add(detailLabel, highDetailCheck, lowDetailCheck, startTodayCheck, rulesList);
 
         var previewPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Draft Preview", navigation, 2))
         {
             X = 0,
             Y = Pos.Bottom(setupPanel),
             Width = Dim.Fill(),
-            Height = Dim.Fill(4)
+            Height = Dim.Fill(5)
         };
         var previewList = BuildList(BuildConversationLines(conversationLines, currentDraft));
         previewPanel.Add(previewList);
@@ -396,20 +434,20 @@ public static class PlanningScreen
         var actionsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(4, "Actions", navigation, 3))
         {
             X = 0,
-            Y = Pos.AnchorEnd(5),
+            Y = Pos.AnchorEnd(6),
             Width = Dim.Fill(),
-            Height = 4
+            Height = 5
         };
-        var actionsList = BuildList(BuildDraftActionLines(vm.SecondaryLines, currentDraft));
-        actionsPanel.Add(actionsList);
+
+        LayoutButtons(actionButtons, actionsPanel, maxPerLine: 4);
 
         host.Add(setupPanel, rulesPanel, previewPanel, actionsPanel);
         TuiScreenUtilities.UpdatePanelTitles(
             [setupPanel, rulesPanel, previewPanel, actionsPanel],
             ["Setup", "Rules", "Draft Preview", "Actions"],
             navigation);
-        TuiScreenUtilities.FocusCurrentPanel([topicField, rulesList, previewList, actionsList], navigation);
-        onFieldsCreated(topicField, tagField);
+        TuiScreenUtilities.FocusCurrentPanel([topicField, highDetailCheck, previewList, actionButtons[0]], navigation);
+        onFieldsCreated(topicField, tagField, highDetailCheck, lowDetailCheck, startTodayCheck);
     }
 
     private static ListView BuildList(IReadOnlyList<string> lines) =>
@@ -421,23 +459,27 @@ public static class PlanningScreen
             Height = Dim.Fill()
         };
 
-    private static IReadOnlyList<string> BuildDraftActionLines(
-        IReadOnlyList<string> baseLines,
-        GenerateAiPlanningDraftResult? currentDraft)
+    private static void LayoutButtons(Button[] buttons, View parent, int maxPerLine)
     {
-        if (currentDraft is null)
-        {
-            return baseLines;
-        }
+        var row = 0;
+        var col = 0;
+        Button? lastInRow = null;
 
-        return
-        [
-            "Apply plan",
-            "Discard draft",
-            $"draft: {currentDraft.Draft.Actions.Count} actions",
-            "press a to apply",
-            "press d to discard"
-        ];
+        foreach (var button in buttons)
+        {
+            button.X = col == 0 ? 0 : Pos.Right(lastInRow!) + 2;
+            button.Y = row;
+            parent.Add(button);
+            lastInRow = button;
+            col++;
+
+            if (col >= maxPerLine)
+            {
+                col = 0;
+                row++;
+                lastInRow = null;
+            }
+        }
     }
 
     private static IReadOnlyList<string> BuildConversationLines(
@@ -447,36 +489,37 @@ public static class PlanningScreen
 
     private static IReadOnlyList<string> BuildGuidedRuleLines(GuidedPlanningForm form)
     {
-        var (todayCount, weekCount, monthCount, backlogCount) = form.EstimateDistribution();
-
         return
         [
-            $"Volume: {form.VolumeLabel}",
-            $"Target range: {form.TargetRangeLabel}",
-            $"Target tasks: {form.TargetTaskCount}",
-            $"Start today: {(form.StartToday ? "Yes" : "No")}",
+            "High: each task = one atomic action.",
+            "Low: each task = ~1 day or ~2h of work.",
             "",
-            $"Today: {todayCount}",
-            $"Week: max 5 ({weekCount})",
-            $"Month: max 20 ({monthCount})",
-            $"Backlog: remaining ({backlogCount})",
+            "Collection guardrails:",
+            "  today: max 2",
+            "  week: 2 to 10",
+            "  month: 10+ (no limit)",
+            "  backlog: remaining",
             "",
-            "TermBullet controls count, tag, and collections.",
-            "The model only writes ordered task content."
+            "AI decides total task count.",
+            "TermBullet controls tag and placement."
         ];
     }
 
     private static string BuildGuidedPlanningPrompt(GuidedPlanningForm form)
     {
-        var (todayCount, weekCount, monthCount, backlogCount) = form.EstimateDistribution();
+        var detailInstruction = form.DetailLevel == GuidedPlanningDetailLevel.High
+            ? "Each task must be a single atomic action (e.g., \"Install Rust with rustup\", \"Run cargo init\")."
+            : "Each task must represent approximately 1 day or 2 hours of work. Group related atomic actions into meaningful tasks (e.g., \"Setup Rust development environment\").";
+
+        var startTodayInstruction = form.StartToday
+            ? "- Put at most 2 tasks in today."
+            : "- Put 0 tasks in today.";
 
         return string.Join(Environment.NewLine, [
-            "Create a new project planning draft from these fixed guided inputs.",
+            "Create a new project planning draft from these guided inputs.",
             $"Topic: {form.Topic}",
             $"Project tag: {form.ProjectTag}",
-            $"Task volume: {form.VolumeLabel}",
-            $"Task count target: {form.TargetTaskCount}",
-            $"Allowed task count range: {form.TargetRangeLabel}",
+            $"Detail level: {form.DetailLevelLabel}",
             $"Start today: {(form.StartToday ? "yes" : "no")}",
             "",
             "Hard constraints:",
@@ -485,10 +528,12 @@ public static class PlanningScreen
             $"- Every task must use tag \"{form.ProjectTag}\".",
             "- Every task content must start with a strictly increasing numeric prefix: 1. 2. 3. 4.",
             "- The prefix order must describe the execution order.",
-            $"- Put {todayCount} task(s) in today.",
-            $"- Put {weekCount} task(s) in week, never more than 5.",
-            $"- Put {monthCount} task(s) in month, never more than 20.",
-            $"- Put {backlogCount} task(s) in backlog.",
+            detailInstruction,
+            "- You decide the total number of tasks based on the topic complexity.",
+            startTodayInstruction,
+            "- Put 2 to 10 tasks in week.",
+            "- Put 10 or more tasks in month (no upper limit).",
+            "- Put any remaining tasks in backlog.",
             "- Do not create notes or events.",
             "- Do not ask follow-up questions."
         ]);
@@ -497,50 +542,20 @@ public static class PlanningScreen
 
 internal sealed class GuidedPlanningForm
 {
-    private static readonly GuidedPlanningVolume[] VolumeOrder =
-    [
-        GuidedPlanningVolume.Small,
-        GuidedPlanningVolume.Medium,
-        GuidedPlanningVolume.Large
-    ];
-
     public string Topic { get; set; } = string.Empty;
 
     public string ProjectTag { get; set; } = string.Empty;
 
-    public GuidedPlanningVolume Volume { get; private set; } = GuidedPlanningVolume.Medium;
+    public GuidedPlanningDetailLevel DetailLevel { get; set; } = GuidedPlanningDetailLevel.High;
 
     public bool StartToday { get; set; } = true;
 
-    public string VolumeLabel => Volume switch
+    public string DetailLevelLabel => DetailLevel switch
     {
-        GuidedPlanningVolume.Small => "Small",
-        GuidedPlanningVolume.Medium => "Medium",
-        GuidedPlanningVolume.Large => "Large",
-        _ => "Medium"
+        GuidedPlanningDetailLevel.High => "High",
+        GuidedPlanningDetailLevel.Low => "Low",
+        _ => "High"
     };
-
-    public string TargetRangeLabel => Volume switch
-    {
-        GuidedPlanningVolume.Small => "up to 10 tasks",
-        GuidedPlanningVolume.Medium => "10-20 tasks",
-        GuidedPlanningVolume.Large => "20-40 tasks",
-        _ => "10-20 tasks"
-    };
-
-    public int TargetTaskCount => Volume switch
-    {
-        GuidedPlanningVolume.Small => 8,
-        GuidedPlanningVolume.Medium => 15,
-        GuidedPlanningVolume.Large => 30,
-        _ => 15
-    };
-
-    public void CycleVolume()
-    {
-        var nextIndex = (Array.IndexOf(VolumeOrder, Volume) + 1) % VolumeOrder.Length;
-        Volume = VolumeOrder[nextIndex];
-    }
 
     public string? GetValidationError()
     {
@@ -556,26 +571,10 @@ internal sealed class GuidedPlanningForm
 
         return null;
     }
-
-    public (int Today, int Week, int Month, int Backlog) EstimateDistribution()
-    {
-        var remaining = TargetTaskCount;
-        var today = StartToday && remaining > 0 ? 1 : 0;
-        remaining -= today;
-
-        var week = Math.Min(remaining, 5);
-        remaining -= week;
-
-        var month = Math.Min(remaining, 20);
-        remaining -= month;
-
-        return (today, week, month, remaining);
-    }
 }
 
-internal enum GuidedPlanningVolume
+internal enum GuidedPlanningDetailLevel
 {
-    Small,
-    Medium,
-    Large
+    High,
+    Low
 }

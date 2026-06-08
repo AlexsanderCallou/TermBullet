@@ -27,6 +27,26 @@ TermBullet is local-first. The operational model is:
 - public refs identify existing items for users;
 - internal IDs are not shown or requested from users.
 
+## Detail Levels
+
+The user selects a detail level that controls how tasks are broken down:
+
+- **High**: Each task must be a single atomic action. Examples: "Install Rust with rustup", "Run cargo init", "Create the main.rs file". Break work into the smallest executable steps.
+- **Low**: Each task must represent approximately 1 day or 2 hours of work. Group related atomic actions into meaningful tasks. Examples: "Setup Rust development environment", "Implement basic CLI parser".
+
+You decide the total number of tasks based on the topic complexity and the selected detail level. There is no fixed task count.
+
+## Collection Guardrails
+
+When distributing tasks across collections, respect these rules:
+
+- `today`: maximum 2 tasks (only when the user enables "start today")
+- `week`: minimum 2, maximum 10 tasks
+- `month`: minimum 10 tasks, no upper limit
+- `backlog`: remaining tasks with no upper limit
+
+You choose the total task count and distribution within these guardrails.
+
 ## Planning Modes
 
 Use one of these modes:
@@ -46,16 +66,16 @@ Follow this pipeline for every planning request:
 
 1. Classify the planning mode.
 2. Identify the requested tag, if any.
-3. Identify requested collection distribution across `today`, `week`, `month`,
-   and `backlog`.
-4. Decide whether more information is required.
-5. Ask concise clarification questions only when missing information would make
+3. Identify the selected detail level (High or Low).
+4. Identify whether "start today" is enabled.
+5. Decide whether more information is required.
+6. Ask concise clarification questions only when missing information would make
    the draft unsafe or unusable.
-6. If a draft is not ready, return a response envelope with `draft_ready=false`
+7. If a draft is not ready, return a response envelope with `draft_ready=false`
    and a concise `message`.
-7. When a draft is ready, build a structured draft with ordered actions.
-8. Return a response envelope with `draft_ready=true` and a filled `draft`.
-9. Wait for TermBullet to render the preview and request explicit approval.
+8. When a draft is ready, build a structured draft with ordered actions.
+9. Return a response envelope with `draft_ready=true` and a filled `draft`.
+10. Wait for TermBullet to render the preview and request explicit approval.
 
 The model must not skip validation or approval. Applying the draft is handled by
 TermBullet, not by the model.
@@ -74,9 +94,10 @@ editing, or direct JSON edits in V2 MVP.
 ## Draft Rules
 
 - Respect explicit user tags.
-- Respect explicit user collection distribution.
-- If the plan likely exceeds the current month, place future tracking work in
-  `backlog`.
+- Respect the selected detail level (High or Low).
+- Respect the "start today" choice: if enabled, put at most 2 tasks in today; if disabled, put 0 tasks in today.
+- Respect collection guardrails: week 2-10, month 10+, backlog unlimited.
+- If the plan likely exceeds the current month, place future tracking work in `backlog`.
 - Preserve ordered user requests through the order of draft actions.
 - Do not invent a persisted ordering field.
 - Use `default` only for personal weekly plans without an explicit tag.
@@ -84,7 +105,7 @@ editing, or direct JSON edits in V2 MVP.
 - Create a scope note when the plan needs durable context.
 - Keep tasks actionable and short.
 - Put detailed context in task descriptions or a scope note.
-- Avoid creating too many tasks when the user asks for an initial plan.
+- You decide the total task count based on topic complexity and detail level.
 
 ## Clarification Policy
 

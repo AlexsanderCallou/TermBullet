@@ -223,13 +223,14 @@ Deferred TUI screens:
 
 New Planning supports:
 
-- guided project planning from a topic, project tag, task volume, and whether
+- guided project planning from a topic, project tag, detail level, and whether
   the first task should start today;
-- task volume ranges: `small` up to 10 tasks, `medium` from 10 to 20 tasks, and
-  `large` from 20 to 40 tasks;
-- deterministic distribution: first task in `today` when enabled, then up to 5
-  tasks in `week`, up to 20 tasks in `month`, and the remaining tasks in
-  `backlog`;
+- detail levels: `high` where each task is a single atomic action, and `low`
+  where each task represents approximately 1 day or 2 hours of work;
+- the AI decides the total number of tasks based on topic complexity and the
+  selected detail level;
+- collection guardrails: today max 2 (if start today enabled), week 2-10,
+  month 10+, backlog unlimited;
 - ordered task content where every generated task starts with a growing numeric
   prefix such as `1.`, `2.`, `3.`.
 

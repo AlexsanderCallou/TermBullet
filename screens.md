@@ -751,54 +751,71 @@ Entry points:
 Navigation:
 
 - `Tab` and `Shift+Tab` move focus between numbered panels.
-- `g` generates a structured draft.
-- `s` cycles task volume.
-- `t` toggles the first task in Today.
-- `Enter` sends the prompt or activates the selected action.
+- `Enter` activates the focused button or control.
 - `Esc` returns to the dashboard.
 - `?` opens contextual help.
 - `q` quits.
+
+The Planning screen has text input fields (Topic and Project tag). To avoid
+keyboard shortcut conflicts with text input, all actions are performed through
+physical buttons in the Actions panel. There are no letter-key shortcuts on this
+screen.
 
 Planning target ASCII layout:
 
 ```text
 + TermBullet - Planning ------------------------------------------------------------------+
 | 1 Setup                                      | 2 Rules                                   |
-| Topic        Rust programming               | Volume: Medium                            |
-| Project tag  studies-rust                   | Target range: 10-20 tasks                 |
-| s: cycle task volume                        | Target tasks: 15                          |
-| t: toggle first task today                  | Start today: Yes                          |
-| g: generate structured draft                | Today: 1                                  |
-| All task titles start with 1., 2., 3.       | Week: max 5 (5)                           |
-|                                             | Month: max 20 (9)                         |
-|                                             | Backlog: remaining (0)                    |
+| Topic        Rust programming               | Detail level: [x] High  [ ] Low           |
+| Project tag  studies-rust                   | [x] Start today                           |
+| All task titles start with 1., 2., 3.       |                                           |
+|                                              | High: each task = one atomic action.      |
+|                                              | Low: each task = ~1 day or ~2h of work.   |
+|                                              |                                           |
+|                                              | Collection guardrails:                    |
+|                                              |   today: max 2                            |
+|                                              |   week: 2 to 10                           |
+|                                              |   month: 10+ (no limit)                   |
+|                                              |   backlog: remaining                      |
+|                                              |                                           |
+|                                              | AI decides total task count.              |
+|                                              | TermBullet controls tag and placement.    |
 |---------------------------------------------+-------------------------------------------|
 | 3 Draft Preview                                                                         |
-| system> generating medium plan for studies-rust...                                      |
-| assistant> draft ready: 15 actions.                                                     |
-| draft> 1. Install the Rust toolchain                                                    |
-| draft> 2. Learn cargo project basics                                                    |
+| system> generating high-detail plan for studies-rust...                                 |
+| assistant> draft ready: 12 actions.                                                     |
+| draft> 1. Install Rust with rustup                                                      |
+| draft> 2. Verify cargo installation                                                     |
 |                                                                                     v   |
 |-----------------------------------------------------------------------------------------|
 | 4 Actions                                                                               |
-| Generate draft                                                                          |
-| Apply plan                                                                              |
-| Discard draft                                                                           |
+| [ Generate ]  [ Apply ]  [ Discard ]                                                    |
 +-----------------------------------------------------------------------------------------+
-| g generate  s size  t today  a apply  d discard  Tab focus  ? help  Esc back  q quit    |
+| Tab/1-4 focus  ? help  Esc back  q quit                                                 |
 +-----------------------------------------------------------------------------------------+
 ```
+
+The Actions panel uses physical buttons with a maximum of 4 buttons per line:
+
+- `Generate` generates a structured draft from the guided inputs.
+- `Apply` applies the current validated draft to local data.
+- `Discard` discards the current draft without changes.
+
+The Rules panel contains interactive controls:
+
+- **Detail level** checkboxes: `[x] High` or `[ ] Low` (mutually exclusive).
+  - High: each task is a single atomic action.
+  - Low: each task represents approximately 1 day or 2 hours of work.
+- **Start today** checkbox: controls whether the first task is placed in `today`.
 
 New Planning guided inputs:
 
 - `Topic` describes the planning subject.
 - `Project tag` is applied to every generated task.
-- `Volume` cycles through `small`, `medium`, and `large`.
+- `Detail level` controls task granularity (High or Low).
 - `Start today` controls whether the first task is placed in `today`.
-- Small creates up to 10 tasks, medium creates 10 to 20 tasks, and large creates
-  20 to 40 tasks.
-- New Planning places the first task in `today` when enabled, then up to 5 tasks
-  in `week`, up to 20 tasks in `month`, and any remaining tasks in `backlog`.
+- The AI decides the total number of tasks based on topic complexity and detail level.
+- Collection guardrails are enforced: today max 2, week 2-10, month 10+, backlog unlimited.
 - Every generated task title must start with a growing numeric prefix such as
   `1.`, `2.`, `3.` so the user can follow the plan in order.
 - Editing the generated draft is deferred for V2 MVP. If the draft is wrong,
@@ -818,7 +835,7 @@ review reliably enough yet.
 |                                                                                     v   |
 |-----------------------------------------------------------------------------------------|
 +-----------------------------------------------------------------------------------------+
-| Enter send/open  Up/Down scroll  PgUp/PgDn page  Tab focus  ? help  Esc back  q quit    |
+| Tab focus  ? help  Esc back  q quit                                                     |
 +-----------------------------------------------------------------------------------------+
 ```
 
