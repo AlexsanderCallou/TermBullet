@@ -214,6 +214,10 @@ model=gemma3:4b
 base_url=http://localhost:11434/v1
 api_key=ollama
 default=true
+reasoning=false
+test_max_tokens=64
+chat_max_tokens=600
+planning_max_tokens=1200
 timeout_seconds=180
 ```
 
@@ -225,6 +229,10 @@ provider=openai-compatible
 model=llama3.2:1b
 base_url=http://localhost:11434/v1
 api_key=ollama
+reasoning=false
+test_max_tokens=64
+chat_max_tokens=600
+planning_max_tokens=1200
 timeout_seconds=180
 ```
 
@@ -237,7 +245,21 @@ termbullet set-ai local-gemma
 
 Hosted providers can also be used when they expose an OpenAI-compatible API. For
 hosted keys, prefer `api_key_env=OPENAI_API_KEY` instead of writing a secret into
-`.aiconf`.
+`.aiconf`. Reasoning models should set `reasoning=true` and larger token budgets
+so validation and planning have enough room for the model's internal reasoning.
+
+```ini
+[cloud-reasoning]
+provider=openai-compatible
+model=deepseek-v4-flash-free
+base_url=https://opencode.ai/zen/v1
+api_key_env=OPENCODE_API_KEY
+reasoning=true
+test_max_tokens=128
+chat_max_tokens=1200
+planning_max_tokens=3000
+timeout_seconds=240
+```
 
 ## Product Summary
 

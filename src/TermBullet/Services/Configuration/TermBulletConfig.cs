@@ -15,4 +15,8 @@ public sealed record AiProfile(
     string ApiKeySource = "environment",
     string? ApiKeyEnv = null,
     string? ApiKey = null,
-    int? TimeoutSeconds = null);
+    int? TimeoutSeconds = null,
+    bool Reasoning = false,
+    int? TestMaxTokens = null,
+    int? ChatMaxTokens = null,
+    int? PlanningMaxTokens = null);

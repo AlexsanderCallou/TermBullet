@@ -258,6 +258,7 @@ public static class TermBulletBootstrap
             throw new InvalidOperationException($"AI profile not found: {activeProfile}");
         }
 
+        var testProfile = profiles[activeProfile];
         var testConfig = config with
         {
             Ai = new AiConfiguration(activeProfile, profiles)
@@ -274,7 +275,7 @@ public static class TermBulletBootstrap
             ],
             ContextItems: [],
             RequireStructuredDraft: false,
-            MaxOutputTokens: 8), cancellationToken);
+            MaxOutputTokens: testProfile.TestMaxTokens ?? (testProfile.Reasoning ? 128 : 64)), cancellationToken);
     }
 
     private sealed class SystemClock : IClock

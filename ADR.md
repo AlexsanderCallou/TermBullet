@@ -425,11 +425,17 @@ Accepted settings:
 - `api_key_env`
 - `default`
 - `timeout_seconds`
+- `reasoning`
+- `test_max_tokens`
+- `chat_max_tokens`
+- `planning_max_tokens`
 
 Consequences:
 
 - AI provider settings move out of install-directory `conf.json`;
 - the data root contains both operational data and user-editable AI settings;
+- local direct-response models and hosted reasoning models can coexist through
+  per-profile token budgets;
 - `termbullet test-ai` validates the selected profile and creates a commented
   template when `.aiconf` is missing;
 - `termbullet set-ai <name>` switches the default profile;

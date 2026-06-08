@@ -70,7 +70,12 @@ public sealed class TermBulletConfigServiceTests : IDisposable
                         Model: "gpt-4.1-mini",
                         BaseUrl: "https://api.openai.com/v1",
                         ApiKeySource: "environment",
-                        ApiKeyEnv: "TERMBULLET_OPENAI_API_KEY")
+                        ApiKeyEnv: "TERMBULLET_OPENAI_API_KEY",
+                        TimeoutSeconds: 240,
+                        Reasoning: true,
+                        TestMaxTokens: 128,
+                        ChatMaxTokens: 1200,
+                        PlanningMaxTokens: 3000)
                 }));
 
         await service.SaveAsync(config);
@@ -85,6 +90,11 @@ public sealed class TermBulletConfigServiceTests : IDisposable
         Assert.Equal("https://api.openai.com/v1", profile.GetProperty("base_url").GetString());
         Assert.Equal("environment", profile.GetProperty("api_key_source").GetString());
         Assert.Equal("TERMBULLET_OPENAI_API_KEY", profile.GetProperty("api_key_env").GetString());
+        Assert.Equal(240, profile.GetProperty("timeout_seconds").GetInt32());
+        Assert.True(profile.GetProperty("reasoning").GetBoolean());
+        Assert.Equal(128, profile.GetProperty("test_max_tokens").GetInt32());
+        Assert.Equal(1200, profile.GetProperty("chat_max_tokens").GetInt32());
+        Assert.Equal(3000, profile.GetProperty("planning_max_tokens").GetInt32());
     }
 
     [Fact]
@@ -103,7 +113,12 @@ public sealed class TermBulletConfigServiceTests : IDisposable
                     "provider": "openai-compatible",
                     "model": "llama3.1",
                     "base_url": "http://localhost:11434/v1",
-                    "api_key_source": "none"
+                    "api_key_source": "none",
+                    "reasoning": true,
+                    "test_max_tokens": 128,
+                    "chat_max_tokens": 1200,
+                    "planning_max_tokens": 3000,
+                    "timeout_seconds": 240
                   }
                 }
               }
@@ -122,6 +137,11 @@ public sealed class TermBulletConfigServiceTests : IDisposable
         Assert.Equal("http://localhost:11434/v1", profile.Value.BaseUrl);
         Assert.Equal("none", profile.Value.ApiKeySource);
         Assert.Null(profile.Value.ApiKeyEnv);
+        Assert.True(profile.Value.Reasoning);
+        Assert.Equal(128, profile.Value.TestMaxTokens);
+        Assert.Equal(1200, profile.Value.ChatMaxTokens);
+        Assert.Equal(3000, profile.Value.PlanningMaxTokens);
+        Assert.Equal(240, profile.Value.TimeoutSeconds);
     }
 
     [Fact]

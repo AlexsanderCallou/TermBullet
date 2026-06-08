@@ -252,6 +252,10 @@ model=gemma3:4b
 base_url=http://localhost:11434/v1
 api_key=ollama
 default=true
+reasoning=false
+test_max_tokens=64
+chat_max_tokens=600
+planning_max_tokens=1200
 timeout_seconds=180
 
 [local-llama-fast]
@@ -259,6 +263,10 @@ provider=openai-compatible
 model=llama3.2:1b
 base_url=http://localhost:11434/v1
 api_key=ollama
+reasoning=false
+test_max_tokens=64
+chat_max_tokens=600
+planning_max_tokens=1200
 timeout_seconds=180
 ```
 
@@ -270,7 +278,26 @@ provider=openai-compatible
 model=gpt-4.1-mini
 base_url=https://api.openai.com/v1
 api_key_env=OPENAI_API_KEY
+reasoning=false
+test_max_tokens=64
+chat_max_tokens=600
+planning_max_tokens=1200
 timeout_seconds=180
+```
+
+Hosted reasoning model example:
+
+```ini
+[cloud-reasoning]
+provider=openai-compatible
+model=deepseek-v4-flash-free
+base_url=https://opencode.ai/zen/v1
+api_key_env=OPENCODE_API_KEY
+reasoning=true
+test_max_tokens=128
+chat_max_tokens=1200
+planning_max_tokens=3000
+timeout_seconds=240
 ```
 
 Required keys:
@@ -279,6 +306,14 @@ Required keys:
 - `model`
 - `base_url` for `openai-compatible`
 - either `api_key` or `api_key_env`
+
+Optional behavior keys:
+
+- `reasoning`
+- `test_max_tokens`
+- `chat_max_tokens`
+- `planning_max_tokens`
+- `timeout_seconds`
 
 If a single profile exists, it is active automatically. If multiple profiles
 exist, exactly one must have `default=true`.
@@ -291,8 +326,9 @@ termbullet test-ai local-gemma
 ```
 
 Validates `.aiconf`, resolves the active or requested profile, checks required
-settings, and sends a short provider request. A failed test returns a clear
-actionable error.
+settings, and sends a short provider request. `test-ai` uses the profile's
+`test_max_tokens`, which should be higher for reasoning models. A failed test
+returns a clear actionable error.
 
 ### `set-ai`
 

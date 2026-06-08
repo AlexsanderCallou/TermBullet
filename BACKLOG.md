@@ -74,6 +74,9 @@ Implemented foundation:
 
 - `<data_root>/.aiconf` stores named AI profiles in an editable comment-friendly
   line format.
+- AI profiles support local direct-response models and hosted reasoning models
+  through `reasoning`, `test_max_tokens`, `chat_max_tokens`, and
+  `planning_max_tokens`.
 - `termbullet test-ai` creates the `.aiconf` template when missing and validates
   the active profile.
 - `termbullet set-ai <name>` sets the default profile when more than one profile

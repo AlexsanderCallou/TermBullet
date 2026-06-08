@@ -60,9 +60,16 @@ Supported settings:
 - `api_key_env`
 - `default`
 - `timeout_seconds`
+- `reasoning`
+- `test_max_tokens`
+- `chat_max_tokens`
+- `planning_max_tokens`
 
 Normal CLI output must not print API key values. Hosted-provider secrets should
-use `api_key_env`.
+use `api_key_env`. Local direct-response models normally use `reasoning=false`
+with smaller token budgets. Hosted reasoning models should use
+`reasoning=true`, a larger `test_max_tokens`, and larger planning/chat budgets
+so internal reasoning does not consume the whole response.
 
 The V2 planning agent prompt is installed beside the executable:
 

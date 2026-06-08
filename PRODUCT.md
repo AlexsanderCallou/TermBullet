@@ -267,6 +267,9 @@ For local models, Ollama is the recommended user setup in V2. Hosted providers
 and other compatible services remain supported through named
 OpenAI-compatible profiles in `.aiconf`, but they are not required for local
 usage.
+Profiles can declare whether a model is a reasoning model and can tune test,
+chat, and planning token budgets independently, allowing small local models and
+hosted reasoning models to coexist in the same configuration file.
 
 CLI `ai chat` uses the active AI profile by default and supports interactive
 planning commands such as mode selection, conversational replies, draft preview,
@@ -292,6 +295,9 @@ TUI only shows whether AI is configured and which profile is active.
 For local models, Ollama is the recommended user setup in V2. Hosted providers
 and other compatible services remain supported through named
 OpenAI-compatible profiles, but they are not required for local usage.
+Profiles can declare whether a model is a reasoning model and can tune test,
+chat, and planning token budgets independently, allowing small local models and
+hosted reasoning models to coexist in the same configuration file.
 
 CLI `ai chat` uses the active AI profile by default and supports interactive
 planning commands such as mode selection, conversational replies, draft preview,

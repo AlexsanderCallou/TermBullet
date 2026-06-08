@@ -31,7 +31,7 @@ public sealed class OpenAiCompatiblePlanningProvider(
             profile.Model,
             request.Messages.Select(ToProviderMessage).ToArray(),
             request.RequireStructuredDraft ? new ResponseFormat("json_object") : null,
-            request.MaxOutputTokens ?? (request.RequireStructuredDraft ? 700 : 300),
+            ResolveMaxTokens(request, profile),
             0.2);
         var json = JsonSerializer.Serialize(body, JsonOptions);
         httpRequest.Content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -136,7 +136,8 @@ public sealed class OpenAiCompatiblePlanningProvider(
             throw new InvalidOperationException("AI provider response is malformed JSON.", exception);
         }
 
-        var content = document?.Choices?.FirstOrDefault()?.Message?.Content;
+        var choice = document?.Choices?.FirstOrDefault();
+        var content = choice?.Message?.Content;
         if (content is null)
         {
             throw new InvalidOperationException("AI provider response is malformed: missing choices[0].message.content.");
@@ -144,10 +145,31 @@ public sealed class OpenAiCompatiblePlanningProvider(
 
         if (string.IsNullOrWhiteSpace(content))
         {
+            if (string.Equals(choice?.FinishReason, "length", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "AI provider response content is empty (finish_reason=length). Increase chat_max_tokens, planning_max_tokens, or test_max_tokens for this profile.");
+            }
+
             throw new InvalidOperationException("AI provider response content is empty.");
         }
 
         return new AiPlanningProviderResponse(content.Trim(), document?.Model ?? fallbackModel);
+    }
+
+    private static int ResolveMaxTokens(AiPlanningModelRequest request, AiProfile profile)
+    {
+        if (request.MaxOutputTokens is > 0)
+        {
+            return request.MaxOutputTokens.Value;
+        }
+
+        if (request.RequireStructuredDraft)
+        {
+            return profile.PlanningMaxTokens ?? (profile.Reasoning ? 3000 : 700);
+        }
+
+        return profile.ChatMaxTokens ?? (profile.Reasoning ? 1200 : 300);
     }
 
     private static string TrimForError(string text)
@@ -184,6 +206,9 @@ public sealed class OpenAiCompatiblePlanningProvider(
     private sealed class Choice
     {
         public ResponseMessage? Message { get; set; }
+
+        [JsonPropertyName("finish_reason")]
+        public string? FinishReason { get; set; }
     }
 
     private sealed class ResponseMessage

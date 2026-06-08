@@ -6,6 +6,12 @@ public sealed class AiConfigurationFileService(string dataRoot)
 {
     public const string FileName = ".aiconf";
     private const int DefaultTimeoutSeconds = 180;
+    private const int DefaultTestMaxTokens = 64;
+    private const int DefaultChatMaxTokens = 600;
+    private const int DefaultPlanningMaxTokens = 1200;
+    private const int ReasoningTestMaxTokens = 128;
+    private const int ReasoningChatMaxTokens = 1200;
+    private const int ReasoningPlanningMaxTokens = 3000;
 
     public string FilePath => Path.Combine(dataRoot, FileName);
 
@@ -123,6 +129,18 @@ public sealed class AiConfigurationFileService(string dataRoot)
                 case "timeout_seconds":
                     builder.TimeoutSeconds = ParsePositiveInteger(value, key, lineNumber);
                     break;
+                case "reasoning":
+                    builder.Reasoning = ParseBoolean(value, lineNumber);
+                    break;
+                case "test_max_tokens":
+                    builder.TestMaxTokens = ParsePositiveInteger(value, key, lineNumber);
+                    break;
+                case "chat_max_tokens":
+                    builder.ChatMaxTokens = ParsePositiveInteger(value, key, lineNumber);
+                    break;
+                case "planning_max_tokens":
+                    builder.PlanningMaxTokens = ParsePositiveInteger(value, key, lineNumber);
+                    break;
                 default:
                     throw new InvalidOperationException($"Unsupported AI setting '{key}' at line {lineNumber}.");
             }
@@ -173,10 +191,18 @@ public sealed class AiConfigurationFileService(string dataRoot)
         # Ollama example:
         # base_url=http://localhost:11434/v1
         # api_key=ollama
+        # reasoning=false
         #
         # OpenAI-compatible hosted example:
         # base_url=https://api.openai.com/v1
         # api_key_env=OPENAI_API_KEY
+        # reasoning=false
+        #
+        # Reasoning models may need larger token budgets:
+        # reasoning=true
+        # test_max_tokens=128
+        # chat_max_tokens=1200
+        # planning_max_tokens=3000
 
         [local-gemma]
         provider=openai-compatible
@@ -184,6 +210,10 @@ public sealed class AiConfigurationFileService(string dataRoot)
         base_url=http://localhost:11434/v1
         api_key=ollama
         default=true
+        reasoning=false
+        test_max_tokens=64
+        chat_max_tokens=600
+        planning_max_tokens=1200
         timeout_seconds=180
 
         [local-llama-fast]
@@ -191,6 +221,10 @@ public sealed class AiConfigurationFileService(string dataRoot)
         model=llama3.2:1b
         base_url=http://localhost:11434/v1
         api_key=ollama
+        reasoning=false
+        test_max_tokens=64
+        chat_max_tokens=600
+        planning_max_tokens=1200
         timeout_seconds=180
 
         # [hosted-fast]
@@ -198,7 +232,22 @@ public sealed class AiConfigurationFileService(string dataRoot)
         # model=gpt-4.1-mini
         # base_url=https://api.openai.com/v1
         # api_key_env=OPENAI_API_KEY
+        # reasoning=false
+        # test_max_tokens=64
+        # chat_max_tokens=600
+        # planning_max_tokens=1200
         # timeout_seconds=180
+
+        # [cloud-reasoning]
+        # provider=openai-compatible
+        # model=deepseek-v4-flash-free
+        # base_url=https://opencode.ai/zen/v1
+        # api_key_env=OPENCODE_API_KEY
+        # reasoning=true
+        # test_max_tokens=128
+        # chat_max_tokens=1200
+        # planning_max_tokens=3000
+        # timeout_seconds=240
         """;
 
     private static string Render(AiConfiguration configuration)
@@ -230,6 +279,10 @@ public sealed class AiConfigurationFileService(string dataRoot)
             }
 
             builder.AppendLine($"default={string.Equals(pair.Key, configuration.ActiveProfile, StringComparison.OrdinalIgnoreCase).ToString().ToLowerInvariant()}");
+            builder.AppendLine($"reasoning={profile.Reasoning.ToString().ToLowerInvariant()}");
+            builder.AppendLine($"test_max_tokens={profile.TestMaxTokens ?? GetDefaultTestMaxTokens(profile.Reasoning)}");
+            builder.AppendLine($"chat_max_tokens={profile.ChatMaxTokens ?? GetDefaultChatMaxTokens(profile.Reasoning)}");
+            builder.AppendLine($"planning_max_tokens={profile.PlanningMaxTokens ?? GetDefaultPlanningMaxTokens(profile.Reasoning)}");
             builder.AppendLine($"timeout_seconds={profile.TimeoutSeconds ?? DefaultTimeoutSeconds}");
             builder.AppendLine();
         }
@@ -270,6 +323,10 @@ public sealed class AiConfigurationFileService(string dataRoot)
         public string? ApiKeyEnv { get; set; }
         public string? ApiKey { get; set; }
         public int? TimeoutSeconds { get; set; }
+        public bool Reasoning { get; set; }
+        public int? TestMaxTokens { get; set; }
+        public int? ChatMaxTokens { get; set; }
+        public int? PlanningMaxTokens { get; set; }
 
         public AiProfile Build(string name)
         {
@@ -301,10 +358,23 @@ public sealed class AiConfigurationFileService(string dataRoot)
                 ApiKeySource,
                 Normalize(ApiKeyEnv),
                 Normalize(ApiKey),
-                TimeoutSeconds ?? DefaultTimeoutSeconds);
+                TimeoutSeconds ?? DefaultTimeoutSeconds,
+                Reasoning,
+                TestMaxTokens ?? GetDefaultTestMaxTokens(Reasoning),
+                ChatMaxTokens ?? GetDefaultChatMaxTokens(Reasoning),
+                PlanningMaxTokens ?? GetDefaultPlanningMaxTokens(Reasoning));
         }
 
         private static string? Normalize(string? value) =>
             string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
+
+    private static int GetDefaultTestMaxTokens(bool reasoning) =>
+        reasoning ? ReasoningTestMaxTokens : DefaultTestMaxTokens;
+
+    private static int GetDefaultChatMaxTokens(bool reasoning) =>
+        reasoning ? ReasoningChatMaxTokens : DefaultChatMaxTokens;
+
+    private static int GetDefaultPlanningMaxTokens(bool reasoning) =>
+        reasoning ? ReasoningPlanningMaxTokens : DefaultPlanningMaxTokens;
 }

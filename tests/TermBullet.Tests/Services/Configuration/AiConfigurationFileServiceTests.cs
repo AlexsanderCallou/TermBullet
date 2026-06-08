@@ -35,6 +35,32 @@ public sealed class AiConfigurationFileServiceTests : IDisposable
     }
 
     [Fact]
+    public void Parse_reads_hybrid_model_behavior_settings()
+    {
+        var config = AiConfigurationFileService.Parse(
+            """
+            [cloud-reasoning]
+            provider=openai-compatible
+            model=deepseek-v4-flash-free
+            base_url=https://opencode.ai/zen/v1
+            api_key=secret
+            default=true
+            reasoning=true
+            test_max_tokens=128
+            chat_max_tokens=1200
+            planning_max_tokens=3000
+            timeout_seconds=240
+            """);
+
+        var profile = Assert.Single(config.Profiles).Value;
+        Assert.True(profile.Reasoning);
+        Assert.Equal(128, profile.TestMaxTokens);
+        Assert.Equal(1200, profile.ChatMaxTokens);
+        Assert.Equal(3000, profile.PlanningMaxTokens);
+        Assert.Equal(240, profile.TimeoutSeconds);
+    }
+
+    [Fact]
     public async Task SetActiveProfileAsync_rewrites_default_profile()
     {
         var service = new AiConfigurationFileService(_root);
@@ -60,6 +86,10 @@ public sealed class AiConfigurationFileServiceTests : IDisposable
 
         var config = await service.LoadConfigAsync();
         Assert.Equal("local-llama-fast", config.Ai?.ActiveProfile);
+        var activeProfile = config.Ai?.Profiles["local-llama-fast"];
+        Assert.Equal(64, activeProfile?.TestMaxTokens);
+        Assert.Equal(600, activeProfile?.ChatMaxTokens);
+        Assert.Equal(1200, activeProfile?.PlanningMaxTokens);
     }
 
     [Fact]
