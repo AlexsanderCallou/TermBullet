@@ -43,7 +43,7 @@ license is Apache License 2.0 in [LICENSE](LICENSE).
 Current release:
 
 ```text
-v1.3.0 - Guided AI Planning
+v2.0.0 - Hybrid AI Profiles
 ```
 
 Latest release:
@@ -299,26 +299,6 @@ The concrete editable screen reference is [screens.md](screens.md).
 
 ## Development
 
-V1 does not include Google Calendar, machine sync, cloud accounts, or a
-PostgreSQL runtime dependency.
-
-The product direction, roadmap, item model, and acceptance criteria are in
-[PRODUCT.md](PRODUCT.md).
-
-## TUI
-
-The TUI is a personal cockpit for dated work, review, and execution:
-
-- terminal-first and keyboard-first;
-- panel-based;
-- dense and legible;
-- inspired by LazyDocker/LazyGit style workflows;
-- driven by visible footer shortcuts.
-
-The concrete editable screen reference is [screens.md](screens.md).
-
-## Development
-
 Expected local commands:
 
 ```bash
@@ -331,13 +311,13 @@ dotnet run --project src/TermBullet -- [command] [arguments] [options]
 Build local release assets:
 
 ```bash
-VERSION=1.3.0 ./publish.sh
+VERSION=2.0.0 ./publish.sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\publish.ps1 -Version 1.3.0
+.\publish.ps1 -Version 2.0.0
 ```
 
 When running from source, `conf.json` is created beside the built executable

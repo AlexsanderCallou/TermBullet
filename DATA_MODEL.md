@@ -83,24 +83,6 @@ always loads the canonical planning agent before calling the model.
 
 ## Principles
 
-AI profiles are named connection presets. A user may register more than one
-profile, such as the recommended local Ollama profile and a hosted
-OpenAI-compatible profile, and select which profile is active. API keys should
-not be printed by normal CLI output. Environment variables are the preferred key
-source.
-
-The V2 planning agent prompt is installed beside the executable:
-
-```text
-<install-dir>/agents/planning-bulletjournal-agent.md
-```
-
-This path is not user-configurable in V2 MVP. The file is a product asset, not
-user data. Runtime configuration chooses the AI profile, while the application
-always loads the canonical planning agent before calling the model.
-
-## Principles
-
 - Local JSON files are the source of truth in V1.
 - V1 assumes one active machine at a time.
 - Every item has an internal ID and a human-facing public ref.
@@ -414,34 +396,6 @@ Recommended migration history data:
   "public_ref": "t-0426-1",
   "from_collection": "today",
   "to_collection": "week"
-}
-```
-
-## AI Planning Data Contracts
-
-V2 AI planning uses structured proposals before persistence. Proposals are not
-monthly JSON records by themselves; they are transient drafts produced by AI,
-validated by the application, and applied only after user approval.
-Interactive AI planning may also produce transient conversational assistant
-messages before a draft is ready. Those messages are not draft records and are
-not persisted to monthly JSON files.
-The requested planning mode from the CLI or TUI is authoritative. If a provider
-returns a draft with otherwise valid project actions but an inconsistent `mode`
-field, TermBullet normalizes the draft mode to the requested mode before
-validation.
-Every AI request includes a pipeline-generated `response_envelope_template`
-control message. The template is not persisted; it tells the model which JSON
-object shape to fill, including chat messages, draft readiness, the requested
-mode, allowed action fields, collections, and priority values.
-
-AI provider responses use one envelope shape:
-
-```json
-{
-  "kind": "chat",
-  "message": "Concise assistant response.",
-  "draft_ready": false,
-  "draft": null
 }
 ```
 

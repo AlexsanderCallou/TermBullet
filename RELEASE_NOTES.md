@@ -1,5 +1,26 @@
 # TermBullet Release Notes
 
+## v2.0.0 - Hybrid AI Profiles
+
+TermBullet V2.0.0 improves AI provider configuration so local direct-response
+models and hosted reasoning models can coexist in the same `.aiconf` file.
+
+### Added
+
+- Hybrid AI profile behavior settings: `reasoning`, `test_max_tokens`,
+  `chat_max_tokens`, and `planning_max_tokens`.
+- Larger default token budgets for reasoning profiles.
+- OpenCode/DeepSeek-compatible hosted reasoning profile examples.
+
+### Changed
+
+- `test-ai` now uses each profile's `test_max_tokens` instead of a fixed tiny
+  output limit.
+- Chat and planning requests now use per-profile token budgets unless a request
+  explicitly overrides them.
+- Empty provider responses caused by `finish_reason=length` now return a clearer
+  configuration hint.
+
 ## v1.3.0 - Guided AI Planning
 
 TermBullet V1.3.0 adds optional AI-assisted guided planning for creating new
