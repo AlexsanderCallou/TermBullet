@@ -28,6 +28,7 @@ Long-form ADRs may be split into `docs/adr/` later if more detail is needed.
 | 0017 | Accepted | Items have one tag, and non-default tagged work carries into the current month. |
 | 0018 | Accepted | V2 AI planning uses approved structured drafts before applying changes. |
 | 0019 | Accepted | AI provider profiles are stored in `<data_root>/.aiconf`. |
+| 0020 | Accepted | Daily Review uses history-based Today rollover without task due dates. |
 
 ## ADR-0001 - Local-First Product
 
@@ -444,6 +445,59 @@ Consequences:
 
 Rejected: managing AI profiles primarily through many CLI mutation commands, and
 storing AI provider settings in install-directory `conf.json`.
+
+## ADR-0020 - Daily Review Uses History-Based Today Rollover
+
+Status: Accepted.
+
+TermBullet keeps task collections as Bullet Journal planning lanes:
+
+- `today` is the current daily execution lane;
+- `week` is the current weekly commitment lane;
+- `month` is the current monthly intention lane;
+- `backlog` is uncommitted work.
+
+Tasks still do not persist task due dates in V2. Date traceability comes from
+existing timestamps and item history:
+
+- `created_at`;
+- `updated_at`;
+- `completed_at`;
+- `cancelled_at`;
+- history events such as `created`, `migrate`, `done`, `cancelled`, and the
+  planned `daily_reviewed` event.
+
+Today list behavior:
+
+- tasks marked `done` or `cancelled` remain visible in the default Today view
+  for the local day when the terminal status was applied;
+- terminal Today tasks leave the default Today view on the next local day;
+- completed and cancelled tasks remain available through item detail, history,
+  search, and explicit completed/history views.
+
+Daily rollover behavior:
+
+- Daily Review is a manual Bullet Journal review flow, not automatic migration;
+- stale open Today tasks are tasks whose latest Today placement/review happened
+  before the current local date;
+- Daily Review offers explicit decisions such as keep in Today, move to Week,
+  move to Month, move to Backlog, mark done, or cancel;
+- choosing keep in Today records history only and does not update `updated_at`;
+- Forgotten remains separate because it reviews unresolved tasks from previous
+  monthly files and may scan archive JSON files.
+
+Consequences:
+
+- the app needs a local-date-aware Today query or view model;
+- the app needs a history query capable of finding the latest Today placement or
+  `daily_reviewed` event;
+- TUI should add a Daily Review surface instead of reusing Forgotten;
+- CLI may add a manual Daily Review command after the TUI/product flow is
+  settled.
+
+Rejected: adding task due dates for V2 daily rollover, automatically migrating
+stale Today tasks at startup, reusing Forgotten for daily rollover, and touching
+`updated_at` when the user only reaffirms that a task stays in Today.
 
 ## Future ADR Candidates
 

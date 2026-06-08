@@ -3,6 +3,7 @@ namespace TermBullet.Services.Ai;
 public sealed class PlanningAgentPromptLoader(string installDirectory) : IPlanningAgentPromptLoader
 {
     public const string RelativeAgentPath = "agents/planning-bulletjournal-agent.md";
+    public const string EmbeddedAgentResourceName = "TermBullet.Services.Ai.Agents.planning-bulletjournal-agent.md";
 
     public string InstallDirectory { get; } = Path.GetFullPath(installDirectory);
 
@@ -12,8 +13,7 @@ public sealed class PlanningAgentPromptLoader(string installDirectory) : IPlanni
     {
         if (!File.Exists(AgentPath))
         {
-            throw new InvalidOperationException(
-                $"AI planning agent prompt is missing: {AgentPath}");
+            return LoadEmbeddedPrompt();
         }
 
         try
@@ -33,5 +33,26 @@ public sealed class PlanningAgentPromptLoader(string installDirectory) : IPlanni
                 $"Cannot read AI planning agent prompt: {AgentPath}",
                 exception);
         }
+    }
+
+    private static string LoadEmbeddedPrompt()
+    {
+        var assembly = typeof(PlanningAgentPromptLoader).Assembly;
+        using var stream = assembly.GetManifestResourceStream(EmbeddedAgentResourceName);
+        if (stream is null)
+        {
+            throw new InvalidOperationException(
+                $"AI planning agent prompt is missing: {EmbeddedAgentResourceName}");
+        }
+
+        using var reader = new StreamReader(stream);
+        var prompt = reader.ReadToEnd();
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            throw new InvalidOperationException(
+                $"AI planning agent prompt is empty: {EmbeddedAgentResourceName}");
+        }
+
+        return prompt;
     }
 }
