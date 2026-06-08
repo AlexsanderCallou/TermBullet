@@ -52,9 +52,10 @@ V2 MVP behavior scenarios:
 - Gym habit tracking: when the user explicitly asks for a tag for an ongoing
   personal habit, the draft must create that non-default tag and weekly
   tracking tasks. Recurring tasks are not part of V2 MVP.
-- Local AI setup: Ollama is the recommended local model runtime for users.
-  Hosted providers and other services may be used through OpenAI-compatible
-  profiles, but the README should present Ollama as the local path.
+- AI setup: OpenCode Zen with the free `deepseek-v4-flash-free` model is the
+  recommended setup for users. Local and other hosted providers may be used
+  through OpenAI-compatible profiles, but the README should not recommend a
+  local model by default.
 
 #### V2.0 - Planning Contracts and ADR
 
@@ -81,8 +82,8 @@ Implemented foundation:
   the active profile.
 - `termbullet set-ai <name>` sets the default profile when more than one profile
   is configured.
-- Documentation recommends Ollama for local model profiles and
-  OpenAI-compatible profiles for hosted providers.
+- Documentation recommends OpenCode Zen with `deepseek-v4-flash-free` and keeps
+  local model profiles as supported examples, not the default recommendation.
 
 Remaining:
 
@@ -198,8 +199,7 @@ Status: deferred.
 
 Reviewing existing plans is a future idea, not part of the current Planning
 scope. It is intentionally deferred because the current workflow is optimized
-for small local models, and those models do not handle broad historical review
-reliably enough yet.
+for narrow context, and broad historical review is not reliable enough yet.
 
 #### V2.7 - CLI Support
 

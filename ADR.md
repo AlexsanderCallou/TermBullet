@@ -173,9 +173,10 @@ V2 AI follows BYOK:
 - optional base URL;
 - API key source, preferably an environment variable.
 
-For local models, Ollama is the recommended user-facing setup. Hosted providers
-and other compatible services use the same OpenAI-compatible profile contract,
-but they are optional alternatives instead of separate product paths.
+The recommended user-facing setup is OpenCode Zen with the free
+`deepseek-v4-flash-free` model. Hosted and local compatible services use the
+same OpenAI-compatible profile contract, but TermBullet does not recommend a
+local model by default.
 
 AI connection profiles are configured in `<data_root>/.aiconf`. The CLI provides
 `test-ai` for validation and `set-ai` for switching the default profile. The TUI
@@ -346,10 +347,10 @@ Every planning model request must include this agent prompt. If the prompt
 cannot be loaded, TermBullet must fail the AI planning request with a clear error
 instead of calling the provider without the agent.
 
-AI connection settings use named profiles stored in install-directory
-configuration. The user can register multiple profiles, such as the recommended
-local Ollama profile and a hosted OpenAI-compatible profile, and select one
-active profile. V2 MVP manages these profiles through CLI commands only.
+AI connection settings use named profiles. The user can register multiple
+profiles, such as the recommended OpenCode Zen profile and another
+OpenAI-compatible profile, and select one active profile. V2 MVP manages these
+profiles through CLI commands only.
 
 The Planning TUI currently has one flow:
 
@@ -358,8 +359,8 @@ The Planning TUI currently has one flow:
 
 Reviewing existing plans is a future idea, not part of the current Planning
 implementation. It is intentionally deferred because the current workflow is
-optimized for small local models, and those models do not handle broad
-historical review reliably enough yet.
+optimized for narrow context, and broad historical review is not reliable enough
+yet.
 
 The CLI may expose the same planning modes through `termbullet ai chat`. CLI
 chat uses the active AI profile unless the user selects another registered
@@ -434,7 +435,7 @@ Consequences:
 
 - AI provider settings move out of install-directory `conf.json`;
 - the data root contains both operational data and user-editable AI settings;
-- local direct-response models and hosted reasoning models can coexist through
+- direct-response models and hosted reasoning models can coexist through
   per-profile token budgets;
 - `termbullet test-ai` validates the selected profile and creates a commented
   template when `.aiconf` is missing;
