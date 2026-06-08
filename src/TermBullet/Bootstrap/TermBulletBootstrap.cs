@@ -54,7 +54,7 @@ public static class TermBulletBootstrap
             new CreateItemUseCase(itemRepository, clock, new GuidIdGenerator()),
             new ListItemsUseCase(itemRepository),
             new ShowItemUseCase(itemRepository),
-            new GetTodayItemsUseCase(itemRepository),
+            new GetTodayItemsUseCase(itemRepository, clock),
             new GetWeekItemsUseCase(itemRepository),
             new GetMonthItemsUseCase(itemRepository),
             new GetBacklogItemsUseCase(itemRepository),
@@ -89,7 +89,9 @@ public static class TermBulletBootstrap
                 aiConfigurationFileService,
                 profileName,
                 cancellationToken),
-            startupAction: startupAction ?? startupMaintenanceUseCase.ExecuteAsync);
+            startupAction: startupAction ?? startupMaintenanceUseCase.ExecuteAsync,
+            getDailyReviewItemsUseCase: new GetDailyReviewItemsUseCase(itemRepository, itemRepository, clock),
+            keepTodayItemUseCase: new KeepTodayItemUseCase(itemRepository, itemRepository));
     }
 
     public static TermBulletTuiApp CreateTuiApp(TermBulletRuntimePaths runtimePaths)
@@ -100,10 +102,12 @@ public static class TermBulletBootstrap
             ?? throw new InvalidOperationException("Runtime config path is invalid.");
 
         return new TermBulletTuiApp(
-            new GetTodayItemsUseCase(itemRepository),
+            new GetTodayItemsUseCase(itemRepository, clock),
             new GetBacklogItemsUseCase(itemRepository),
             new GetWeekItemsUseCase(itemRepository),
             new GetMonthItemsUseCase(itemRepository),
+            new GetDailyReviewItemsUseCase(itemRepository, itemRepository, clock),
+            new KeepTodayItemUseCase(itemRepository, itemRepository),
             new ListItemsUseCase(itemRepository),
             new SearchItemsUseCase(itemRepository),
             new ListTagsUseCase(tagCatalogRepository),

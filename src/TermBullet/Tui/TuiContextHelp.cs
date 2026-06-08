@@ -71,6 +71,16 @@ public static class TuiContextHelp
                 "x / z / d: mark done, cancel, or delete selected item",
                 "Esc: return to previous screen"
             ],
+            TuiScreen.DailyReview =>
+            [
+                "Tab / Shift+Tab or 1-3: move between Stale Today Tasks, Decision, and Details",
+                "Enter: apply selected decision",
+                "o: open selected task detail",
+                "k: keep selected task in Today and record history only",
+                "w / m / b: move selected task to Week, Month, or Backlog",
+                "x / z: mark selected task done or cancel it",
+                "Esc: return to previous screen"
+            ],
             TuiScreen.Forgotten =>
             [
                 "Tab / Shift+Tab or 1-9: move between Items, Preview, and Resolution",

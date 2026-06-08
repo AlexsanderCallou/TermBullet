@@ -130,7 +130,7 @@ public sealed class TermBulletItemCommandsCliTests
             new CreateItemUseCase(repository, new FixedClock(Now), new FixedIdGenerator()),
             new ListItemsUseCase(repository),
             new ShowItemUseCase(repository),
-            new GetTodayItemsUseCase(repository),
+            new GetTodayItemsUseCase(repository, new FixedClock(Now)),
             new GetWeekItemsUseCase(repository),
             new GetMonthItemsUseCase(repository),
             new GetBacklogItemsUseCase(repository)),

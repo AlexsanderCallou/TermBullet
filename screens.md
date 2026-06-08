@@ -965,7 +965,7 @@ Notes:
 
 ## Screen 08 - Daily Review
 
-Status: planned.
+Status: implemented.
 
 Role: manual Bullet Journal review for stale open tasks that are still in the
 `today` collection but were placed or last reviewed for Today before the current
@@ -975,7 +975,9 @@ Entry points:
 
 - `Enter` on `Daily Review` from the Main Dashboard menu.
 - Future shortcut: `r` from the dashboard.
-- Future CLI candidate: `termbullet daily review`.
+- CLI: `termbullet daily review`, `termbullet daily keep <ref>`,
+  `termbullet daily move <ref> --collection <week|month|backlog>`,
+  `termbullet daily done <ref>`, and `termbullet daily cancel <ref>`.
 
 Navigation:
 

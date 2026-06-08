@@ -371,6 +371,40 @@ public sealed class JsonItemRepositoryTests
     }
 
     [Fact]
+    public async Task AppendHistoryAsync_adds_history_event_without_updating_item()
+    {
+        var context = CreateContext();
+        var repository = CreateRepository(context);
+        var item = CreateItem(
+            id: Guid.Parse("0f3a9d94-4df0-47f7-95c1-0f967c22f4db"),
+            publicRef: "t-0426-1",
+            collection: ItemCollection.Today);
+        await repository.AddAsync(item);
+
+        await repository.AppendHistoryAsync(
+            item.Id,
+            item.PublicRef.Value,
+            "daily_reviewed",
+            new
+            {
+                decision = "keep_today",
+                collection = "today"
+            });
+
+        var found = await repository.FindByPublicRefAsync("t-0426-1");
+        Assert.NotNull(found);
+        Assert.Equal(item.UpdatedAt, found.UpdatedAt);
+        Assert.Equal(item.Version, found.Version);
+
+        var history = await repository.ListHistoryByPublicRefAsync("t-0426-1");
+        var entries = history.ToArray();
+        Assert.Equal(2, entries.Length);
+        Assert.Equal("daily_reviewed", entries[1].EventType);
+        using var data = JsonDocument.Parse(entries[1].DataJson);
+        Assert.Equal("keep_today", data.RootElement.GetProperty("decision").GetString());
+    }
+
+    [Fact]
     public async Task DeleteByPublicRefAsync_removes_item_and_appends_deleted_event_with_snapshot()
     {
         var context = CreateContext();

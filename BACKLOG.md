@@ -62,11 +62,8 @@ Decided:
 
 - Done and cancelled Today tasks remain visible for the current local day.
 - They leave the default Today view on the next local day.
-
-Open decision:
-
-- Should Today have a completed section, a toggle, or rely on search/history for
-  older completed work?
+- Older completed or cancelled Today work is available through Search, Item
+  Detail, and History only.
 
 #### Topic 1.2 - Daily Rollover and Stale Open Tasks
 
@@ -98,13 +95,9 @@ Decided:
 - The new area name is `Daily Review`.
 - Forgotten keeps its current monthly/archive review role.
 - `keep today` writes history only.
-
-Open decisions:
-
-- Should Daily Review be a dedicated TUI screen or a paginated central section in
-  the Today surface?
-- Should CLI expose a `daily review`, `today review`, or `rollover today`
-  command?
+- Daily Review is a dedicated TUI screen.
+- CLI exposes `daily review`, `daily keep`, `daily move`, `daily done`, and
+  `daily cancel`.
 
 ### 2. Broader AI Planning
 

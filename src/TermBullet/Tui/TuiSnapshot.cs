@@ -8,6 +8,7 @@ public sealed record TuiSnapshot(
     IReadOnlyCollection<ItemResult> WeekItems,
     IReadOnlyCollection<ItemResult> MonthItems,
     IReadOnlyCollection<ItemResult> BacklogItems,
+    IReadOnlyCollection<DailyReviewItemResult> DailyReviewItems,
     IReadOnlyCollection<ItemResult> CurrentItems,
     IReadOnlyCollection<ItemResult> AllItems,
     IReadOnlyCollection<TagCatalogResult> Tags);

@@ -148,6 +148,10 @@ Current operational queries read the current monthly file. Archive/review
 queries may read all monthly files explicitly. Forgotten uses archive review
 semantics to find old open tasks, while Today, Week, Month, and Calendar stay
 bounded to the current month unless a future period view is explicitly added.
+The default Today view treats `today` as an execution surface: it shows open
+Today tasks plus tasks completed or cancelled on the current local day. Older
+completed or cancelled Today tasks remain persisted and available through
+Search, Item Detail, and History.
 
 ## Identity
 
@@ -305,6 +309,7 @@ Important event types:
 - `migrate`
 - `forgotten`
 - `carried_over`
+- `daily_reviewed`
 - `ai_plan_applied` (planned V2 history hardening)
 - `deleted`
 
@@ -343,6 +348,13 @@ the current month, and refreshes the local index. Carried items keep their
 internal ID, public ref, type, collection, content, description, priority, and
 tag. The current-month copy increments `version`, updates `updated_at`, and gets
 a `carried_over` history event. Events do not carry over.
+
+Daily Review is a manual review surface for stale open Today tasks in the
+current monthly file. A stale Today task is an open task whose latest Today
+placement event (`created`, `migrate` to Today, `carried_over` in Today, or
+`daily_reviewed`) happened before the current local date. Choosing `keep today`
+appends a `daily_reviewed` history event and must not change `updated_at` or
+the item version.
 
 Recommended carry-over history event:
 
