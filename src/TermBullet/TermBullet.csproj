@@ -25,6 +25,9 @@
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <TargetPath>agents\planning-bulletjournal-agent.md</TargetPath>
     </Content>
+    <EmbeddedResource Include="Services\Ai\Agents\planning-bulletjournal-agent.md">
+      <LogicalName>TermBullet.Services.Ai.Agents.planning-bulletjournal-agent.md</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

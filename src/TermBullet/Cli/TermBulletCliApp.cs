@@ -36,7 +36,9 @@ public sealed class TermBulletCliApp(
     Func<AiPlanningDraft, CancellationToken, Task<AiPlanningDraftApplyResult>>? applyAiPlanningDraft = null,
     Func<string?, CancellationToken, Task<AiPlanningProviderResponse>>? testAiProfileConnection = null,
     TextReader? input = null,
-    Func<CancellationToken, Task>? startupAction = null)
+    Func<CancellationToken, Task>? startupAction = null,
+    GetDailyReviewItemsUseCase? getDailyReviewItemsUseCase = null,
+    KeepTodayItemUseCase? keepTodayItemUseCase = null)
 {
     public Task<int> InvokeAsync(string[] args, CancellationToken cancellationToken = default)
     {
@@ -144,6 +146,11 @@ public sealed class TermBulletCliApp(
                 standardOutput,
                 standardError,
                 cancellationToken));
+        }
+
+        if (getDailyReviewItemsUseCase is not null)
+        {
+            rootCommand.Subcommands.Add(BuildDailyCommand(standardOutput, standardError, cancellationToken));
         }
 
         if (editItemUseCase is not null)
@@ -662,6 +669,158 @@ public sealed class TermBulletCliApp(
                     Query = query
                 }, cancellationToken);
                 await WriteItemsAsync(items, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildDailyCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var command = new Command("daily", "Review stale Today tasks");
+
+        var reviewCommand = new Command("review", "Show stale Today tasks");
+        reviewCommand.SetAction(async _ =>
+        {
+            try
+            {
+                var items = await getDailyReviewItemsUseCase!.ExecuteAsync(cancellationToken);
+                await WriteDailyReviewItemsAsync(items, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        command.Subcommands.Add(reviewCommand);
+
+        if (keepTodayItemUseCase is not null)
+        {
+            command.Subcommands.Add(BuildDailySimpleCommand(
+                "keep",
+                "Keep a stale Today task in Today and record review history",
+                keepTodayItemUseCase.ExecuteAsync,
+                standardOutput,
+                standardError,
+                cancellationToken));
+        }
+
+        if (migrateItemUseCase is not null)
+        {
+            command.Subcommands.Add(BuildDailyMoveCommand(standardOutput, standardError, cancellationToken));
+        }
+
+        if (markDoneItemUseCase is not null)
+        {
+            command.Subcommands.Add(BuildDailySimpleCommand(
+                "done",
+                "Mark a stale Today task done",
+                markDoneItemUseCase.ExecuteAsync,
+                standardOutput,
+                standardError,
+                cancellationToken));
+        }
+
+        if (cancelItemUseCase is not null)
+        {
+            command.Subcommands.Add(BuildDailySimpleCommand(
+                "cancel",
+                "Cancel a stale Today task",
+                cancelItemUseCase.ExecuteAsync,
+                standardOutput,
+                standardError,
+                cancellationToken));
+        }
+
+        return command;
+    }
+
+    private Command BuildDailySimpleCommand(
+        string name,
+        string description,
+        Func<string, CancellationToken, Task<ItemResult>> operation,
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var publicRefArgument = new Argument<string>("ref") { Description = "Public ref" };
+        var command = new Command(name, description)
+        {
+            publicRefArgument
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var publicRef = parseResult.GetValue(publicRefArgument)
+                    ?? throw new InvalidOperationException("Public ref is required.");
+                var item = await operation(publicRef, cancellationToken);
+                await WriteItemDetailAsync(item, standardOutput);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                await standardError.WriteLineAsync(exception.Message);
+                return 1;
+            }
+        });
+
+        return command;
+    }
+
+    private Command BuildDailyMoveCommand(
+        TextWriter standardOutput,
+        TextWriter standardError,
+        CancellationToken cancellationToken)
+    {
+        var publicRefArgument = new Argument<string>("ref") { Description = "Public ref" };
+        var collectionOption = new Option<string?>("--collection")
+        {
+            Description = "Destination collection: week, month, or backlog"
+        };
+
+        var command = new Command("move", "Move a stale Today task to Week, Month, or Backlog")
+        {
+            publicRefArgument,
+            collectionOption
+        };
+
+        command.SetAction(async parseResult =>
+        {
+            try
+            {
+                var publicRef = parseResult.GetValue(publicRefArgument)
+                    ?? throw new InvalidOperationException("Public ref is required.");
+                var destination = parseResult.GetValue(collectionOption)
+                    ?? throw new InvalidOperationException("Daily move requires --collection <week|month|backlog>.");
+                var destinationCollection = ParseCollection(destination)
+                    ?? throw new InvalidOperationException($"Unsupported collection: {destination}.");
+                if (destinationCollection is ItemCollection.Today or ItemCollection.Notes or ItemCollection.Events)
+                {
+                    throw new InvalidOperationException("Daily move supports only week, month, or backlog.");
+                }
+
+                var item = await migrateItemUseCase!.ExecuteAsync(
+                    new MigrateItemRequest
+                    {
+                        PublicRef = publicRef,
+                        DestinationCollection = destinationCollection
+                    },
+                    cancellationToken);
+                await WriteItemDetailAsync(item, standardOutput);
                 return 0;
             }
             catch (Exception exception)
@@ -1962,5 +2121,22 @@ public sealed class TermBulletCliApp(
         await standardOutput.WriteLineAsync($"collection: {item.Collection.ToString().ToLowerInvariant()}");
         await standardOutput.WriteLineAsync($"priority: {item.Priority.ToString().ToLowerInvariant()}");
         await standardOutput.WriteLineAsync($"tag: {item.Tag}");
+    }
+
+    private static async Task WriteDailyReviewItemsAsync(
+        IReadOnlyCollection<DailyReviewItemResult> items,
+        TextWriter standardOutput)
+    {
+        if (items.Count == 0)
+        {
+            await standardOutput.WriteLineAsync("No stale today tasks found.");
+            return;
+        }
+
+        foreach (var item in items.OrderBy(item => item.LastTodayPlacementDate).ThenBy(item => item.Item.PublicRef, StringComparer.OrdinalIgnoreCase))
+        {
+            await standardOutput.WriteLineAsync(
+                $"{item.Item.PublicRef} [today] last:{item.LastTodayPlacementDate:yyyy-MM-dd} {item.Item.Content}");
+        }
     }
 }

@@ -30,6 +30,12 @@ termbullet
 ├── week
 ├── month
 ├── backlog
+├── daily
+│   ├── review
+│   ├── keep
+│   ├── move
+│   ├── done
+│   └── cancel
 ├── show
 ├── edit
 ├── done
@@ -111,8 +117,35 @@ termbullet backlog
 collections. They are not date-grouped task schedules. Notes and events are
 available through `list`, `show`, `search`, and the TUI Notes/Calendar screens.
 
-Forgotten is currently exposed in the TUI as a derived review list. There is no
-active `forgotten` CLI command in the current command tree.
+`today` shows open Today tasks plus tasks completed or cancelled on the current
+local day. Older completed or cancelled Today tasks remain available through
+`search`, `show`, and history.
+
+### `daily`
+
+Manual Bullet Journal review for stale open Today tasks.
+
+```bash
+termbullet daily review
+termbullet daily keep t-0426-1
+termbullet daily move t-0426-1 --collection week
+termbullet daily move t-0426-1 --collection month
+termbullet daily move t-0426-1 --collection backlog
+termbullet daily done t-0426-1
+termbullet daily cancel t-0426-1
+```
+
+`daily review` lists open tasks still in `today` whose latest Today placement or
+Daily Review event happened before the current local date.
+
+`daily keep` appends `daily_reviewed` history only. It does not change
+`updated_at`, `version`, or the item collection.
+
+`daily move` supports only `week`, `month`, and `backlog` destinations. `daily
+done` and `daily cancel` use the normal terminal-status behavior.
+
+Forgotten is exposed in the TUI as a separate derived review list for open tasks
+from previous monthly files.
 
 ### `show`
 

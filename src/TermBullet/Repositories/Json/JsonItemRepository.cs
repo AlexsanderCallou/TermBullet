@@ -12,7 +12,7 @@ public sealed class JsonItemRepository(
     IClock clock,
     MonthlyJsonPathResolver pathResolver,
     JsonFileStore fileStore,
-    JsonIndexService? indexService = null) : IItemRepository, IItemArchiveReader, IItemHistoryReader, IMonthRolloverService
+    JsonIndexService? indexService = null) : IItemRepository, IItemArchiveReader, IItemHistoryReader, IItemHistoryWriter, IMonthRolloverService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -144,6 +144,41 @@ public sealed class JsonItemRepository(
         var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
         document.History.Clear();
         await WriteMonthlyDocumentAsync(year, month, document, cancellationToken);
+    }
+
+    public async Task AppendHistoryAsync(
+        Guid itemId,
+        string publicRef,
+        string eventType,
+        object? data = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (itemId == Guid.Empty)
+        {
+            throw new ArgumentException("Item ID must not be empty.", nameof(itemId));
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicRef);
+        ArgumentException.ThrowIfNullOrWhiteSpace(eventType);
+
+        var parsedPublicRef = PublicRef.Parse(publicRef);
+        var (year, month) = await ResolveWritePeriodAsync(itemId, parsedPublicRef, cancellationToken);
+        var document = await ReadMonthlyDocumentByPeriodAsync(year, month, cancellationToken);
+        if (!document.Items.Any(item => item.Id == itemId))
+        {
+            throw new KeyNotFoundException($"Item not found for history append: {parsedPublicRef.Value}.");
+        }
+
+        AppendHistory(
+            document,
+            itemId,
+            parsedPublicRef.Value,
+            eventType.Trim(),
+            clock.UtcNow,
+            data);
+
+        await WriteMonthlyDocumentAsync(year, month, document, cancellationToken);
+        await RebuildIndexIfConfiguredAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyCollection<Item>> ListAsync(

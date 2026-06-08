@@ -1,7 +1,7 @@
 # TermBullet Backlog
 
-This file tracks the current V1 status and the next work candidates. Historical
-implementation details belong in release notes and git history.
+This file tracks the current execution focus. Historical implementation details
+belong in release notes and git history.
 
 ## Current Status
 
@@ -20,230 +20,160 @@ Delivered:
 - Safe JSON writes, one backup per operational file, backup recovery, local
   JSON index, and readable JSON formatting.
 - Tags catalog, item history, and Item Detail history display.
+- Optional AI configuration through `<data_root>/.aiconf`.
+- OpenCode Zen with `deepseek-v4-flash-free` documented as the recommended AI
+  setup.
 - Windows x64 and Linux x64 release assets.
 
-## Open V1 Hardening
+## Active V2 Focus
 
-These are quality and distribution improvements, not blockers for the V1
-offline core.
+V2 should now focus on two product problems:
 
-- Decide whether the CLI needs a derived `forgotten` command.
-- Add broader regression tests for complete item lifecycle flows.
-- Add broader persistence round-trip and backup/recovery tests.
-- Run cross-platform smoke testing with published Windows and Linux binaries.
-- Improve install, update, and uninstall workflows.
+1. Task collection behavior, especially stale daily work.
+2. A wider AI planning scope now that the recommended free model is stronger.
 
-## Post-V1
+### 1. Task Collections and Daily Work
 
-### V2 - AI Planning
+The current collection model treats `today` as a normal persisted task bucket.
+That keeps unfinished work visible, but it also lets old daily tasks stay in
+Today forever. Completed daily tasks can also make the execution surface feel
+stale because the current view mixes current work with historical evidence.
 
-Goal: add optional AI-assisted planning while preserving local-first behavior.
-AI must propose structured drafts, the application must validate them, and the
-user must approve before anything is persisted.
+#### Topic 1.1 - Today View Semantics
 
-V2 MVP behavior scenarios:
+Problem:
 
-- Java study roadmap: when the user asks for tag `estudo-java`, one task for
-  `today`, four tasks for `week`, remaining near-term tasks for `month`, and
-  longer work for `backlog`, the draft must create the requested tag, one scope
-  note, and ordered tasks in the requested collections.
-- Nutrition chatbot project: when the user asks to build a chatbot project, the
-  draft must create a project tag, one scope note, and initial tasks.
-- Gym habit tracking: when the user explicitly asks for a tag for an ongoing
-  personal habit, the draft must create that non-default tag and weekly
-  tracking tasks. Recurring tasks are not part of V2 MVP.
-- AI setup: OpenCode Zen with the free `deepseek-v4-flash-free` model is the
-  recommended setup for users. Local and other hosted providers may be used
-  through OpenAI-compatible profiles, but the README should not recommend a
-  local model by default.
+- `today` is doing two jobs: current execution lane and historical collection.
+- Done or cancelled tasks should remain persisted for history, but they should
+  not make Today feel blocked or old.
+- Open tasks left in Today after the day changes need a deliberate product rule,
+  not accidental permanence.
 
-#### V2.0 - Planning Contracts and ADR
+Direction to evaluate:
 
-- Keep ADR-0018 aligned with the approved AI workflow.
-- Keep `screens.md` aligned with guided New Planning.
-- Keep `DATA_MODEL.md` aligned with AI proposal contracts and history events.
-- Keep the canonical planning agent prompt aligned with the accepted V2
-  behavior scenarios.
-- Define acceptance criteria for AI being unavailable, misconfigured, or
-  returning invalid drafts.
+- Keep the persisted collection value as `today` for compatibility.
+- Treat Today as an execution view that shows open current work plus tasks
+  completed or cancelled on the current local day.
+- Remove done and cancelled Today tasks from the default Today list on the next
+  local day while keeping them visible through detail/history/search.
+- Add a clear optional way to inspect completed Today work when needed.
 
-#### V2.1 - BYOK AI Configuration
+Decided:
 
-Status: in progress.
+- Done and cancelled Today tasks remain visible for the current local day.
+- They leave the default Today view on the next local day.
+- Older completed or cancelled Today work is available through Search, Item
+  Detail, and History only.
 
-Implemented foundation:
+#### Topic 1.2 - Daily Rollover and Stale Open Tasks
 
-- `<data_root>/.aiconf` stores named AI profiles in an editable comment-friendly
-  line format.
-- AI profiles support local direct-response models and hosted reasoning models
-  through `reasoning`, `test_max_tokens`, `chat_max_tokens`, and
-  `planning_max_tokens`.
-- `termbullet test-ai` creates the `.aiconf` template when missing and validates
-  the active profile.
-- `termbullet set-ai <name>` sets the default profile when more than one profile
-  is configured.
-- Documentation recommends OpenCode Zen with `deepseek-v4-flash-free` and keeps
-  local model profiles as supported examples, not the default recommendation.
+Problem:
 
-Remaining:
+- Open tasks can stay in `today` across multiple days without the user noticing
+  that they are stale.
+- Moving every stale task automatically would be surprising, but doing nothing
+  leaves the daily lane clogged.
+- The current model intentionally avoids task dates, so the solution must work
+  through collection, status, history, and monthly files.
 
-- Add TUI status display for the active AI profile and missing or invalid AI
-  configuration.
-- Keep AI provider editing out of the TUI in V2 MVP.
-- Validate that TermBullet still works fully offline when AI is not configured.
+Direction to evaluate:
 
-#### V2.2 - AI Provider Boundary
+- Add a manual Daily Review step for open Today tasks whose latest Today
+  placement or review happened before the current local date.
+- Offer explicit choices: keep in Today, move to Week, move to Month, move to
+  Backlog, mark done, or cancel.
+- Keep automatic migration out of V2 daily rollover.
+- Use history timestamps for stale detection instead of adding task due dates.
+- Choosing keep in Today records a `daily_reviewed` history event only and does
+  not change `updated_at`.
+- Keep Daily Review separate from Forgotten because Forgotten scans older
+  monthly JSON files and can become heavier.
 
-Status: MVP implemented.
+Decided:
 
-Implemented foundation:
+- Daily rollover is manual, like Bullet Journal migration.
+- The new area name is `Daily Review`.
+- Forgotten keeps its current monthly/archive review role.
+- `keep today` writes history only.
+- Daily Review is a dedicated TUI screen.
+- CLI exposes `daily review`, `daily keep`, `daily move`, `daily done`, and
+  `daily cancel`.
 
-- The canonical planning agent prompt is shipped as a product asset.
-- `PlanningAgentPromptLoader` reads
-  `<install-dir>/agents/planning-bulletjournal-agent.md`.
-- Missing or unreadable agent prompt fails before model usage can be wired.
-- `BuildAiPlanningRequestUseCase` assembles agent prompt, filtered context, and
-  user prompt into a model request.
-- `IAiPlanningProvider` defines the provider boundary for future hosted or local
-  adapters.
-- `OpenAiCompatiblePlanningProvider` sends chat-completions requests to hosted
-  or local OpenAI-compatible endpoints.
-- Provider tests cover request mapping, bearer token handling, missing API key,
-  HTTP failures, empty content, and malformed responses.
-- Provider tests cover timeout/cancellation reporting.
-- `AiPlanningProviderFactory` selects `openai` and `openai-compatible` profiles
-  from the active profile.
-- `GenerateAiPlanningDraftUseCase` assembles the model request, calls the active
-  provider, parses the provider response as a structured draft, and validates it
-  before returning it to callers.
-- Runtime wiring is connected from Bootstrap to CLI and TUI planning flows.
+### 2. Broader AI Planning
 
-#### V2.3 - Structured Planning Drafts
+The previous planning flow constrained the user with fixed task-size choices
+and deterministic distribution. That was useful for weaker local models, but
+the recommended OpenCode Zen `deepseek-v4-flash-free` profile can support a more
+natural planning flow.
 
-Status: in progress.
+#### Topic 2.1 - AI-Decided Plan Size and Breakdown
 
-Implemented foundation:
+Problem:
 
-- Added structured planning draft DTOs with ordered actions.
-- Added parser for canonical JSON draft responses.
-- Added validation for modes `new_project` and `new_weekly`.
-- Added validation for allowed action types: `create_tag`, `create_task`, and
-  `create_note`.
-- Unsupported actions such as delete, event creation, and direct note body
-  editing are rejected before any apply workflow exists.
-- Project drafts must use a non-default tag and weekly drafts must use
-  `default`.
-- Project planning drafts must focus one non-default tag.
-- Added scenario fixtures for the Java roadmap, nutrition chatbot project, and
-  gym habit tracking examples.
+- Small/medium/large task volume is too rigid.
+- The user often knows the topic and desired outcome, but not the right number
+  of tasks.
+- The current deterministic distribution can fight the model's ability to plan
+  sensible milestones.
 
-Remaining:
+Direction to evaluate:
 
-- Preserve ordered user requests through grouped draft previews.
-- Validate explicit collection distribution across `today`, `week`, `month`, and
-  `backlog`.
-- Add broader tests for missing fields, conflicting tags, unsupported
-  collections, and unknown public refs.
+- Let AI choose the task count based on topic complexity and user intent.
+- Keep guardrails instead of fixed choices: maximum task count, required project
+  tag, allowed collections, and explicit user approval.
+- Ask the model to include a short planning rationale in the readable preview,
+  while the structured draft remains machine-validated.
+- Keep numeric task prefixes so the user can follow the plan in order.
 
-#### V2.4 - Planning TUI
+Open decisions:
 
-Status: in progress.
+- What is the default maximum task count for AI-decided plans: 20, 30, or 40?
+- Should the user still be able to force a small/medium/large cap when desired?
 
-Implemented foundation:
+#### Topic 2.2 - Planning With Existing Open Work
 
-- Implemented guided New Planning as the only current Planning workflow.
-- Implemented New Planning guided workspace with topic, project tag, task
-  volume, start-today, deterministic distribution, and structured draft
-  generation.
-- Implemented Draft Actions shell with Apply and Discard actions visible.
-- Wired TUI prompt submission to the AI draft generation use case.
-- Wired TUI apply and discard actions to the current generated draft.
-- Updated Planning contextual help for the real hub/workspace behavior.
+Problem:
 
-Remaining:
+- AI planning currently behaves mostly like a new-project generator.
+- Users need planning that considers existing open tasks, notes, and tags.
+- Sending all monthly JSON files is unsafe and noisy, but sending no context
+  makes the assistant forget the real workload.
 
-- Implement terminal-like chat panels with scroll support.
-- Keep draft editing out of V2 MVP; users refine by continuing the conversation
-  or discarding the draft.
-- Verify keyboard navigation, focus, scroll behavior, and footer shortcuts.
+Direction to evaluate:
 
-#### V2.5 - Apply Plan Use Case
+- Build a filtered open-work snapshot for AI: active tags, open tasks, recent
+  notes, current collections, and stale Today candidates.
+- Let AI propose a plan that may create tasks, move tasks between collections,
+  mark stale tasks for cancellation, and summarize conflicts.
+- Continue requiring structured drafts plus explicit approval before any write.
+- Keep broad historical review as future scope; start with current open work.
 
-Status: in progress.
+Open decisions:
 
-Implemented foundation:
+- Which context is allowed by default: current month only, current tag only, or
+  all open non-completed work?
+- Which mutation actions should be allowed first: create, move, cancel, or
+  priority changes?
 
-- Added an Application use case that applies approved structured drafts.
-- The apply flow validates the draft before persisting any action.
-- The apply flow uses existing tag creation, item creation, movement, priority,
-  and cancellation use cases.
-- Draft actions are applied in order and applied refs are returned in the result
-  summary.
-- Tests cover project creation actions, review mutations, and invalid drafts
-  being rejected before persistence.
-- Tests cover unknown public refs for review mutations.
-- Apply intentionally uses validation plus ordered execution instead of
-  transactional rollback; users can recover through readable JSON/backups if
-  manual repair is needed during alpha.
+## Verification Before Next Release
 
-Remaining:
+- Run `dotnet restore`.
+- Run `dotnet build`.
+- Run `dotnet test`.
+- Run manual TUI smoke tests for Today, stale task review, AI planning preview,
+  draft approval, and AI unavailable states.
+- Confirm non-AI local-first flows keep working without internet or accounts.
 
-- Append `ai_plan_applied` history plus normal per-item history events where
-  needed.
-- Add stronger preflight validation for mid-apply failures when new action types
-  are added.
+## Future
 
-#### Future - Plan Review
-
-Status: deferred.
-
-Reviewing existing plans is a future idea, not part of the current Planning
-scope. It is intentionally deferred because the current workflow is optimized
-for narrow context, and broad historical review is not reliable enough yet.
-
-#### V2.7 - CLI Support
-
-Status: MVP implemented.
-
-Implemented foundation:
-
-- Added `termbullet ai plan <mode> --prompt ...` to generate a validated draft
-  preview through the active AI profile.
-- The real CLI wiring loads `<data_root>/.aiconf`, the active AI provider,
-  and `<install-dir>/agents/planning-bulletjournal-agent.md`.
-- `ai plan` previews the structured draft by default.
-- `ai plan --apply --yes` applies the validated draft through the Application
-  apply use case.
-- `ai plan --apply` prompts for interactive confirmation before applying.
-- Added `termbullet ai chat` with line-based prompts, `/mode`, `/apply`,
-  `/discard`, and `/exit`.
-- `ai chat` generates validated draft previews and applies only after
-  interactive confirmation.
-- `termbullet` with no command still opens the TUI.
-- CLI parsing tests cover the implemented `.aiconf`, `test-ai`, `set-ai`, plan,
-  and chat paths.
-
-Remaining:
-
-- Add optional profile switching for CLI chat after the active-profile workflow
-  is stable.
-
-#### V2.8 - Release Readiness
-
-- Run `dotnet restore`, `dotnet build`, and `dotnet test`.
-- Run manual TUI smoke tests for guided New Planning, draft approval, and AI
-  unavailable states.
-- Update README, release notes, and deployment assets.
-- Publish V2 only after local-first non-AI flows remain unaffected.
-
-### V3 - Google Calendar
+### Google Calendar
 
 - Optional Google Calendar integration.
 - Read daily calendar events.
 - Show schedule context in the TUI.
 - Create events from TermBullet when explicitly requested.
 
-### V4 - Sync + Cloud
+### Sync and Cloud
 
 - Optional authentication and cloud sync.
 - Push/pull synchronization.
@@ -251,7 +181,7 @@ Remaining:
 - Conflict handling and sync history.
 - Optional PostgreSQL backend storing the same JSON file content.
 
-## Distribution
+### Distribution
 
 - Homebrew.
 - Scoop.

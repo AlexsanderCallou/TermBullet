@@ -10,6 +10,7 @@ public enum TuiScreen
     Week,
     Month,
     Backlog,
+    DailyReview,
     Forgotten,
     Notes,
     Calendar,

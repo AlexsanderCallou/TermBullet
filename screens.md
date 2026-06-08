@@ -24,10 +24,11 @@ Current implemented screens:
 - Search
 - Add Item auxiliary flow
 - Item Detail
-- Planning placeholder
+- Planning
 - Week View
 - Month View
 - Backlog
+- Daily Review
 - Forgotten
 - Notes
 - Calendar
@@ -84,6 +85,7 @@ Refined target ASCII layout:
 |   Planning          |   (o) e-0526-1 Review 16:00       | status: open                  |
 |   Month             |                                   | priority: normal              |
 |   Backlog           |                                   | collection: today             |
+|   Daily Review      |                                   |                               |
 |   Forgotten         |                                   |                               |
 |   Notes             |                                   |                               |
 |   Calendar          |                                   |                               |
@@ -93,6 +95,7 @@ Refined target ASCII layout:
 | 4 Context           | 5 Content                                                         |
 | context             | Fix auth flow                                                     |
 | > today      3      |                                                                  |
+|   daily rev  2      |                                                                  |
 |   week       8      | Description:                                                     |
 |   month      5      | - reproduce login failure                                        |
 |   backlog    14     | - check token audience                                           |
@@ -112,8 +115,8 @@ Notes:
   permanent dashboard panel.
 - `Details` keeps structured metadata compact and leaves the larger lower panel
   for the selected item's actual content.
-- `Context` shows collection counts for Today, Week, Month, Backlog, Forgotten,
-  and active tags.
+- `Context` shows collection counts for Today, Daily Review, Week, Month,
+  Backlog, Forgotten, and active tags.
 - `Planning` opens a future AI-assisted planning placeholder. It is not the
   Week View and is not part of the V1 execution workflow.
 - `Tags` opens the catalog view where tags can be created, inspected, and later
@@ -841,44 +844,6 @@ AI notes:
 - AI context must be filtered to the selected planning mode and must not send
   all monthly JSON files by default.
 
-Reviewing existing plans is a future idea, not part of the current Planning
-implementation. It is intentionally deferred because the current Planning design
-targets small local models, and those models do not handle broad historical
-review reliably enough yet.
-
-```text
-|-----------------------------------------------+-----------------------------------------|
-| assistant> Select a review scope.                                                       |
-| user> Review the auth project and suggest the next execution steps.                     |
-|                                                                                     v   |
-|-----------------------------------------------------------------------------------------|
-+-----------------------------------------------------------------------------------------+
-| Enter send/open  Up/Down scroll  PgUp/PgDn page  Tab focus  ? help  Esc back  q quit    |
-+-----------------------------------------------------------------------------------------+
-```
-
-
-AI notes:
-
-- AI never writes directly to monthly JSON files.
-- AI may answer conversationally while planning. When it produces a structured
-  draft, the application validates it, and only an approved draft is applied
-  through Application use cases.
-- AI responses use one JSON envelope. `draft_ready=false` renders `message` as
-  chat, and `draft_ready=true` renders the validated `draft` preview.
-- Planning sends recent user and assistant turns with each prompt so follow-up
-  messages can refer to the current conversation.
-- If the user explicitly asks to create, add, generate, or build tasks, plans,
-  roadmaps, or drafts, Planning requires a structured draft instead of another
-  conversational reply.
-- If the required draft is returned as normal chat, Planning retries once with a
-  draft-repair instruction before showing an error.
-- Long assistant messages wrap inside the conversation panel.
-- Structured draft JSON is rendered as a user-facing preview, not shown as raw
-  JSON conversation text.
-- AI context must be filtered to the selected planning mode and must not send
-  all monthly JSON files by default.
-
 ## Screen 06 - Week View
 
 Status: implemented.
@@ -998,7 +963,105 @@ Notes:
 - Event rows should not normally appear here because events require
   `scheduled_at`.
 
-## Screen 08 - Forgotten
+## Screen 08 - Daily Review
+
+Status: implemented.
+
+Role: manual Bullet Journal review for stale open tasks that are still in the
+`today` collection but were placed or last reviewed for Today before the current
+local date.
+
+Entry points:
+
+- `Enter` on `Daily Review` from the Main Dashboard menu.
+- Future shortcut: `r` from the dashboard.
+- CLI: `termbullet daily review`, `termbullet daily keep <ref>`,
+  `termbullet daily move <ref> --collection <week|month|backlog>`,
+  `termbullet daily done <ref>`, and `termbullet daily cancel <ref>`.
+
+Navigation:
+
+- `CursorUp` and `CursorDown` move through stale Today tasks.
+- `Tab` and `Shift+Tab` move focus between Tasks and Details.
+- `Enter` opens the Decision popup for the focused task.
+- `o` opens the selected task detail.
+- In the Decision popup, `Save` applies the selected decision.
+- In the Decision popup, `Cancel` or `Esc` closes without changing data.
+- `Esc` returns to the dashboard.
+- `?` opens contextual help.
+
+Target ASCII layout:
+
+```text
++ TermBullet - Daily Review ------------------------------------------------------------+
+| 1 Stale Today Tasks                         | 2 Details                              |
+| > [ ] t-0626-3 Study ownership in Rust      | ref: t-0626-3                          |
+|   [ ] t-0626-4 Build CLI parser sample      | last today review: 2026-06-07          |
+|   [ ] t-0626-5 Read async chapter           | status: open                           |
+|                                             | collection: today                      |
+|                                             | tag: studies-rust                      |
+|                                             | priority: none                         |
+|                                             |                                        |
+|                                             | Study ownership in Rust                |
++---------------------------------------------------------------------------------------+
+| Enter decide  o open  Tab/1-2 focus  ? help  Esc back                                 |
++---------------------------------------------------------------------------------------+
+
++ Daily Review Decision ---------------------------------------------------------------+
+| t-0626-3 Study ownership in Rust                                                     |
+| Choose what to do with this stale Today task:                                        |
+| (x) Keep today                                                                       |
+| ( ) Move to week                                                                     |
+| ( ) Move to month                                                                    |
+| ( ) Move to backlog                                                                  |
+| ( ) Mark done                                                                        |
+| ( ) Cancel task                                                                      |
+| [ Save ] [ Cancel ]                                                                  |
++---------------------------------------------------------------------------------------+
+```
+
+Rules:
+
+- Daily Review is a derived review screen, not a persisted item collection.
+- It does not scan every monthly file like Forgotten; it works from current
+  Today tasks and their current-month history.
+- A stale Today task is an open task whose latest Today placement or
+  `daily_reviewed` event happened before the current local date.
+- `keep today` appends a `daily_reviewed` history event and does not change
+  `updated_at`.
+- `move to week`, `move to month`, and `move to backlog` use the normal migrate
+  behavior and update the item collection.
+- `mark done` and `cancel` use the normal terminal-status use cases.
+- Done or cancelled Today tasks remain in the default Today view for the local
+  day when they were completed or cancelled. They leave the default Today view
+  on the next local day.
+
+Alternative considered:
+
+```text
++ TermBullet - Today -------------------------------------------------------------------+
+| 1 Daily Review                               | 2 Today Tasks                          |
+| > [!] t-0626-3 Study ownership in Rust       | [ ] t-0626-8 Practice CLI              |
+|   [!] t-0626-4 Build CLI parser sample       | [ ] t-0626-9 Read docs                 |
+|                                             | [x] t-0626-2 Setup env                 |
+|---------------------------------------------+----------------------------------------|
+| 3 Decision                                  | 4 Details                              |
+| (x) keep today                              | last review: 2026-06-07                |
+| ( ) move to week                            | tag: studies-rust                      |
+| ( ) move to month                           | collection: today                      |
+| ( ) move to backlog                         |                                        |
+| ( ) mark done                               |                                        |
+| ( ) cancel                                  |                                        |
++---------------------------------------------------------------------------------------+
+| Enter apply  Space decision  Tab focus  > migrate  x done  z cancel  Esc back         |
++---------------------------------------------------------------------------------------+
+```
+
+The dedicated Daily Review screen is preferred for V2 because it keeps Today
+focused on execution and keeps review/migration as an explicit Bullet Journal
+ritual.
+
+## Screen 09 - Forgotten
 
 Status: implemented.
 
@@ -1056,7 +1119,7 @@ Notes:
 - Events may need a later overdue-events review, but this screen is task-first
   for V1.
 
-## Screen 09 - Notes
+## Screen 10 - Notes
 
 Status: implemented.
 
@@ -1105,7 +1168,7 @@ Notes:
   description, tag, and timestamps.
 - Deleting a note must use the same delete use case as other item types.
 
-## Screen 10 - Calendar
+## Screen 11 - Calendar
 
 Status: implemented.
 
@@ -1174,7 +1237,7 @@ Notes:
 - Calendar must not convert tasks into events. Task and event remain distinct
   item types and keep their own fields.
 
-## Screen 11 - Tags
+## Screen 12 - Tags
 
 Status: implemented.
 
@@ -1231,7 +1294,7 @@ Notes:
 - Removing or editing tag catalog entries is deferred until a clear business
   rule exists. Until then, the TUI must not advertise edit/delete for tags.
 
-## Screen 12 - Tag Detail
+## Screen 13 - Tag Detail
 
 Status: implemented.
 

@@ -23,15 +23,13 @@ public sealed class PlanningAgentPromptLoaderTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadAsync_rejects_missing_planning_agent_prompt()
+    public async Task LoadAsync_uses_embedded_planning_agent_prompt_when_installed_file_is_missing()
     {
         var loader = new PlanningAgentPromptLoader(_root);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => loader.LoadAsync());
+        var prompt = await loader.LoadAsync();
 
-        Assert.Contains("planning-bulletjournal-agent.md", exception.Message);
-        Assert.Contains("missing", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("TermBullet Planning Bullet Journal Agent", prompt);
     }
 
     public void Dispose()

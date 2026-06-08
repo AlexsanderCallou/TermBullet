@@ -11,6 +11,7 @@ public sealed class TuiSnapshotLoader(
     GetBacklogItemsUseCase getBacklogItemsUseCase,
     ListItemsUseCase? listItemsUseCase = null,
     ListTagsUseCase? listTagsUseCase = null,
+    GetDailyReviewItemsUseCase? getDailyReviewItemsUseCase = null,
     Func<CancellationToken, Task>? startupAction = null)
 {
     private bool _startupCompleted;
@@ -31,6 +32,9 @@ public sealed class TuiSnapshotLoader(
             ? await getMonthItemsUseCase.ExecuteAsync(cancellationToken)
             : Array.Empty<ItemResult>();
         var backlogItems = await getBacklogItemsUseCase.ExecuteAsync(cancellationToken);
+        var dailyReviewItems = getDailyReviewItemsUseCase is not null
+            ? await getDailyReviewItemsUseCase.ExecuteAsync(cancellationToken)
+            : Array.Empty<DailyReviewItemResult>();
         var currentItems = listItemsUseCase is not null
             ? await listItemsUseCase.ExecuteAsync(new ListItemsRequest(), cancellationToken)
             : todayItems.Concat(weekItems).Concat(monthItems).Concat(backlogItems).ToArray();
@@ -42,6 +46,6 @@ public sealed class TuiSnapshotLoader(
             ? await listTagsUseCase.ExecuteAsync(cancellationToken)
             : Array.Empty<TagCatalogResult>();
 
-        return new TuiSnapshot(todayItems, weekItems, monthItems, backlogItems, currentItems, allItems, tags);
+        return new TuiSnapshot(todayItems, weekItems, monthItems, backlogItems, dailyReviewItems, currentItems, allItems, tags);
     }
 }

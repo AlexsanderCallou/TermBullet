@@ -6,8 +6,29 @@ public sealed class MainDashboardActionHandler(
     MarkDoneItemUseCase markDoneItemUseCase,
     CancelItemUseCase cancelItemUseCase,
     MigrateItemUseCase migrateItemUseCase,
-    DeleteItemUseCase deleteItemUseCase)
+    DeleteItemUseCase deleteItemUseCase,
+    KeepTodayItemUseCase? keepTodayItemUseCase = null)
 {
+    public async Task<ActionResult> HandleKeepTodayAsync(
+        string publicRef,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (keepTodayItemUseCase is null)
+            {
+                throw new InvalidOperationException("Daily Review keep today is not available.");
+            }
+
+            await keepTodayItemUseCase.ExecuteAsync(publicRef, cancellationToken);
+            return ActionResult.Ok();
+        }
+        catch (Exception ex)
+        {
+            return ActionResult.Fail(ex.Message);
+        }
+    }
+
     public async Task<ActionResult> HandleDoneAsync(
         string publicRef,
         CancellationToken cancellationToken = default)

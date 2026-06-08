@@ -14,6 +14,8 @@ public sealed class TermBulletTuiApp(
     GetBacklogItemsUseCase getBacklogItemsUseCase,
     GetWeekItemsUseCase? getWeekItemsUseCase = null,
     GetMonthItemsUseCase? getMonthItemsUseCase = null,
+    GetDailyReviewItemsUseCase? getDailyReviewItemsUseCase = null,
+    KeepTodayItemUseCase? keepTodayItemUseCase = null,
     ListItemsUseCase? listItemsUseCase = null,
     SearchItemsUseCase? searchItemsUseCase = null,
     ListTagsUseCase? listTagsUseCase = null,
@@ -38,6 +40,7 @@ public sealed class TermBulletTuiApp(
             getBacklogItemsUseCase,
             listItemsUseCase,
             listTagsUseCase,
+            getDailyReviewItemsUseCase,
             startupAction);
         var snapshot = await snapshotLoader.LoadAsync(cancellationToken);
         var searchVm = new SearchViewModel();
@@ -58,7 +61,11 @@ public sealed class TermBulletTuiApp(
             && migrateItemUseCase is not null && deleteItemUseCase is not null)
         {
             actionHandler = new MainDashboardActionHandler(
-                markDoneItemUseCase, cancelItemUseCase, migrateItemUseCase, deleteItemUseCase);
+                markDoneItemUseCase,
+                cancelItemUseCase,
+                migrateItemUseCase,
+                deleteItemUseCase,
+                keepTodayItemUseCase);
         }
 
         TGui.Init();
@@ -365,7 +372,8 @@ public sealed class TermBulletTuiApp(
                     snapshot.TodayItems,
                     snapshot.WeekItems,
                     snapshot.MonthItems,
-                    snapshot.BacklogItems);
+                    snapshot.BacklogItems,
+                    snapshot.DailyReviewItems.Count);
 
                 if (auxiliaryFlow == TuiAuxiliaryFlow.AddItemTypePicker)
                 {
@@ -626,6 +634,27 @@ public sealed class TermBulletTuiApp(
                             " Enter open  e edit  > migrate  x done  z cancel  d delete  Tab/1-3 focus  ? help  Esc back  q quit");
                         break;
 
+                    case TuiScreen.DailyReview:
+                        DailyReviewScreen.Build(
+                            root,
+                            BuildDailyReviewRows(snapshot),
+                            navigation,
+                            row => selectedItem = row?.Item,
+                            row => OpenItemDetail(row?.Item),
+                            (row, decision) =>
+                            {
+                                if (actionHandler is null || row is null) return;
+                                DispatchDailyReviewDecision(
+                                    row,
+                                    decision,
+                                    actionHandler,
+                                    RefreshAndRender,
+                                    cancellationToken);
+                            },
+                            NavigateBack,
+                            Quit);
+                        break;
+
                     case TuiScreen.Forgotten:
                         ItemListScreen.Build(
                             root,
@@ -714,6 +743,7 @@ public sealed class TermBulletTuiApp(
                             root,
                             dashboardVm,
                             BuildForgottenRows(snapshot).Length,
+                            snapshot.DailyReviewItems.Count,
                             navigation,
                             actionHandler,
                             createItemUseCase,
@@ -745,6 +775,7 @@ public sealed class TermBulletTuiApp(
         View root,
         MainDashboardViewModel viewModel,
         int forgottenCount,
+        int dailyReviewCount,
         TuiNavigationState navigation,
         MainDashboardActionHandler? actionHandler,
         CreateItemUseCase? createItemUseCase,
@@ -782,6 +813,7 @@ public sealed class TermBulletTuiApp(
             "  Planning",
             "  Month",
             "  Backlog",
+            "  Daily Review",
             "  Forgotten",
             "  Notes",
             "  Calendar",
@@ -824,7 +856,7 @@ public sealed class TermBulletTuiApp(
         {
             X = 0, Y = Pos.Bottom(menuPanel), Width = Dim.Percent(20), Height = Dim.Fill(1)
         };
-        var contextRows = BuildContextLines(viewModel, forgottenCount);
+        var contextRows = BuildContextLines(viewModel, forgottenCount, dailyReviewCount);
         var contextList = new ListView(TuiScreenUtilities.SanitizeListItems(contextRows))
         {
             X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
@@ -1016,6 +1048,7 @@ public sealed class TermBulletTuiApp(
             TuiScreen.Week => 3,
             TuiScreen.Month => 3,
             TuiScreen.Backlog => 3,
+            TuiScreen.DailyReview => 2,
             TuiScreen.Forgotten => 3,
             TuiScreen.Notes => 3,
             TuiScreen.Calendar => 4,
@@ -1039,6 +1072,17 @@ public sealed class TermBulletTuiApp(
     private static string FormatForgottenRow(ItemDisplayRow row)
     {
         return $"{row.Symbol} {row.PublicRef} {row.Content} previous month".Trim();
+    }
+
+    private static DailyReviewRow[] BuildDailyReviewRows(TuiSnapshot snapshot)
+    {
+        return snapshot.DailyReviewItems
+            .OrderBy(item => item.LastTodayPlacementDate)
+            .ThenBy(item => item.Item.PublicRef, StringComparer.Ordinal)
+            .Select(item => new DailyReviewRow(
+                ItemDisplayRow.From(item.Item),
+                item.LastTodayPlacementDate))
+            .ToArray();
     }
 
     private static bool IsFromPreviousMonth(string publicRef, DateOnly today)
@@ -1072,6 +1116,49 @@ public sealed class TermBulletTuiApp(
         }, cancellationToken);
     }
 
+    private static void DispatchDailyReviewDecision(
+        DailyReviewRow row,
+        DailyReviewDecision decision,
+        MainDashboardActionHandler actionHandler,
+        Action onRefresh,
+        CancellationToken cancellationToken)
+    {
+        Func<CancellationToken, Task<ActionResult>> handler = decision switch
+        {
+            DailyReviewDecision.KeepToday => token => actionHandler.HandleKeepTodayAsync(row.PublicRef, token),
+            DailyReviewDecision.MoveToWeek => token => actionHandler.HandleMigrateAsync(
+                new MigrateItemRequest
+                {
+                    PublicRef = row.PublicRef,
+                    DestinationCollection = ItemCollection.Week
+                },
+                token),
+            DailyReviewDecision.MoveToMonth => token => actionHandler.HandleMigrateAsync(
+                new MigrateItemRequest
+                {
+                    PublicRef = row.PublicRef,
+                    DestinationCollection = ItemCollection.Month
+                },
+                token),
+            DailyReviewDecision.MoveToBacklog => token => actionHandler.HandleMigrateAsync(
+                new MigrateItemRequest
+                {
+                    PublicRef = row.PublicRef,
+                    DestinationCollection = ItemCollection.Backlog
+                },
+                token),
+            DailyReviewDecision.MarkDone => token => actionHandler.HandleDoneAsync(row.PublicRef, token),
+            DailyReviewDecision.Cancel => token => actionHandler.HandleCancelAsync(row.PublicRef, token),
+            _ => token => actionHandler.HandleKeepTodayAsync(row.PublicRef, token)
+        };
+
+        _ = Task.Run(async () =>
+        {
+            await handler(cancellationToken);
+            TGui.MainLoop?.Invoke(onRefresh);
+        }, cancellationToken);
+    }
+
     private static string[] BuildPreviewLines(ItemDisplayRow? item) =>
         item is not null
             ?
@@ -1085,12 +1172,13 @@ public sealed class TermBulletTuiApp(
             ]
             : ["(nothing selected)"];
 
-    private static string[] BuildContextLines(MainDashboardViewModel viewModel, int forgottenCount)
+    private static string[] BuildContextLines(MainDashboardViewModel viewModel, int forgottenCount, int dailyReviewCount)
     {
         var lines = new List<string>
         {
             "collections",
             $"> today      {viewModel.DayItems.Count}",
+            $"  daily      {dailyReviewCount}",
             $"  week       {viewModel.WeekItems.Count}",
             $"  month      {viewModel.MonthItems.Count}",
             $"  backlog    {viewModel.BacklogItems.Count}",

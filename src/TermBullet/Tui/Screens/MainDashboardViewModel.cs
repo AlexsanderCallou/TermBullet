@@ -11,12 +11,14 @@ public sealed class MainDashboardViewModel
         IReadOnlyCollection<ItemResult> dayItems,
         IReadOnlyCollection<ItemResult> weekItems,
         IReadOnlyCollection<ItemResult> monthItems,
-        IReadOnlyCollection<ItemResult> backlogItems)
+        IReadOnlyCollection<ItemResult> backlogItems,
+        int dailyReviewCount = 0)
     {
         DayItems = dayItems.Select(MapToRow).ToList();
         WeekItems = weekItems.Select(MapToRow).ToList();
         MonthItems = monthItems.Select(MapToRow).ToList();
         BacklogItems = backlogItems.Select(MapToRow).ToList();
+        DailyReviewCount = dailyReviewCount;
         ProjectOrTagRows = dayItems.Concat(weekItems).Concat(monthItems).Concat(backlogItems)
             .Select(item => item.Tag)
             .Where(tag => !string.Equals(tag, Item.DefaultTag, StringComparison.OrdinalIgnoreCase))
@@ -34,6 +36,8 @@ public sealed class MainDashboardViewModel
     public IReadOnlyList<ItemDisplayRow> MonthItems { get; }
 
     public IReadOnlyList<ItemDisplayRow> BacklogItems { get; }
+
+    public int DailyReviewCount { get; }
 
     public IReadOnlyList<string> ProjectOrTagRows { get; }
 
