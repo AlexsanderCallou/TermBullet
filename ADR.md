@@ -378,14 +378,15 @@ It does not require transaction-level rollback for a failure after partial
 application. Local monthly JSON files remain user-readable and safe writes keep
 the existing backup/atomic replacement guarantees.
 
-Allowed V2 MVP draft actions:
+Allowed current V2 draft actions:
 
 - create a tag for a new closed-scope project;
 - create tasks;
-- create notes;
-- move tasks between collections;
-- set task priority;
-- cancel stale tasks.
+- create notes.
+
+Moving existing tasks, changing existing task priority, and cancelling stale
+tasks from AI proposals are future open-work planning capabilities. They are
+not part of the current published V2 apply surface.
 
 Project Plan may create one project tag, one scope note, and the required tasks.
 Weekly Plan creates tasks under the protected `default` tag.

@@ -22,7 +22,7 @@ public sealed class PlanningViewModelTests
         Assert.Equal(PlanningScreenMode.NewPlanning, vm.Mode);
         Assert.Contains("Topic: -", vm.PrimaryLines);
         Assert.Contains("Project tag: -", vm.PrimaryLines);
-        Assert.Contains("Volume: Medium (10-20 tasks)", vm.PrimaryLines);
+        Assert.Contains("Detail level: High", vm.PrimaryLines);
         Assert.Contains("Start today: Yes", vm.PrimaryLines);
         Assert.Contains("Generate draft", vm.SecondaryLines);
         Assert.Contains("Apply plan", vm.SecondaryLines);

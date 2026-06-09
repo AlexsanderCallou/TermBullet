@@ -170,25 +170,26 @@ Rules:
 
 The CLI is documented in [CLI.md](CLI.md).
 
-The TUI is documented in [screens.md](screens.md). The active MVP scope is:
+The TUI is documented in [screens.md](screens.md). The active V2 scope is:
 
 - Main Dashboard;
 - Search / Command Palette;
 - Item Detail;
-- Planning placeholder;
+- Planning;
 - Week View;
 - Month View;
 - Backlog Triage;
+- Daily Review;
 - Forgotten Review;
 - Notes;
 - Calendar;
 - Tags;
 - Migrate Item;
 - Add Item as an auxiliary keyboard-only flow.
+- Edit Item as an auxiliary keyboard-only flow.
 
 Deferred TUI screens:
 
-- AI Planning;
 - Review;
 - External calendar integration in V3;
 - Sync / Cloud in V4.
@@ -206,7 +207,11 @@ Deferred TUI screens:
 - local JSON index;
 - readable public refs.
 
-### V2 - AI Planning
+### V2 - AI Planning and Daily Review
+
+V2 is the current published line. It extends the offline core with optional AI
+planning and manual daily rollover support while preserving local-first
+behavior.
 
 - Planning workspace with guided planning inputs for fresh project plans;
 - BYOK AI setup managed through `<data_root>/.aiconf`;
@@ -220,6 +225,8 @@ Deferred TUI screens:
   a draft is ready;
 - New Planning flow for fresh work;
 - structured drafts that must be approved before any persistence.
+- Daily Review for stale open Today tasks using item history instead of task
+  due dates.
 
 New Planning supports:
 
@@ -261,8 +268,9 @@ structured draft. TermBullet validates that draft, and the user must approve
 before Application use cases create or change items.
 
 AI connection settings are not edited inside the TUI in V2 MVP. Users configure
-provider, model, optional base URL, and API key source through CLI commands. The
-TUI only shows whether AI is configured and which profile is active.
+provider, model, optional base URL, and API key source in the user-editable
+`<data_root>/.aiconf` file, then validate or switch profiles with CLI commands.
+The TUI only shows whether AI is configured and which profile is active.
 
 TermBullet recommends OpenCode Zen with the free `deepseek-v4-flash-free` model
 for V2 AI planning. Other hosted or local OpenAI-compatible providers remain

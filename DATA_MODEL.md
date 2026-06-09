@@ -481,7 +481,8 @@ Action fields should use existing item model names where possible:
 - `content`, `description`, `collection`, `priority`, and `tag` match item
   fields;
 - new weekly planning must use `tag = "default"`;
-- project planning and project review must use one non-default tag.
+- project planning must use one non-default tag;
+- existing-plan review is deferred and is not a current draft mode.
 
 Draft ordering and collection rules:
 
@@ -498,8 +499,8 @@ Draft ordering and collection rules:
 - if the user explicitly requests collection distribution, the draft must keep
   that distribution unless validation rejects it.
 
-`create_event`, item deletion, and note body editing are deferred until they are
-explicitly designed.
+`create_event`, existing item movement, existing priority changes, item
+deletion, and note body editing are deferred until they are explicitly designed.
 
 When an approved AI draft is applied, the application validates the complete
 draft first and then executes actions in order through normal Application use

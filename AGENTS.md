@@ -61,8 +61,12 @@ V1 is local-first and offline. It includes tasks, notes, events, Today, Backlog,
 Forgotten review, Week View, CLI, TUI MVP, monthly JSON persistence,
 search, editing, migration, movement, and data path discovery.
 
-V1 excludes AI execution, Google Calendar, machine sync, cloud accounts, and a
-PostgreSQL runtime dependency.
+V2 keeps the local-first core and adds optional AI planning, file-based AI
+profiles in `<data_root>/.aiconf`, structured drafts that require approval, and
+Daily Review for stale Today tasks.
+
+The current local-first release excludes Google Calendar, machine sync, cloud
+accounts, and a PostgreSQL runtime dependency.
 
 ## Architecture Rules
 

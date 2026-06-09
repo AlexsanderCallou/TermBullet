@@ -51,7 +51,14 @@ termbullet
 ├── set-ai
 ├── ai
 │   ├── chat
-│   └── plan
+│   ├── plan
+│   └── profile
+│       ├── add
+│       ├── list
+│       ├── remove
+│       ├── show
+│       ├── test
+│       └── use
 ├── history
 │   └── clear
 └── path
@@ -72,7 +79,7 @@ Open the TUI by running TermBullet without a command:
 termbullet
 ```
 
-There is no separate `tui` command in V1. The shortest command opens the main
+There is no separate `tui` command. The shortest command opens the main
 terminal interface.
 
 ### `add`
@@ -375,6 +382,23 @@ termbullet set-ai opencode-free
 
 Sets the default profile in `.aiconf`. It rewrites the file with the same profile
 settings and updates `default=true`.
+
+### Legacy `ai profile`
+
+The CLI still exposes `termbullet ai profile` commands for compatibility with
+the earlier V2 alpha profile workflow:
+
+```bash
+termbullet ai profile list
+termbullet ai profile show opencode-free
+termbullet ai profile test opencode-free
+termbullet ai profile use opencode-free
+```
+
+The recommended V2 configuration path is the user-editable
+`<data_root>/.aiconf` file plus `termbullet test-ai` and
+`termbullet set-ai <name>`. New documentation should prefer the file-based
+workflow.
 
 ## V2 AI Planning Commands
 

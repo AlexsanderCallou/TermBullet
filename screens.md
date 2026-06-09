@@ -10,8 +10,10 @@ Source checked:
 - `src/TermBullet/Tui/TermBulletTuiApp.cs`
 - `src/TermBullet/Tui/Screens/SearchScreen.cs`
 - `src/TermBullet/Tui/Screens/AddItemScreen.cs`
+- `src/TermBullet/Tui/Screens/EditItemScreen.cs`
 - `src/TermBullet/Tui/Screens/PlanningScreen.cs`
 - `src/TermBullet/Tui/Screens/ItemListScreen.cs`
+- `src/TermBullet/Tui/Screens/DailyReviewScreen.cs`
 - `src/TermBullet/Tui/Screens/CalendarScreen.cs`
 - `src/TermBullet/Tui/Screens/TagsScreen.cs`
 - `src/TermBullet/Tui/Screens/CreateTagScreen.cs`
@@ -23,6 +25,7 @@ Current implemented screens:
 - Main Dashboard
 - Search
 - Add Item auxiliary flow
+- Edit Item auxiliary flow
 - Item Detail
 - Planning
 - Week View
@@ -117,8 +120,8 @@ Notes:
   for the selected item's actual content.
 - `Context` shows collection counts for Today, Daily Review, Week, Month,
   Backlog, Forgotten, and active tags.
-- `Planning` opens a future AI-assisted planning placeholder. It is not the
-  Week View and is not part of the V1 execution workflow.
+- `Planning` opens the V2 AI-assisted new planning workspace. It is not the
+  Week View and does not edit existing plans.
 - `Tags` opens the catalog view where tags can be created, inspected, and later
   selected while editing or creating items.
 - `Content` is the main reading/editing surface for the selected item. It
@@ -436,7 +439,7 @@ Notes:
 
 ## Flow 04 - Edit Item
 
-Status: planned.
+Status: implemented.
 
 Role: edit an existing task, note, or event without changing its identity.
 
@@ -1505,10 +1508,10 @@ Notes:
 
 ## Implementation Gap Notes
 
-The product spec describes a broader TUI with AI Planning, Week,
-Backlog Triage, Forgotten Review, Review, Notes, Calendar, Tags, and Search.
 The active codebase currently contains `MainDashboard`, `Search`, `ItemDetail`,
-`Planning`, `Week`, `Backlog`, `Forgotten`, `Notes`, `Calendar`, `Tags`, and
-`MigrateItem` in `TuiScreen`, plus the Add Item auxiliary flow for type picking,
-quick task capture, type-specific creation forms, and the Create Tag flow.
-Review remains a future screen outside the current route set.
+`MigrateItem`, `Planning`, `Week`, `Month`, `Backlog`, `DailyReview`,
+`Forgotten`, `Notes`, `Calendar`, and `Tags` in `TuiScreen`, plus auxiliary
+flows for Add Item, Edit Item, Quick Task, Create Tag, and Daily Review
+decision popups.
+
+Review and Sync / Cloud remain future screens outside the current route set.
