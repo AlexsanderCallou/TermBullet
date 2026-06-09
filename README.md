@@ -44,7 +44,7 @@ license is Apache License 2.0 in [LICENSE](LICENSE).
 Current release:
 
 ```text
-v2.0.1 - Daily Review Patch
+v2.0.2 - TUI Standardization Patch
 ```
 
 Latest release:
@@ -291,13 +291,13 @@ dotnet run --project src/TermBullet -- [command] [arguments] [options]
 Build local release assets:
 
 ```bash
-VERSION=2.0.1 ./publish.sh
+VERSION=2.0.2 ./publish.sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\publish.ps1 -Version 2.0.1
+.\publish.ps1 -Version 2.0.2
 ```
 
 When running from source, `conf.json` is created beside the built executable

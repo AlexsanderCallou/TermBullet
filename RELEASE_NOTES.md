@@ -1,5 +1,18 @@
 # TermBullet Release Notes
 
+## v2.0.2 - TUI Standardization Patch
+
+TermBullet V2.0.2 standardizes TUI screen behavior and removes text-input
+shortcut conflicts.
+
+- Added shared ASCII checkbox and radio formatting for TUI screens.
+- Updated Planning, Search, Tags, Add/Edit Item, Migrate Item, Daily Review,
+  Calendar, and collection screens to use consistent focus and action behavior.
+- Protected text-input screens so ordinary letters and numbers do not trigger
+  screen actions while typing.
+- Renamed the visible main menu entry to `Daily`.
+- Updated screen documentation, ADR guidance, and regression tests.
+
 ## v2.0.1 - Daily Review Patch
 
 TermBullet V2.0.1 adds the manual Daily Review workflow for stale Today tasks
