@@ -53,7 +53,7 @@ public static class AddItemScreen
             Width = Dim.Fill()
         };
 
-        var footer = new Label(" Enter activate  Tab focus  Arrows move  Space cycle  Esc cancel  ? help  q quit")
+        var footer = new Label(" Enter activate  Tab focus  Arrows move  Space cycle  Esc cancel  ? help")
         {
             X = 0,
             Y = Pos.AnchorEnd(1),
@@ -88,9 +88,7 @@ public static class AddItemScreen
             Height = isTask ? 7 : 4,
             Visible = isTask || isEvent
         };
-        var timingGroup = new RadioGroup(
-            ["Today", "Week", "Month", "Backlog"],
-            0)
+        var timingGroup = new ListView(TuiScreenUtilities.SanitizeListItems(BuildTimingRows(selectedTiming)))
         {
             X = 1,
             Y = 1,
@@ -98,6 +96,7 @@ public static class AddItemScreen
             Height = 4,
             Visible = isTask
         };
+        timingGroup.SelectedItem = 0;
         var scheduledLabel = new Label("Scheduled for:")
         {
             X = 1,
@@ -128,7 +127,7 @@ public static class AddItemScreen
             Height = 7,
             Visible = isTask
         };
-        var priorityGroup = new RadioGroup(["None", "Low", "Medium", "High"], 0)
+        var priorityGroup = new ListView(TuiScreenUtilities.SanitizeListItems(BuildPriorityRows(selectedPriority)))
         {
             X = 1,
             Y = 1,
@@ -136,6 +135,7 @@ public static class AddItemScreen
             Height = 4,
             Visible = isTask
         };
+        priorityGroup.SelectedItem = 0;
         priorityPanel.Add(priorityGroup);
 
         var detailsPanel = new FrameView(isTask ? "4 Details" : isEvent ? "3 Details" : "2 Details")
@@ -218,17 +218,15 @@ public static class AddItemScreen
                 _ => 0
             };
 
-            if (timingGroup.SelectedItem != selectedIndex)
+            syncingSelection = true;
+            try
             {
-                syncingSelection = true;
-                try
-                {
-                    timingGroup.SelectedItem = selectedIndex;
-                }
-                finally
-                {
-                    syncingSelection = false;
-                }
+                TuiScreenUtilities.RefreshListView(timingGroup, BuildTimingRows(selectedTiming));
+                timingGroup.SelectedItem = selectedIndex;
+            }
+            finally
+            {
+                syncingSelection = false;
             }
 
             var showSchedule = isEvent;
@@ -254,17 +252,15 @@ public static class AddItemScreen
                 _ => 0
             };
 
-            if (priorityGroup.SelectedItem != selectedIndex)
+            syncingPrioritySelection = true;
+            try
             {
-                syncingPrioritySelection = true;
-                try
-                {
-                    priorityGroup.SelectedItem = selectedIndex;
-                }
-                finally
-                {
-                    syncingPrioritySelection = false;
-                }
+                TuiScreenUtilities.RefreshListView(priorityGroup, BuildPriorityRows(selectedPriority));
+                priorityGroup.SelectedItem = selectedIndex;
+            }
+            finally
+            {
+                syncingPrioritySelection = false;
             }
 
             UpdateStatus();
@@ -453,23 +449,20 @@ public static class AddItemScreen
 
         root.KeyPress += args =>
         {
+            if (TuiScreenUtilities.ShouldLetTextInputHandle(
+                args.KeyEvent,
+                contentField,
+                scheduledField,
+                descriptionField))
+            {
+                return;
+            }
+
             if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
             {
                 TuiScreenUtilities.ShowAddItemHelp();
                 args.Handled = true;
                 return;
-            }
-
-            var digit = TuiScreenUtilities.GetDigit(args.KeyEvent);
-            if (digit is not null)
-            {
-                var panelFocus = ResolvePanelFocus(digit.Value);
-                if (panelFocus is not null)
-                {
-                    SetFocusArea(panelFocus.Value);
-                    args.Handled = true;
-                    return;
-                }
             }
 
             switch (args.KeyEvent.Key)
@@ -527,10 +520,6 @@ public static class AddItemScreen
                     onCancel();
                     args.Handled = true;
                     break;
-                case Key.q:
-                    onQuit();
-                    args.Handled = true;
-                    break;
             }
         };
 
@@ -539,36 +528,21 @@ public static class AddItemScreen
         SetFocusArea(FocusArea.Content);
         UpdateStatus();
 
-        FocusArea? ResolvePanelFocus(int panelNumber)
-        {
-            if (panelNumber == 1)
-            {
-                return FocusArea.Content;
-            }
-
-            if (isTask)
-            {
-                return panelNumber switch
-                {
-                    2 => FocusArea.Timing,
-                    3 => FocusArea.Priority,
-                    4 => FocusArea.Description,
-                    _ => null
-                };
-            }
-
-            if (isEvent)
-            {
-                return panelNumber switch
-                {
-                    2 => FocusArea.ScheduledAt,
-                    3 => FocusArea.Description,
-                    _ => null
-                };
-            }
-
-            return panelNumber == 2 ? FocusArea.Description : null;
-        }
     }
 
+    private static string[] BuildTimingRows(AddItemTimingChoice selectedTiming) =>
+    [
+        TuiAsciiControls.RadioLine(selectedTiming == AddItemTimingChoice.Today, "Today"),
+        TuiAsciiControls.RadioLine(selectedTiming == AddItemTimingChoice.Week, "Week"),
+        TuiAsciiControls.RadioLine(selectedTiming == AddItemTimingChoice.Month, "Month"),
+        TuiAsciiControls.RadioLine(selectedTiming == AddItemTimingChoice.Backlog, "Backlog")
+    ];
+
+    private static string[] BuildPriorityRows(Priority selectedPriority) =>
+    [
+        TuiAsciiControls.RadioLine(selectedPriority == Priority.None, "None"),
+        TuiAsciiControls.RadioLine(selectedPriority == Priority.Low, "Low"),
+        TuiAsciiControls.RadioLine(selectedPriority == Priority.Medium, "Medium"),
+        TuiAsciiControls.RadioLine(selectedPriority == Priority.High, "High")
+    ];
 }

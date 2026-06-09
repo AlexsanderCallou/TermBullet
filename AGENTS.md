@@ -144,6 +144,12 @@ When no command is provided, the app opens the TUI.
 - Screens with text input fields must use physical buttons for actions instead
   of letter-key shortcuts to avoid input conflicts. Buttons are laid out
   horizontally with a maximum of 4 per line.
+- When a screen or popup contains `TextField` or `TextView`, ordinary letters
+  must not trigger actions such as save, generate, edit, delete, done, cancel,
+  tag, or search. `Enter` activates only the focused button or non-text control;
+  multiline text keeps normal text-editing behavior.
+- Render checkbox and radio choices with stable ASCII controls:
+  `[ x ]`, `[   ]`, `( x )`, and `(   )`.
 
 The TUI direction is a personal cockpit for planning and execution, visually
 inspired by LazyDocker/LazyGit and dense like btop.

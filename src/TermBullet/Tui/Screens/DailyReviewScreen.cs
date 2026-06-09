@@ -1,5 +1,4 @@
 using Terminal.Gui;
-using NStack;
 using TermBullet.Tui.Navigation;
 using TGui = Terminal.Gui.Application;
 
@@ -7,7 +6,7 @@ namespace TermBullet.Tui.Screens;
 
 public static class DailyReviewScreen
 {
-    private static readonly ustring[] DecisionLabels =
+    private static readonly string[] DecisionLabels =
     [
         "Keep today",
         "Move to week",
@@ -213,37 +212,54 @@ public static class DailyReviewScreen
             Y = 3,
             Width = Dim.Fill(2)
         };
-        var decisionGroup = new RadioGroup(DecisionLabels, 0)
+        var decisionList = new ListView(TuiScreenUtilities.SanitizeListItems(BuildDecisionRows(selectedDecision)))
         {
             X = 1,
             Y = 5,
-            Width = Dim.Fill(2)
+            Width = Dim.Fill(2),
+            Height = 7
         };
 
         var apply = false;
+        var syncingDecisionSelection = false;
         saveButton.Clicked += () =>
         {
-            selectedDecision = FromDecisionIndex(decisionGroup.SelectedItem);
+            selectedDecision = FromDecisionIndex(decisionList.SelectedItem);
             apply = true;
             TGui.RequestStop();
         };
         cancelButton.Clicked += () => TGui.RequestStop();
-        decisionGroup.SelectedItemChanged += _ =>
+        decisionList.SelectedItemChanged += _ =>
         {
-            selectedDecision = FromDecisionIndex(decisionGroup.SelectedItem);
+            if (syncingDecisionSelection)
+            {
+                return;
+            }
+
+            selectedDecision = FromDecisionIndex(decisionList.SelectedItem);
+            syncingDecisionSelection = true;
+            try
+            {
+                TuiScreenUtilities.RefreshListView(decisionList, BuildDecisionRows(selectedDecision));
+                decisionList.SelectedItem = (int)selectedDecision;
+            }
+            finally
+            {
+                syncingDecisionSelection = false;
+            }
         };
         dialog.KeyPress += args =>
         {
             switch (args.KeyEvent.Key)
             {
                 case Key.Space:
-                    decisionGroup.SelectedItem = decisionGroup.SelectedItem >= (int)DailyReviewDecision.Cancel
+                    decisionList.SelectedItem = decisionList.SelectedItem >= (int)DailyReviewDecision.Cancel
                         ? 0
-                        : decisionGroup.SelectedItem + 1;
+                        : decisionList.SelectedItem + 1;
                     args.Handled = true;
                     break;
                 case Key.Enter:
-                    selectedDecision = FromDecisionIndex(decisionGroup.SelectedItem);
+                    selectedDecision = FromDecisionIndex(decisionList.SelectedItem);
                     apply = true;
                     TGui.RequestStop();
                     args.Handled = true;
@@ -255,8 +271,8 @@ public static class DailyReviewScreen
             }
         };
 
-        dialog.Add(summary, prompt, decisionGroup);
-        decisionGroup.SetFocus();
+        dialog.Add(summary, prompt, decisionList);
+        decisionList.SetFocus();
         TGui.Run(dialog);
 
         if (apply)
@@ -269,4 +285,9 @@ public static class DailyReviewScreen
         selectedIndex >= 0 && selectedIndex <= (int)DailyReviewDecision.Cancel
             ? (DailyReviewDecision)selectedIndex
             : DailyReviewDecision.KeepToday;
+
+    private static string[] BuildDecisionRows(DailyReviewDecision selectedDecision) =>
+        DecisionLabels
+            .Select((label, index) => TuiAsciiControls.RadioLine(index == (int)selectedDecision, label))
+            .ToArray();
 }

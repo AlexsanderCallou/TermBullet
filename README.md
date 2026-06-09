@@ -9,7 +9,7 @@ It provides two first-class interfaces over the same Application use cases:
 - **CLI:** fast capture, lookup, and item manipulation from the shell.
 
 > Status: V2 local-first planner with optional AI planning. The active TUI
-> includes Main Dashboard, Search, Item Detail, Planning, Week, Month, Backlog,
+> includes Daily, Search, Item Detail, Planning, Week, Month, Backlog,
 > Daily Review, Forgotten, Notes, Calendar, Tags, Migrate Item, Add Item, and
 > Edit Item flows.
 

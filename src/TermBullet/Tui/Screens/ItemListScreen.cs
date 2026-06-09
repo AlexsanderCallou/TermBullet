@@ -76,7 +76,7 @@ public static class ItemListScreen
             X = 0,
             Y = Pos.Bottom(itemsPanel),
             Width = Dim.Fill(),
-            Height = 7
+            Height = 8
         };
         var actionList = new ListView(TuiScreenUtilities.SanitizeListItems(actions))
         {
@@ -107,6 +107,39 @@ public static class ItemListScreen
             }
         };
 
+        void ActivateSelectedAction()
+        {
+            var selectedAction = actionList.SelectedItem >= 0 && actionList.SelectedItem < actions.Count
+                ? actions[actionList.SelectedItem]
+                : string.Empty;
+            var action = selectedAction.Trim().TrimStart('>').Trim().ToLowerInvariant();
+
+            if (action.Contains("edit", StringComparison.Ordinal))
+            {
+                onOpenEdit(selectedItem);
+            }
+            else if (action.Contains("migrate", StringComparison.Ordinal))
+            {
+                onOpenMigrate(selectedItem);
+            }
+            else if (action.Contains("done", StringComparison.Ordinal))
+            {
+                onMarkDone(selectedItem);
+            }
+            else if (action.Contains("cancel", StringComparison.Ordinal))
+            {
+                onCancelItem(selectedItem);
+            }
+            else if (action.Contains("delete", StringComparison.Ordinal))
+            {
+                onDeleteItem(selectedItem);
+            }
+            else
+            {
+                onOpenDetail(selectedItem);
+            }
+        }
+
         bool HandleListShortcut(KeyEvent keyEvent, bool includeEnter)
         {
             if (TuiScreenUtilities.IsHelpKey(keyEvent))
@@ -131,6 +164,9 @@ public static class ItemListScreen
                     navigation.MovePreviousPanel();
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
+                    return true;
+                case Key.Enter when actionList.HasFocus:
+                    ActivateSelectedAction();
                     return true;
                 case Key.Enter when includeEnter:
                     onOpenDetail(selectedItem);

@@ -66,8 +66,7 @@ public sealed class MigrateItemViewModel
 
     private string FormatDestinationLine(ItemCollection collection)
     {
-        var selected = DestinationCollection == collection ? "x" : " ";
-        return $"({selected}) {FormatCollection(collection)}";
+        return $"{TuiAsciiControls.Radio(DestinationCollection == collection)} {FormatCollection(collection)}";
     }
 
     private static string FormatCollection(ItemCollection collection) =>

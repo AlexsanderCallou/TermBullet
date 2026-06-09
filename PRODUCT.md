@@ -15,6 +15,8 @@ developers and technical users who prefer fast local tools.
 - **Optional integrations:** calendar, sync, and cloud are later extensions.
 - **Evolutionary architecture:** V1 must prepare V2/V3/V4 without rewrites.
 - **Terminal-first:** keyboard-driven, dense, legible, and predictable.
+- **Text-safe TUI:** text input screens use visible action buttons instead of
+  letter-key commands, so typing content cannot trigger actions accidentally.
 - **Open source:** documentation, examples, labels, and commands are English.
 
 ## V1 Scope
@@ -172,7 +174,7 @@ The CLI is documented in [CLI.md](CLI.md).
 
 The TUI is documented in [screens.md](screens.md). The active V2 scope is:
 
-- Main Dashboard;
+- Daily;
 - Search / Command Palette;
 - Item Detail;
 - Planning;
@@ -193,6 +195,15 @@ Deferred TUI screens:
 - Review;
 - External calendar integration in V3;
 - Sync / Cloud in V4.
+
+TUI interaction rule:
+
+- screens and popups with text input fields must expose actions through visible
+  buttons such as `[ Save ]`, `[ Cancel ]`, `[ Generate ]`, `[ Apply ]`, and
+  `[ Discard ]`;
+- ordinary letter keys must not perform actions while text input is present;
+- checkbox controls use `[ x ]` and `[   ]`;
+- radio controls use `( x )` and `(   )`.
 
 ## Roadmap
 
@@ -325,7 +336,7 @@ disposable cache.
 V1 is adequate when:
 
 1. users can use TermBullet locally without internet access;
-2. TUI MVP navigation works for Main Dashboard, Search, and Add Item;
+2. TUI MVP navigation works for Daily, Search, and Add Item;
 3. CLI manipulates items without opening the TUI;
 4. tasks, notes, and events can be created, listed, edited, and changed;
 5. public refs follow the official format;

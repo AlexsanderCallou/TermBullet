@@ -43,6 +43,15 @@ public static class TuiScreenUtilities
             .ToList();
     }
 
+    public static bool IsTextInputOwnedKey(KeyEvent keyEvent) =>
+        keyEvent.Key is not Key.Esc
+            and not Key.Tab
+            and not Key.BackTab;
+
+    public static bool ShouldLetTextInputHandle(KeyEvent keyEvent, params View?[] textInputs) =>
+        IsTextInputOwnedKey(keyEvent)
+        && textInputs.Any(input => input?.HasFocus == true);
+
     public static void UpdatePanelTitles(
         IReadOnlyList<FrameView> panels,
         IReadOnlyList<string> titles,

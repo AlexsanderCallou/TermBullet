@@ -128,7 +128,7 @@ public sealed class SearchViewModelTests
         vm.SetResults([MakeItem("t-0426-1", "Fix JWT", ItemType.Task, ItemStatus.Open)]);
 
         Assert.Equal("t-0426-1", vm.Results[0].PublicRef);
-        Assert.Equal("[ ]", vm.Results[0].Symbol);
+        Assert.Equal("[   ]", vm.Results[0].Symbol);
         Assert.Equal("Fix JWT", vm.Results[0].Content);
     }
 

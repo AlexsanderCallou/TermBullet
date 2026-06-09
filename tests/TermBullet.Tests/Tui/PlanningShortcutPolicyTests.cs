@@ -10,13 +10,14 @@ public sealed class PlanningShortcutPolicyTests
     [InlineData('d')]
     [InlineData('e')]
     [InlineData('q')]
+    [InlineData('1')]
+    [InlineData('?')]
     public void IsPromptTextInput_treats_plain_letters_as_text(char key)
     {
         Assert.True(PlanningShortcutPolicy.IsPromptTextInput(new KeyEvent((Key)key, default)));
     }
 
     [Theory]
-    [InlineData(Key.Enter)]
     [InlineData(Key.Esc)]
     [InlineData(Key.Tab)]
     [InlineData(Key.BackTab)]
@@ -26,8 +27,8 @@ public sealed class PlanningShortcutPolicyTests
     }
 
     [Fact]
-    public void IsPromptTextInput_keeps_help_key_available()
+    public void IsPromptTextInput_keeps_enter_owned_by_text_input()
     {
-        Assert.False(PlanningShortcutPolicy.IsPromptTextInput(new KeyEvent((Key)'?', default)));
+        Assert.True(PlanningShortcutPolicy.IsPromptTextInput(new KeyEvent(Key.Enter, default)));
     }
 }

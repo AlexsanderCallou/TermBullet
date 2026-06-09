@@ -22,9 +22,6 @@ public static class PlanningScreen
         string? statusLine = null;
         TextField? guidedTopicField = null;
         TextField? guidedTagField = null;
-        CheckBox? highDetailCheckBox = null;
-        CheckBox? lowDetailCheckBox = null;
-        CheckBox? startTodayCheckBox = null;
         var guidedForm = new GuidedPlanningForm();
         IReadOnlyList<TextField> textInputFields = [];
 
@@ -57,9 +54,6 @@ public static class PlanningScreen
             contentHost.RemoveAll();
             guidedTopicField = null;
             guidedTagField = null;
-            highDetailCheckBox = null;
-            lowDetailCheckBox = null;
-            startTodayCheckBox = null;
             textInputFields = [];
             var vm = PlanningViewModel.ForNewPlanning();
 
@@ -140,13 +134,10 @@ public static class PlanningScreen
                 conversationLines.Count > 0 ? conversationLines : vm.ConversationLines,
                 currentDraft,
                 actionButtons,
-                (topicField, tagField, highCheck, lowCheck, startTodayCheck) =>
+                (topicField, tagField) =>
                 {
                     guidedTopicField = topicField;
                     guidedTagField = tagField;
-                    highDetailCheckBox = highCheck;
-                    lowDetailCheckBox = lowCheck;
-                    startTodayCheckBox = startTodayCheck;
                     textInputFields = [topicField, tagField];
                 });
         }
@@ -165,19 +156,6 @@ public static class PlanningScreen
                 guidedForm.ProjectTag = guidedTagField.Text?.ToString()?.Trim() ?? string.Empty;
             }
 
-            if (highDetailCheckBox is not null && highDetailCheckBox.Checked)
-            {
-                guidedForm.DetailLevel = GuidedPlanningDetailLevel.High;
-            }
-            else if (lowDetailCheckBox is not null && lowDetailCheckBox.Checked)
-            {
-                guidedForm.DetailLevel = GuidedPlanningDetailLevel.Low;
-            }
-
-            if (startTodayCheckBox is not null)
-            {
-                guidedForm.StartToday = startTodayCheckBox.Checked;
-            }
         }
 
         void GenerateGuidedDraft()
@@ -285,9 +263,6 @@ public static class PlanningScreen
     {
         switch (keyEvent.Key)
         {
-            case Key.q:
-                onQuit();
-                return true;
             case Key.Esc:
                 onBack();
                 return true;
@@ -313,7 +288,7 @@ public static class PlanningScreen
         IReadOnlyList<string> conversationLines,
         GenerateAiPlanningDraftResult? currentDraft,
         Button[] actionButtons,
-        Action<TextField, TextField, CheckBox, CheckBox, CheckBox> onFieldsCreated)
+        Action<TextField, TextField> onFieldsCreated)
     {
         var setupPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, "Setup", navigation, 0))
         {
@@ -372,54 +347,62 @@ public static class PlanningScreen
             Y = 0,
             Width = 14
         };
-        var highDetailCheck = new CheckBox("High")
-        {
-            X = 14,
-            Y = 0,
-            Checked = form.DetailLevel == GuidedPlanningDetailLevel.High
-        };
-        var lowDetailCheck = new CheckBox("Low")
-        {
-            X = Pos.Right(highDetailCheck) + 2,
-            Y = 0,
-            Checked = form.DetailLevel == GuidedPlanningDetailLevel.Low
-        };
-
-        highDetailCheck.Toggled += args =>
-        {
-            if (highDetailCheck.Checked)
-            {
-                lowDetailCheck.Checked = false;
-            }
-            else
-            {
-                highDetailCheck.Checked = true;
-            }
-        };
-
-        lowDetailCheck.Toggled += args =>
-        {
-            if (lowDetailCheck.Checked)
-            {
-                highDetailCheck.Checked = false;
-            }
-            else
-            {
-                lowDetailCheck.Checked = true;
-            }
-        };
-
-        var startTodayCheck = new CheckBox("Start today")
+        var detailList = new ListView(TuiScreenUtilities.SanitizeListItems(BuildDetailRows(form.DetailLevel)))
         {
             X = 0,
-            Y = 2,
-            Checked = form.StartToday
+            Y = 1,
+            Width = Dim.Fill(),
+            Height = 2
+        };
+        detailList.SelectedItem = form.DetailLevel == GuidedPlanningDetailLevel.Low ? 1 : 0;
+        var startTodayList = new ListView(TuiScreenUtilities.SanitizeListItems(BuildStartTodayRows(form.StartToday)))
+        {
+            X = 0,
+            Y = 4,
+            Width = Dim.Fill(),
+            Height = 1
+        };
+        startTodayList.SelectedItem = 0;
+        var syncingDetailSelection = false;
+
+        detailList.SelectedItemChanged += _ =>
+        {
+            if (syncingDetailSelection)
+            {
+                return;
+            }
+
+            form.DetailLevel = detailList.SelectedItem == 1
+                ? GuidedPlanningDetailLevel.Low
+                : GuidedPlanningDetailLevel.High;
+            syncingDetailSelection = true;
+            try
+            {
+                TuiScreenUtilities.RefreshListView(detailList, BuildDetailRows(form.DetailLevel));
+                detailList.SelectedItem = form.DetailLevel == GuidedPlanningDetailLevel.Low ? 1 : 0;
+            }
+            finally
+            {
+                syncingDetailSelection = false;
+            }
+        };
+        startTodayList.KeyPress += args =>
+        {
+            if (args.KeyEvent.Key != Key.Space && args.KeyEvent.Key != Key.Enter)
+            {
+                return;
+            }
+
+            form.StartToday = !form.StartToday;
+            TuiScreenUtilities.RefreshListView(startTodayList, BuildStartTodayRows(form.StartToday));
+            startTodayList.SelectedItem = 0;
+            args.Handled = true;
         };
 
         var rulesList = BuildList(BuildGuidedRuleLines(form));
-        rulesList.Y = 4;
+        rulesList.Y = 6;
         rulesList.Height = Dim.Fill();
-        rulesPanel.Add(detailLabel, highDetailCheck, lowDetailCheck, startTodayCheck, rulesList);
+        rulesPanel.Add(detailLabel, detailList, startTodayList, rulesList);
 
         var previewPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Draft Preview", navigation, 2))
         {
@@ -446,8 +429,8 @@ public static class PlanningScreen
             [setupPanel, rulesPanel, previewPanel, actionsPanel],
             ["Setup", "Rules", "Draft Preview", "Actions"],
             navigation);
-        TuiScreenUtilities.FocusCurrentPanel([topicField, highDetailCheck, previewList, actionButtons[0]], navigation);
-        onFieldsCreated(topicField, tagField, highDetailCheck, lowDetailCheck, startTodayCheck);
+        TuiScreenUtilities.FocusCurrentPanel([topicField, detailList, previewList, actionButtons[0]], navigation);
+        onFieldsCreated(topicField, tagField);
     }
 
     private static ListView BuildList(IReadOnlyList<string> lines) =>
@@ -504,6 +487,17 @@ public static class PlanningScreen
             "TermBullet controls tag and placement."
         ];
     }
+
+    private static string[] BuildDetailRows(GuidedPlanningDetailLevel selectedDetailLevel) =>
+    [
+        TuiAsciiControls.RadioLine(selectedDetailLevel == GuidedPlanningDetailLevel.High, "High"),
+        TuiAsciiControls.RadioLine(selectedDetailLevel == GuidedPlanningDetailLevel.Low, "Low")
+    ];
+
+    private static string[] BuildStartTodayRows(bool startToday) =>
+    [
+        TuiAsciiControls.CheckboxLine(startToday, "Start today")
+    ];
 
     private static string BuildGuidedPlanningPrompt(GuidedPlanningForm form)
     {

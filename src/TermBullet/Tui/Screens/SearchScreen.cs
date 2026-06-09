@@ -36,15 +36,14 @@ public static class SearchScreen
             X = 0, Y = 2, Width = Dim.Fill()
         };
 
-        var footer = new Label(" / search  Enter open  e edit  Tab/1-2 focus  ? help  Esc back")
+        var footer = new Label(" Enter search/open/action  Tab focus  ? help  Esc back")
         {
             X = 0, Y = Pos.AnchorEnd(1), Width = Dim.Fill()
         };
 
-        // Panel 1: Results
         var resultsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(1, "Results", navigation, 0))
         {
-            X = 0, Y = 3, Width = Dim.Percent(55), Height = Dim.Fill(1)
+            X = 0, Y = 3, Width = Dim.Percent(50), Height = Dim.Fill(5)
         };
         var resultRows = viewModel.Results.Count > 0
             ? viewModel.Results.Select(r => $"{r.Symbol} {r.PublicRef} {r.Content}").ToArray()
@@ -55,10 +54,9 @@ public static class SearchScreen
         };
         resultsPanel.Add(resultsList);
 
-        // Panel 2: Preview
         var previewPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(2, "Preview", navigation, 1))
         {
-            X = Pos.Right(resultsPanel), Y = 3, Width = Dim.Fill(), Height = Dim.Fill(1)
+            X = Pos.Right(resultsPanel), Y = 3, Width = Dim.Fill(), Height = Dim.Fill(5)
         };
         var selected = viewModel.SelectedResult;
         var previewLines = selected is not null
@@ -70,14 +68,35 @@ public static class SearchScreen
         };
         previewPanel.Add(previewList);
 
-        var panels = new[] { resultsPanel, previewPanel };
-        var panelTitles = new[] { "Results", "Preview" };
-        var focusTargets = new View[] { queryField, previewList };
+        var actionsPanel = new FrameView(TuiScreenUtilities.GetPanelTitle(3, "Actions", navigation, 2))
+        {
+            X = 0, Y = Pos.Bottom(resultsPanel), Width = Dim.Fill(), Height = 4
+        };
+        var actionsList = new ListView(TuiScreenUtilities.SanitizeListItems(["> open selected", "  edit selected"]))
+        {
+            X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill()
+        };
+        actionsPanel.Add(actionsList);
+
+        var panels = new[] { resultsPanel, previewPanel, actionsPanel };
+        var panelTitles = new[] { "Results", "Preview", "Actions" };
+        var focusTargets = new View[] { resultsList, previewList, actionsList };
         TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
 
-        root.Add(topBar, queryLabel, queryField, separator, resultsPanel, previewPanel, footer);
-        TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
+        root.Add(topBar, queryLabel, queryField, separator, resultsPanel, previewPanel, actionsPanel, footer);
+        queryField.SetFocus();
         onSelectedItemChanged(viewModel.SelectedResult);
+
+        void ActivateAction()
+        {
+            if (actionsList.SelectedItem == 1)
+            {
+                onEditSelected(viewModel.SelectedResult);
+                return;
+            }
+
+            onOpenSelected(viewModel.SelectedResult);
+        }
 
         queryField.KeyPress += args =>
         {
@@ -90,14 +109,13 @@ public static class SearchScreen
             }
             else if (args.KeyEvent.Key == Key.Tab)
             {
-                navigation.MoveNextPanel();
                 TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                 TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                 args.Handled = true;
             }
             else if (args.KeyEvent.Key == Key.BackTab)
             {
-                navigation.MovePreviousPanel();
+                navigation.FocusPanel(3);
                 TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                 TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                 args.Handled = true;
@@ -106,15 +124,14 @@ public static class SearchScreen
 
         root.KeyPress += args =>
         {
-            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
+            if (TuiScreenUtilities.ShouldLetTextInputHandle(args.KeyEvent, queryField))
             {
-                TuiScreenUtilities.ShowContextHelp(TuiScreen.Search);
-                args.Handled = true;
                 return;
             }
 
-            if (TuiScreenUtilities.TryFocusPanelByNumber(args.KeyEvent, navigation, panels, panelTitles, focusTargets))
+            if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
             {
+                TuiScreenUtilities.ShowContextHelp(TuiScreen.Search);
                 args.Handled = true;
                 return;
             }
@@ -133,20 +150,20 @@ public static class SearchScreen
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                     args.Handled = true;
                     break;
-                case Key.q:
-                    onQuit();
-                    args.Handled = true;
-                    break;
                 case Key.Esc:
                     onBack();
                     args.Handled = true;
                     break;
                 case Key.Enter:
-                    onOpenSelected(viewModel.SelectedResult);
-                    args.Handled = true;
-                    break;
-                case Key e when e == (Key)'e':
-                    onEditSelected(viewModel.SelectedResult);
+                    if (actionsList.HasFocus)
+                    {
+                        ActivateAction();
+                    }
+                    else
+                    {
+                        onOpenSelected(viewModel.SelectedResult);
+                    }
+
                     args.Handled = true;
                     break;
             }
@@ -166,6 +183,13 @@ public static class SearchScreen
         resultsList.KeyPress += args =>
         {
             if (TuiScreenUtilities.TryHandleEnter(args.KeyEvent.Key, () => onOpenSelected(viewModel.SelectedResult)))
+            {
+                args.Handled = true;
+            }
+        };
+        actionsList.KeyPress += args =>
+        {
+            if (TuiScreenUtilities.TryHandleEnter(args.KeyEvent.Key, ActivateAction))
             {
                 args.Handled = true;
             }
