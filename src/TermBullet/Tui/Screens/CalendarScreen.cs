@@ -143,6 +143,22 @@ public static class CalendarScreen
             }
         };
 
+        void ActivateSelectedAction()
+        {
+            switch (actionsList.SelectedItem)
+            {
+                case 1:
+                    onCancelItem(selectedItem);
+                    break;
+                case 2:
+                    onDeleteItem(selectedItem);
+                    break;
+                default:
+                    onOpenDetail(selectedItem);
+                    break;
+            }
+        }
+
         bool HandleCalendarShortcut(KeyEvent keyEvent, bool includeEnter)
         {
             if (TuiScreenUtilities.IsHelpKey(keyEvent))
@@ -185,6 +201,9 @@ public static class CalendarScreen
                     return true;
                 case Key close when close == (Key)']':
                     RefreshCalendar(CalendarViewModel.MoveSelectedMonth(selectedDate, 1));
+                    return true;
+                case Key.Enter when actionsList.HasFocus:
+                    ActivateSelectedAction();
                     return true;
                 case Key.Enter when includeEnter:
                     onOpenDetail(selectedItem);

@@ -5,181 +5,127 @@ belong in release notes and git history.
 
 ## Current Status
 
-V1 offline core is complete and released.
+The backlog is intentionally empty after the V2 publication.
 
-Delivered:
+TermBullet currently has:
 
-- CLI and TUI over shared Application use cases.
-- Tasks, notes, and events.
-- Today, Week, Month, and Backlog task collections.
-- Forgotten review as a derived TUI view.
-- Create, list, show, edit, done, cancel, delete, migrate, move, tag, untag,
-  priority, search, path, and history clear flows.
-- First-run data root selection stored in install-directory `conf.json`.
-- Monthly JSON persistence under `<data_root>/data`.
-- Safe JSON writes, one backup per operational file, backup recovery, local
-  JSON index, and readable JSON formatting.
-- Tags catalog, item history, and Item Detail history display.
-- Optional AI configuration through `<data_root>/.aiconf`.
-- OpenCode Zen with `deepseek-v4-flash-free` documented as the recommended AI
-  setup.
-- Windows x64 and Linux x64 release assets.
+- the offline local-first core;
+- CLI and TUI over shared Application use cases;
+- monthly JSON persistence, tag catalog, local index, and item history;
+- task, note, and event workflows;
+- Today, Week, Month, Backlog, Forgotten, Daily Review, Notes, Calendar, Tags,
+  Item Detail, Search, Add Item, Edit Item, and Migrate Item surfaces;
+- optional AI planning through `<data_root>/.aiconf`;
+- structured AI drafts that require explicit approval before persistence;
+- the canonical planning agent installed beside the executable.
 
-## Active V2 Focus
+## Completed Planning Area
 
-V2 should now focus on two product problems:
+The first real refactoring cycle standardized TUI screens and removed
+text-input shortcut conflicts.
 
-1. Task collection behavior, especially stale daily work.
-2. A wider AI planning scope now that the recommended free model is stronger.
+Concrete pain:
 
-### 1. Task Collections and Daily Work
+- screens use different visual conventions for actions, checkboxes, radio
+  choices, and footers;
+- some screens with text input still expose action shortcuts or document action
+  shortcuts that could conflict with typing;
+- repeated screen code makes it easy for future screens to drift.
 
-The current collection model treats `today` as a normal persisted task bucket.
-That keeps unfinished work visible, but it also lets old daily tasks stay in
-Today forever. Completed daily tasks can also make the execution surface feel
-stale because the current view mixes current work with historical evidence.
+Expected user-visible preservation:
 
-#### Topic 1.1 - Today View Semantics
+- existing item workflows still work;
+- existing CLI behavior is unchanged;
+- local JSON data remains untouched;
+- screens remain keyboard-first and dense.
 
-Problem:
+Completed refactor plan:
 
-- `today` is doing two jobs: current execution lane and historical collection.
-- Done or cancelled tasks should remain persisted for history, but they should
-  not make Today feel blocked or old.
-- Open tasks left in Today after the day changes need a deliberate product rule,
-  not accidental permanence.
+1. Done - Define shared TUI primitives.
+   - Add shared formatting helpers for ASCII checkbox and radio labels:
+     `[ x ]`, `[   ]`, `( x )`, and `(   )`.
+   - Add a shared action button row helper with a maximum of four buttons per
+     line.
+   - Add a common footer wording for text-input screens:
+     `Tab focus  Enter activate focused button  Esc back  ? help`.
+   - Rename the visible Daily menu entry from `Dashboard` to `Daily`.
+     Internal class names can be renamed later if that reduces churn.
 
-Direction to evaluate:
+2. Done - Protect text-input screens.
+   - Audit Quick Task, Add Task, Add Note, Add Event, Edit Task, Edit Note,
+     Edit Event, Create Tag, Search, and Planning.
+   - Ensure ordinary letter keys do not trigger actions when `TextField` or
+     `TextView` is present.
+   - Move actions to visible buttons or focused popups.
 
-- Keep the persisted collection value as `today` for compatibility.
-- Treat Today as an execution view that shows open current work plus tasks
-  completed or cancelled on the current local day.
-- Remove done and cancelled Today tasks from the default Today list on the next
-  local day while keeping them visible through detail/history/search.
-- Add a clear optional way to inspect completed Today work when needed.
+3. Done - Normalize full-form screens.
+   - Refactor Add and Edit flows to use the shared controls and button row.
+   - Keep Quick Task as the compact popup reference.
+   - Ensure `Enter` submits only when `Save` is focused.
 
-Decided:
+4. Done - Normalize list screens.
+   - Standardize Week, Month, Backlog, Daily Review, Forgotten, Notes, and Tags
+     as List + Preview + Actions screens.
+   - Keep letter shortcuts only on screens without text input, or expose the
+     same command as a visible action button.
 
-- Done and cancelled Today tasks remain visible for the current local day.
-- They leave the default Today view on the next local day.
-- Older completed or cancelled Today work is available through Search, Item
-  Detail, and History only.
+5. Done - Normalize specialized screens.
+   - Update Search to use Query + Results + Preview + Actions.
+   - Update Planning to use Setup + Rules + Draft Preview + Actions with no
+     letter-key actions.
+   - Review Calendar, Item Detail, Tag Detail, and Migrate Item for consistent
+     footers and ASCII controls.
 
-#### Topic 1.2 - Daily Rollover and Stale Open Tasks
+6. Done - Add regression tests.
+   - TUI shortcut policy tests for text-input screens.
+   - Screen view-model tests for checkbox/radio formatting.
+   - Representative screen tests for action button labels and footer wording.
+   - Numbered panel navigation tests for screens without text input.
+   - Tests proving number keys do not steal focus/input on screens with text
+     fields.
+   - Existing `dotnet test` must keep passing.
 
-Problem:
+7. Done - Validate general screen behavior.
+   - From Daily, open Today, Week, Month, Backlog, Daily Review, Forgotten,
+     Notes, Calendar, Tags, Search, Planning, and Item Detail.
+   - Confirm tasks open correctly from each task collection screen:
+     Today/Daily items, Week, Month, Backlog, Daily Review, and Forgotten.
+   - Confirm item detail opens the same public ref that was selected.
+   - Confirm Tag Detail opens from Tags and lists the selected tag's current
+     tasks, notes, and events in the correct panels.
+   - Confirm tasks opened from Tag Detail keep their original collection and
+     public ref.
+   - Confirm `1`-`9` navigate numbered panels on screens without text input.
+   - Confirm `1`-`9` type into focused text fields, or are ignored as commands,
+     on screens with text input.
+   - Confirm `Tab`, `Shift+Tab`, `Enter`, `Esc`, and `?` behave consistently
+     across all screen families.
+   - Confirm all action buttons perform the same Application use case behavior
+     as the previous shortcuts.
 
-- Open tasks can stay in `today` across multiple days without the user noticing
-  that they are stale.
-- Moving every stale task automatically would be surprising, but doing nothing
-  leaves the daily lane clogged.
-- The current model intentionally avoids task dates, so the solution must work
-  through collection, status, history, and monthly files.
+8. Ready - Manual smoke checklist before merging.
+   - Create one task in each collection and open it from its collection screen.
+   - Create one non-default tag, assign it to at least one task, note, and
+     event, then open Tag Detail.
+   - Type text containing `e`, `s`, `t`, `g`, `d`, `x`, `n`, and numbers in all
+     text-input screens.
+   - Verify no unintended action fires while typing.
+   - Verify Daily menu label appears as `Daily`, not `Dashboard`.
 
-Direction to evaluate:
+Boundaries:
 
-- Add a manual Daily Review step for open Today tasks whose latest Today
-  placement or review happened before the current local date.
-- Offer explicit choices: keep in Today, move to Week, move to Month, move to
-  Backlog, mark done, or cancel.
-- Keep automatic migration out of V2 daily rollover.
-- Use history timestamps for stale detection instead of adding task due dates.
-- Choosing keep in Today records a `daily_reviewed` history event only and does
-  not change `updated_at`.
-- Keep Daily Review separate from Forgotten because Forgotten scans older
-  monthly JSON files and can become heavier.
+- TUI owns layout, focus, and shortcut policy.
+- Application use cases remain unchanged.
+- Repositories and JSON contracts remain unchanged.
+- Documentation changes must land with each screen refactor.
 
-Decided:
+## Future Ideas
 
-- Daily rollover is manual, like Bullet Journal migration.
-- The new area name is `Daily Review`.
-- Forgotten keeps its current monthly/archive review role.
-- `keep today` writes history only.
-- Daily Review is a dedicated TUI screen.
-- CLI exposes `daily review`, `daily keep`, `daily move`, `daily done`, and
-  `daily cancel`.
+Future ideas stay outside the active backlog until they are selected for a
+cycle:
 
-### 2. Broader AI Planning
-
-The previous planning flow constrained the user with fixed task-size choices
-and deterministic distribution. That was useful for weaker local models, but
-the recommended OpenCode Zen `deepseek-v4-flash-free` profile can support a more
-natural planning flow.
-
-#### Topic 2.1 - AI-Decided Plan Size and Detail Levels
-
-Problem:
-
-- Small/medium/large task volume was too rigid.
-- The user often knows the topic and desired outcome, but not the right number
-  of tasks.
-- The deterministic distribution could fight the model's ability to plan
-  sensible milestones.
-
-Resolved:
-
-- Replaced task volume with detail levels: `high` (each task = one atomic
-  action) and `low` (each task = ~1 day or ~2h of work).
-- AI decides the total task count based on topic complexity and detail level.
-- Collection guardrails remain: today max 1, week max 5, month max 20, backlog
-  unlimited.
-- Numeric task prefixes preserved for ordered preview.
-
-#### Topic 2.2 - Planning With Existing Open Work
-
-Problem:
-
-- AI planning currently behaves mostly like a new-project generator.
-- Users need planning that considers existing open tasks, notes, and tags.
-- Sending all monthly JSON files is unsafe and noisy, but sending no context
-  makes the assistant forget the real workload.
-
-Direction to evaluate:
-
-- Build a filtered open-work snapshot for AI: active tags, open tasks, recent
-  notes, current collections, and stale Today candidates.
-- Let AI propose a plan that may create tasks, move tasks between collections,
-  mark stale tasks for cancellation, and summarize conflicts.
-- Continue requiring structured drafts plus explicit approval before any write.
-- Keep broad historical review as future scope; start with current open work.
-
-Open decisions:
-
-- Which context is allowed by default: current month only, current tag only, or
-  all open non-completed work?
-- Which mutation actions should be allowed first: create, move, cancel, or
-  priority changes?
-
-## Verification Before Next Release
-
-- Run `dotnet restore`.
-- Run `dotnet build`.
-- Run `dotnet test`.
-- Run manual TUI smoke tests for Today, stale task review, AI planning preview,
-  draft approval, and AI unavailable states.
-- Confirm non-AI local-first flows keep working without internet or accounts.
-
-## Future
-
-### Google Calendar
-
-- Optional Google Calendar integration.
-- Read daily calendar events.
-- Show schedule context in the TUI.
-- Create events from TermBullet when explicitly requested.
-
-### Sync and Cloud
-
-- Optional authentication and cloud sync.
-- Push/pull synchronization.
-- Whole-file monthly JSON synchronization.
-- Conflict handling and sync history.
-- Optional PostgreSQL backend storing the same JSON file content.
-
-### Distribution
-
-- Homebrew.
-- Scoop.
-- Winget.
-- Chocolatey.
-- Release automation.
+- broader AI planning over existing open work;
+- Google Calendar integration;
+- sync and cloud;
+- package manager distribution;
+- release automation.

@@ -19,7 +19,7 @@ public sealed class MainDashboardViewModelTests
 
         Assert.Equal(2, vm.DayItems.Count);
         Assert.Equal("t-0426-1", vm.DayItems[0].PublicRef);
-        Assert.Equal("[ ]", vm.DayItems[0].Symbol);
+        Assert.Equal("[   ]", vm.DayItems[0].Symbol);
         Assert.Equal("Fix auth JWT", vm.DayItems[0].Content);
         Assert.Equal("high", vm.DayItems[0].Priority);
 
@@ -135,8 +135,8 @@ public sealed class MainDashboardViewModelTests
     }
 
     [Theory]
-    [InlineData(ItemType.Task, ItemStatus.Open, "[ ]")]
-    [InlineData(ItemType.Task, ItemStatus.Done, "[x]")]
+    [InlineData(ItemType.Task, ItemStatus.Open, "[   ]")]
+    [InlineData(ItemType.Task, ItemStatus.Done, "[ x ]")]
     [InlineData(ItemType.Task, ItemStatus.Cancelled, "[-]")]
     [InlineData(ItemType.Note, ItemStatus.Open, "(.)")]
     [InlineData(ItemType.Event, ItemStatus.Open, "(o)")]

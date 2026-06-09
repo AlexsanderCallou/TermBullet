@@ -1,5 +1,18 @@
 # TermBullet Release Notes
 
+## v2.0.1 - Daily Review Patch
+
+TermBullet V2.0.1 adds the manual Daily Review workflow for stale Today tasks
+and aligns Today list behavior with local-day visibility.
+
+- Added Daily Review in the TUI for stale open Today tasks.
+- Added CLI commands under `daily` for review, keep, move, done, and cancel.
+- Kept completed and cancelled Today tasks visible only on the local day when
+  they reached a terminal status.
+- Added `daily_reviewed` history events for keep-today decisions without
+  changing `updated_at`.
+- Updated documentation for the current V2 local-first and AI planning scope.
+
 ## v2.0.0 - Hybrid AI Profiles
 
 TermBullet V2.0.0 improves AI provider configuration so direct-response models

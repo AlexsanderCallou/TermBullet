@@ -1,4 +1,5 @@
 using TermBullet.Tui.Screens;
+using TermBullet.Tui;
 
 namespace TermBullet.Tests.Tui;
 
@@ -49,7 +50,7 @@ public sealed class CalendarViewModelTests
         {
             Id = Guid.NewGuid(),
             PublicRef = publicRef,
-            Symbol = type == "note" ? "(.)" : type == "event" ? "(o)" : "[ ]",
+            Symbol = type == "note" ? "(.)" : type == "event" ? "(o)" : TuiAsciiControls.Checkbox(false),
             Type = type,
             Status = "open",
             Content = "Item",

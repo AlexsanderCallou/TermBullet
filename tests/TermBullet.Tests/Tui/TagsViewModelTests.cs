@@ -55,7 +55,7 @@ public sealed class TagsViewModelTests
         {
             Id = Guid.NewGuid(),
             PublicRef = publicRef,
-            Symbol = type == "note" ? "(.)" : type == "event" ? "(o)" : "[ ]",
+            Symbol = type == "note" ? "(.)" : type == "event" ? "(o)" : TermBullet.Tui.TuiAsciiControls.Checkbox(false),
             Type = type,
             Status = status,
             Content = "Item",

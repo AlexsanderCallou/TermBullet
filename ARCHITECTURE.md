@@ -1,6 +1,6 @@
 # TermBullet Architecture
 
-TermBullet V1 uses one production .NET project with clear folders and simple
+TermBullet uses one production .NET project with clear folders and simple
 names. The goal is readability first: domain rules, application actions,
 repositories, services, CLI, and TUI live in predictable places without heavy
 architecture vocabulary.

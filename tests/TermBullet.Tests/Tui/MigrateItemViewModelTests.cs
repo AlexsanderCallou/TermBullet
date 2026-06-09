@@ -13,7 +13,7 @@ public sealed class MigrateItemViewModelTests
 
         Assert.Contains(vm.ItemLines, line => line.Contains("ref: t-0526-1", StringComparison.Ordinal));
         Assert.Contains(vm.ItemLines, line => line.Contains("content: Fix auth flow", StringComparison.Ordinal));
-        Assert.Contains(vm.DestinationLines, line => line.Contains("(x) month", StringComparison.Ordinal));
+        Assert.Contains(vm.DestinationLines, line => line.Contains("( x ) month", StringComparison.Ordinal));
         Assert.Contains(vm.ResultLines, line => line.Contains("t-0526-1: today -> month", StringComparison.Ordinal));
         Assert.Contains(vm.ResultLines, line => line.Contains("same task, same ref", StringComparison.Ordinal));
     }
@@ -23,7 +23,7 @@ public sealed class MigrateItemViewModelTests
     {
         var vm = MigrateItemViewModel.ForBacklog(MakeItem());
 
-        Assert.Contains(vm.DestinationLines, line => line.Contains("(x) backlog", StringComparison.Ordinal));
+        Assert.Contains(vm.DestinationLines, line => line.Contains("( x ) backlog", StringComparison.Ordinal));
         Assert.Contains(vm.ResultLines, line => line.Contains("t-0526-1: today -> backlog", StringComparison.Ordinal));
     }
 

@@ -46,10 +46,10 @@ public sealed class ItemDisplayRow
             ItemType.Event => "(o)",
             _ => status switch
             {
-                ItemStatus.Open => "[ ]",
-                ItemStatus.Done => "[x]",
+                ItemStatus.Open => TuiAsciiControls.Checkbox(false),
+                ItemStatus.Done => TuiAsciiControls.Checkbox(true),
                 ItemStatus.Cancelled => "[-]",
-                _ => "[ ]"
+                _ => TuiAsciiControls.Checkbox(false)
             }
         };
 }

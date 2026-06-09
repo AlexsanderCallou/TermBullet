@@ -30,6 +30,8 @@ public static class EditItemScreen
         var isTask = draft.Type == ItemType.Task;
         var isEvent = draft.Type == ItemType.Event;
         var focusArea = FocusArea.Content;
+        var syncingCollectionSelection = false;
+        var syncingPrioritySelection = false;
 
         var title = draft.Type switch
         {
@@ -39,7 +41,7 @@ public static class EditItemScreen
         };
 
         var topBar = new Label($" {title}") { X = 0, Y = 0, Width = Dim.Fill() };
-        var footer = new Label(" Enter activate  Tab/1-5 focus  Arrows move  Space cycle  Esc cancel  ? help  q quit")
+        var footer = new Label(" Enter activate  Tab focus  Arrows move  Space cycle  Esc cancel  ? help")
         {
             X = 0,
             Y = Pos.AnchorEnd(1),
@@ -69,7 +71,7 @@ public static class EditItemScreen
             Height = isTask ? 7 : 4,
             Visible = isTask || isEvent
         };
-        var collectionGroup = new RadioGroup(["Today", "Week", "Month", "Backlog"], CollectionIndex(draft.Collection))
+        var collectionGroup = new ListView(TuiScreenUtilities.SanitizeListItems(BuildCollectionRows(draft.Collection)))
         {
             X = 1,
             Y = 1,
@@ -77,6 +79,7 @@ public static class EditItemScreen
             Height = 4,
             Visible = isTask
         };
+        collectionGroup.SelectedItem = CollectionIndex(draft.Collection);
         var scheduledField = new TextField(draft.ScheduledAtText)
         {
             X = 1,
@@ -100,7 +103,7 @@ public static class EditItemScreen
             Height = 7,
             Visible = isTask
         };
-        var priorityGroup = new RadioGroup(["None", "Low", "Medium", "High"], PriorityIndex(draft.Priority))
+        var priorityGroup = new ListView(TuiScreenUtilities.SanitizeListItems(BuildPriorityRows(draft.Priority)))
         {
             X = 1,
             Y = 1,
@@ -108,6 +111,7 @@ public static class EditItemScreen
             Height = 4,
             Visible = isTask
         };
+        priorityGroup.SelectedItem = PriorityIndex(draft.Priority);
         priorityPanel.Add(priorityGroup);
 
         var detailsPanel = new FrameView(isTask ? "4 Details" : isEvent ? "3 Details" : "2 Details")
@@ -242,8 +246,48 @@ public static class EditItemScreen
             }
         }
 
-        collectionGroup.SelectedItemChanged += _ => UpdateStatus();
-        priorityGroup.SelectedItemChanged += _ => UpdateStatus();
+        collectionGroup.SelectedItemChanged += _ =>
+        {
+            if (syncingCollectionSelection)
+            {
+                return;
+            }
+
+            syncingCollectionSelection = true;
+            try
+            {
+                var selectedIndex = collectionGroup.SelectedItem;
+                TuiScreenUtilities.RefreshListView(collectionGroup, BuildCollectionRows(CollectionFromIndex(selectedIndex)));
+                collectionGroup.SelectedItem = selectedIndex;
+            }
+            finally
+            {
+                syncingCollectionSelection = false;
+            }
+
+            UpdateStatus();
+        };
+        priorityGroup.SelectedItemChanged += _ =>
+        {
+            if (syncingPrioritySelection)
+            {
+                return;
+            }
+
+            syncingPrioritySelection = true;
+            try
+            {
+                var selectedIndex = priorityGroup.SelectedItem;
+                TuiScreenUtilities.RefreshListView(priorityGroup, BuildPriorityRows(PriorityFromIndex(selectedIndex)));
+                priorityGroup.SelectedItem = selectedIndex;
+            }
+            finally
+            {
+                syncingPrioritySelection = false;
+            }
+
+            UpdateStatus();
+        };
         saveButton.Clicked += Submit;
         cancelButton.Clicked += onCancel;
 
@@ -290,23 +334,20 @@ public static class EditItemScreen
 
         root.KeyPress += args =>
         {
+            if (TuiScreenUtilities.ShouldLetTextInputHandle(
+                args.KeyEvent,
+                contentField,
+                scheduledField,
+                descriptionField))
+            {
+                return;
+            }
+
             if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(Tui.Navigation.TuiScreen.ItemDetail);
                 args.Handled = true;
                 return;
-            }
-
-            var digit = TuiScreenUtilities.GetDigit(args.KeyEvent);
-            if (digit is not null)
-            {
-                var order = FocusOrder();
-                if (digit.Value >= 1 && digit.Value <= order.Length)
-                {
-                    SetFocus(order[digit.Value - 1]);
-                    args.Handled = true;
-                    return;
-                }
             }
 
             switch (args.KeyEvent.Key)
@@ -354,10 +395,6 @@ public static class EditItemScreen
                     onCancel();
                     args.Handled = true;
                     break;
-                case Key.q:
-                    onQuit();
-                    args.Handled = true;
-                    break;
             }
         };
 
@@ -383,6 +420,14 @@ public static class EditItemScreen
             _ => ItemCollection.Today
         };
 
+    private static string[] BuildCollectionRows(ItemCollection selectedCollection) =>
+    [
+        TuiAsciiControls.RadioLine(selectedCollection == ItemCollection.Today, "Today"),
+        TuiAsciiControls.RadioLine(selectedCollection == ItemCollection.Week, "Week"),
+        TuiAsciiControls.RadioLine(selectedCollection == ItemCollection.Month, "Month"),
+        TuiAsciiControls.RadioLine(selectedCollection == ItemCollection.Backlog, "Backlog")
+    ];
+
     private static int PriorityIndex(Priority priority) =>
         priority switch
         {
@@ -400,4 +445,12 @@ public static class EditItemScreen
             3 => Priority.High,
             _ => Priority.None
         };
+
+    private static string[] BuildPriorityRows(Priority selectedPriority) =>
+    [
+        TuiAsciiControls.RadioLine(selectedPriority == Priority.None, "None"),
+        TuiAsciiControls.RadioLine(selectedPriority == Priority.Low, "Low"),
+        TuiAsciiControls.RadioLine(selectedPriority == Priority.Medium, "Medium"),
+        TuiAsciiControls.RadioLine(selectedPriority == Priority.High, "High")
+    ];
 }

@@ -29,6 +29,7 @@ Long-form ADRs may be split into `docs/adr/` later if more detail is needed.
 | 0018 | Accepted | V2 AI planning uses approved structured drafts before applying changes. |
 | 0019 | Accepted | AI provider profiles are stored in `<data_root>/.aiconf`. |
 | 0020 | Accepted | Daily Review uses history-based Today rollover without task due dates. |
+| 0021 | Accepted | TUI text-input screens use physical action buttons instead of letter shortcuts. |
 
 ## ADR-0001 - Local-First Product
 
@@ -378,14 +379,15 @@ It does not require transaction-level rollback for a failure after partial
 application. Local monthly JSON files remain user-readable and safe writes keep
 the existing backup/atomic replacement guarantees.
 
-Allowed V2 MVP draft actions:
+Allowed current V2 draft actions:
 
 - create a tag for a new closed-scope project;
 - create tasks;
-- create notes;
-- move tasks between collections;
-- set task priority;
-- cancel stale tasks.
+- create notes.
+
+Moving existing tasks, changing existing task priority, and cancelling stale
+tasks from AI proposals are future open-work planning capabilities. They are
+not part of the current published V2 apply surface.
 
 Project Plan may create one project tag, one scope note, and the required tasks.
 Weekly Plan creates tasks under the protected `default` tag.
@@ -500,6 +502,43 @@ Consequences:
 Rejected: adding task due dates for V2 daily rollover, automatically migrating
 stale Today tasks at startup, reusing Forgotten for daily rollover, and touching
 `updated_at` when the user only reaffirms that a task stays in Today.
+
+## ADR-0021 - Text Input Screens Use Physical Action Buttons
+
+Status: Accepted.
+
+Any TUI screen or popup that contains a text input control must prevent ordinary
+letter keys from acting as commands while the user is typing. This includes
+single-line and multiline inputs.
+
+Rules:
+
+- screens with `TextField` or `TextView` must perform actions through visible
+  physical buttons such as `[ Save ]`, `[ Cancel ]`, `[ Generate ]`,
+  `[ Apply ]`, `[ Discard ]`, or `[ Back ]`;
+- ordinary letter-key actions such as `s`, `g`, `t`, `e`, `d`, `x`, and `n`
+  must not trigger commands on those screens;
+- `Enter` activates only the focused button or focused non-text control;
+- when focus is inside a multiline text input, `Enter` keeps its text-editing
+  behavior;
+- list screens that need text input should open a focused popup instead of
+  capturing text directly in a shortcut-heavy surface;
+- checkbox and radio choices must be rendered with stable ASCII forms:
+  `[ x ]`, `[   ]`, `( x )`, and `(   )`.
+
+Consequences:
+
+- Quick Task is the reference popup style for compact text-entry flows;
+- Add Item, Edit Item, Create Tag, Search, and Planning must be audited for
+  shortcut conflicts;
+- screens without text inputs may keep letter shortcuts, but action panels with
+  buttons are preferred for consistency;
+- automated TUI tests should cover that typing letters in text fields does not
+  dispatch screen actions.
+
+Rejected: allowing letter shortcuts to remain active while a text field has
+focus, relying on users to avoid shortcut letters while typing, and mixing
+multiple checkbox/radio ASCII styles.
 
 ## Future ADR Candidates
 

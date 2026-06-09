@@ -8,9 +8,10 @@ It provides two first-class interfaces over the same Application use cases:
 - **TUI:** keyboard-first visual interface with panel-based screens.
 - **CLI:** fast capture, lookup, and item manipulation from the shell.
 
-> Status: V1 offline core. The active TUI MVP includes Main Dashboard, Search,
-> Item Detail, Planning placeholder, Week, Month, Backlog, Forgotten, Notes,
-> Calendar, Tags, Migrate Item, and Add Item.
+> Status: V2 local-first planner with optional AI planning. The active TUI
+> includes Daily, Search, Item Detail, Planning, Week, Month, Backlog,
+> Daily Review, Forgotten, Notes, Calendar, Tags, Migrate Item, Add Item, and
+> Edit Item flows.
 
 ## Repository
 
@@ -43,7 +44,7 @@ license is Apache License 2.0 in [LICENSE](LICENSE).
 Current release:
 
 ```text
-v2.0.0 - Hybrid AI Profiles
+v2.0.1 - Daily Review Patch
 ```
 
 Latest release:
@@ -241,11 +242,12 @@ default. For hosted keys, prefer `api_key_env` instead of writing a secret into
 
 ## Product Summary
 
-V1 delivers:
+The current V2 release delivers:
 
 - tasks, notes, and events;
 - Today, Week, Month, Backlog, Notes, and Events collections;
 - Forgotten review;
+- Daily Review for stale Today tasks;
 - Week View;
 - Notes, Calendar, and Tags views;
 - CLI and TUI MVP;
@@ -257,8 +259,8 @@ V1 delivers:
 - local data path discovery;
 - optional AI-assisted guided planning with local or OpenAI-compatible profiles.
 
-V1 does not include Google Calendar, machine sync, cloud accounts, or a
-PostgreSQL runtime dependency.
+TermBullet does not include Google Calendar, machine sync, cloud accounts, or a
+PostgreSQL runtime dependency in the current local-first release.
 
 The product direction, roadmap, item model, and acceptance criteria are in
 [PRODUCT.md](PRODUCT.md).
@@ -289,13 +291,13 @@ dotnet run --project src/TermBullet -- [command] [arguments] [options]
 Build local release assets:
 
 ```bash
-VERSION=2.0.0 ./publish.sh
+VERSION=2.0.1 ./publish.sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\publish.ps1 -Version 2.0.0
+.\publish.ps1 -Version 2.0.1
 ```
 
 When running from source, `conf.json` is created beside the built executable
@@ -322,7 +324,7 @@ Architecture details are in [ARCHITECTURE.md](ARCHITECTURE.md).
 - [DATA_MODEL.md](DATA_MODEL.md) - monthly JSON data contract.
 - [ARCHITECTURE.md](ARCHITECTURE.md) - module boundaries and flows.
 - [ADR.md](ADR.md) - accepted architecture decisions.
-- [BACKLOG.md](BACKLOG.md) - execution backlog and post-V1 work.
+- [BACKLOG.md](BACKLOG.md) - current execution backlog and next planning area.
 - [RELEASE_NOTES.md](RELEASE_NOTES.md) - release notes and expected assets.
 - [AGENTS.md](AGENTS.md) - AI agent development guide.
 - [CONTRIBUTING.md](CONTRIBUTING.md) - contribution rules.

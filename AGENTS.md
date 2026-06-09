@@ -61,8 +61,12 @@ V1 is local-first and offline. It includes tasks, notes, events, Today, Backlog,
 Forgotten review, Week View, CLI, TUI MVP, monthly JSON persistence,
 search, editing, migration, movement, and data path discovery.
 
-V1 excludes AI execution, Google Calendar, machine sync, cloud accounts, and a
-PostgreSQL runtime dependency.
+V2 keeps the local-first core and adds optional AI planning, file-based AI
+profiles in `<data_root>/.aiconf`, structured drafts that require approval, and
+Daily Review for stale Today tasks.
+
+The current local-first release excludes Google Calendar, machine sync, cloud
+accounts, and a PostgreSQL runtime dependency.
 
 ## Architecture Rules
 
@@ -140,6 +144,12 @@ When no command is provided, the app opens the TUI.
 - Screens with text input fields must use physical buttons for actions instead
   of letter-key shortcuts to avoid input conflicts. Buttons are laid out
   horizontally with a maximum of 4 per line.
+- When a screen or popup contains `TextField` or `TextView`, ordinary letters
+  must not trigger actions such as save, generate, edit, delete, done, cancel,
+  tag, or search. `Enter` activates only the focused button or non-text control;
+  multiline text keeps normal text-editing behavior.
+- Render checkbox and radio choices with stable ASCII controls:
+  `[ x ]`, `[   ]`, `( x )`, and `(   )`.
 
 The TUI direction is a personal cockpit for planning and execution, visually
 inspired by LazyDocker/LazyGit and dense like btop.

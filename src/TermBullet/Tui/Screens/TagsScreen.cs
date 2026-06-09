@@ -24,7 +24,7 @@ public static class TagsScreen
             Y = 0,
             Width = Dim.Fill()
         };
-        var footer = new Label(" Enter detail  n new  Tab/1-4 focus  Esc back  q quit")
+        var footer = new Label(" Enter activate  Tab focus  Esc back")
         {
             X = 0,
             Y = Pos.AnchorEnd(1),
@@ -123,16 +123,30 @@ public static class TagsScreen
             TuiScreenUtilities.RefreshListView(previewList, BuildPreview(selectedTag));
         };
 
+        void ActivateAction()
+        {
+            if (actionsList.SelectedItem == 1)
+            {
+                onCreateTag();
+                return;
+            }
+
+            if (selectedTag is not null)
+            {
+                onOpenDetail(selectedTag.Name);
+            }
+        }
+
         bool HandleTagsShortcut(KeyEvent keyEvent)
         {
+            if (TuiScreenUtilities.ShouldLetTextInputHandle(keyEvent, searchField))
+            {
+                return false;
+            }
+
             if (TuiScreenUtilities.IsHelpKey(keyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.Tags);
-                return true;
-            }
-
-            if (TuiScreenUtilities.TryFocusPanelByNumber(keyEvent, navigation, panels, panelTitles, focusTargets))
-            {
                 return true;
             }
 
@@ -148,18 +162,14 @@ public static class TagsScreen
                     TuiScreenUtilities.UpdatePanelTitles(panels, panelTitles, navigation);
                     TuiScreenUtilities.FocusCurrentPanel(focusTargets, navigation);
                     return true;
-                case Key c when c == (Key)'c':
-                case Key n when n == (Key)'n':
-                    onCreateTag();
+                case Key.Enter when actionsList.HasFocus:
+                    ActivateAction();
                     return true;
                 case Key.Enter when selectedTag is not null:
                     onOpenDetail(selectedTag.Name);
                     return true;
                 case Key.Esc:
                     onBack();
-                    return true;
-                case Key.q:
-                    onQuit();
                     return true;
             }
 

@@ -9,7 +9,7 @@ public sealed class TuiScreenNavigationTests
     {
         var state = new TuiNavigationState();
 
-        state.NavigateTo(TuiScreen.Search, panelCount: 2);
+        state.NavigateTo(TuiScreen.Search, panelCount: 3);
 
         Assert.Equal(TuiScreen.Search, state.CurrentScreen);
     }
@@ -33,7 +33,7 @@ public sealed class TuiScreenNavigationTests
         state.MoveNextPanel();
         state.MoveNextPanel();
 
-        state.NavigateTo(TuiScreen.Search, panelCount: 2);
+        state.NavigateTo(TuiScreen.Search, panelCount: 3);
 
         Assert.Equal(0, state.FocusedPanelIndex);
     }
@@ -51,7 +51,7 @@ public sealed class TuiScreenNavigationTests
     {
         var state = new TuiNavigationState();
 
-        state.NavigateTo(TuiScreen.Search, panelCount: 2);
+        state.NavigateTo(TuiScreen.Search, panelCount: 3);
 
         Assert.True(state.CanNavigateBack);
     }
@@ -60,7 +60,7 @@ public sealed class TuiScreenNavigationTests
     public void NavigateBack_returns_to_previous_screen()
     {
         var state = new TuiNavigationState();
-        state.NavigateTo(TuiScreen.Search, panelCount: 2);
+        state.NavigateTo(TuiScreen.Search, panelCount: 3);
 
         state.NavigateBack();
 

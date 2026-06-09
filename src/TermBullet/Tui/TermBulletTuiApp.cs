@@ -580,7 +580,7 @@ public sealed class TermBulletTuiApp(
                             "Week",
                             snapshot.WeekItems.Select(ItemDisplayRow.From).ToArray(),
                             "Actions",
-                            ["> migrate selected task", "Enter open detail", "x mark done", "z cancel", "d delete"],
+                            ["> open detail", "  edit selected", "  migrate selected task", "  mark done", "  cancel", "  delete"],
                             item => selectedItem = item,
                             OpenItemDetail,
                             OpenEditItem,
@@ -591,7 +591,7 @@ public sealed class TermBulletTuiApp(
                             NavigateBack,
                             Quit,
                             row => $"{row.Symbol} {row.PublicRef} {row.Content}".Trim(),
-                            " Enter open  e edit  > migrate  x done  z cancel  d delete  Tab/1-3 focus  ? help  Esc back  q quit");
+                            " Enter open/action  e edit  > migrate  x done  z cancel  d delete  Tab/1-3 focus  ? help  Esc back  q quit");
                         break;
 
                     case TuiScreen.Month:
@@ -600,7 +600,7 @@ public sealed class TermBulletTuiApp(
                             "Month",
                             snapshot.MonthItems.Select(ItemDisplayRow.From).ToArray(),
                             "Actions",
-                            ["> migrate selected task", "Enter open detail", "x mark done", "z cancel", "d delete"],
+                            ["> open detail", "  edit selected", "  migrate selected task", "  mark done", "  cancel", "  delete"],
                             item => selectedItem = item,
                             OpenItemDetail,
                             OpenEditItem,
@@ -611,7 +611,7 @@ public sealed class TermBulletTuiApp(
                             NavigateBack,
                             Quit,
                             row => $"{row.Symbol} {row.PublicRef} {row.Content}".Trim(),
-                            " Enter open  e edit  > migrate  x done  z cancel  d delete  Tab/1-3 focus  ? help  Esc back  q quit");
+                            " Enter open/action  e edit  > migrate  x done  z cancel  d delete  Tab/1-3 focus  ? help  Esc back  q quit");
                         break;
 
                     case TuiScreen.Backlog:
@@ -620,7 +620,7 @@ public sealed class TermBulletTuiApp(
                             "Backlog",
                             snapshot.BacklogItems.Select(ItemDisplayRow.From).ToArray(),
                             "Actions",
-                            ["> migrate selected task", "Enter open detail", "x mark done", "z cancel", "d delete"],
+                            ["> open detail", "  edit selected", "  migrate selected task", "  mark done", "  cancel", "  delete"],
                             item => selectedItem = item,
                             OpenItemDetail,
                             OpenEditItem,
@@ -631,7 +631,7 @@ public sealed class TermBulletTuiApp(
                             NavigateBack,
                             Quit,
                             row => $"{row.Symbol} {row.PublicRef} {row.Content}".Trim(),
-                            " Enter open  e edit  > migrate  x done  z cancel  d delete  Tab/1-3 focus  ? help  Esc back  q quit");
+                            " Enter open/action  e edit  > migrate  x done  z cancel  d delete  Tab/1-3 focus  ? help  Esc back  q quit");
                         break;
 
                     case TuiScreen.DailyReview:
@@ -808,7 +808,7 @@ public sealed class TermBulletTuiApp(
         };
         var menuEntries = new[]
         {
-            "  Dashboard",
+            "  Daily",
             "  Search",
             "  Planning",
             "  Month",
@@ -1041,7 +1041,7 @@ public sealed class TermBulletTuiApp(
     private static int GetPanelCount(TuiScreen screen) =>
         screen switch
         {
-            TuiScreen.Search => 2,
+            TuiScreen.Search => 3,
             TuiScreen.ItemDetail => 3,
             TuiScreen.MigrateItem => 1,
             TuiScreen.Planning => 1,

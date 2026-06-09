@@ -69,7 +69,7 @@ internal sealed class TagSelectionList
 
         return
         [
-            .. _availableTags.Select(tag => $"{(string.Equals(_selectedTag, tag, StringComparison.OrdinalIgnoreCase) ? "(x)" : "( )")} {tag}")
+            .. _availableTags.Select(tag => $"{TuiAsciiControls.Radio(string.Equals(_selectedTag, tag, StringComparison.OrdinalIgnoreCase))} {tag}")
         ];
     }
 }

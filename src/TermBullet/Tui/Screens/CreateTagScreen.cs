@@ -183,30 +183,16 @@ public static class CreateTagScreen
 
         root.KeyPress += args =>
         {
+            if (TuiScreenUtilities.ShouldLetTextInputHandle(args.KeyEvent, nameField, descriptionField))
+            {
+                return;
+            }
+
             if (TuiScreenUtilities.IsHelpKey(args.KeyEvent))
             {
                 TuiScreenUtilities.ShowContextHelp(TuiScreen.Tags);
                 args.Handled = true;
                 return;
-            }
-
-            var digit = TuiScreenUtilities.GetDigit(args.KeyEvent);
-            if (digit is not null)
-            {
-                var target = digit.Value switch
-                {
-                    1 => FocusArea.Name,
-                    2 => FocusArea.Description,
-                    3 => FocusArea.Preview,
-                    _ => (FocusArea?)null
-                };
-
-                if (target is not null)
-                {
-                    SetFocusArea(target.Value);
-                    args.Handled = true;
-                    return;
-                }
             }
 
             switch (args.KeyEvent.Key)

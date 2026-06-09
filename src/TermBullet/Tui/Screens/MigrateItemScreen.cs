@@ -49,12 +49,14 @@ public static class MigrateItemScreen
             Y = 9,
             Width = Dim.Fill(2)
         };
-        var destinationGroup = new RadioGroup(["Today", "Week", "Month", "Backlog"], SelectedIndex(currentViewModel.DestinationCollection))
+        var destinationList = new ListView(TuiScreenUtilities.SanitizeListItems(currentViewModel.DestinationLines))
         {
             X = 1,
             Y = 10,
-            Width = Dim.Fill(2)
+            Width = Dim.Fill(2),
+            Height = 5
         };
+        destinationList.SelectedItem = SelectedIndex(currentViewModel.DestinationCollection);
 
         var resultTitle = new Label("3 Result")
         {
@@ -85,7 +87,7 @@ public static class MigrateItemScreen
             Y = Pos.AnchorEnd(2)
         };
 
-        screen.Add(destinationTitle, destinationGroup, resultTitle, resultLineOne, resultLineTwo, saveButton, cancelButton);
+        screen.Add(destinationTitle, destinationList, resultTitle, resultLineOne, resultLineTwo, saveButton, cancelButton);
         root.Add(screen, footer);
 
         void SetFocusArea(FocusArea area)
@@ -94,7 +96,7 @@ public static class MigrateItemScreen
             switch (area)
             {
                 case FocusArea.Destination:
-                    destinationGroup.SetFocus();
+                    destinationList.SetFocus();
                     break;
                 case FocusArea.Save:
                     saveButton.SetFocus();
@@ -128,7 +130,8 @@ public static class MigrateItemScreen
             syncingDestinationSelection = true;
             try
             {
-                destinationGroup.SelectedItem = SelectedIndex(updated.DestinationCollection);
+                TuiScreenUtilities.RefreshListView(destinationList, updated.DestinationLines);
+                destinationList.SelectedItem = SelectedIndex(updated.DestinationCollection);
             }
             finally
             {
@@ -144,14 +147,14 @@ public static class MigrateItemScreen
 
         saveButton.Clicked += Submit;
         cancelButton.Clicked += onCancel;
-        destinationGroup.SelectedItemChanged += _ =>
+        destinationList.SelectedItemChanged += _ =>
         {
             if (syncingDestinationSelection)
             {
                 return;
             }
 
-            RefreshDestination(currentViewModel.WithDestination(CollectionFromIndex(destinationGroup.SelectedItem)));
+            RefreshDestination(currentViewModel.WithDestination(CollectionFromIndex(destinationList.SelectedItem)));
         };
 
         root.KeyPress += args =>
@@ -191,7 +194,7 @@ public static class MigrateItemScreen
                     args.Handled = true;
                     break;
                 case Key.Space when focusArea == FocusArea.Destination:
-                    destinationGroup.SelectedItem = destinationGroup.SelectedItem >= 3 ? 0 : destinationGroup.SelectedItem + 1;
+                    destinationList.SelectedItem = destinationList.SelectedItem >= 3 ? 0 : destinationList.SelectedItem + 1;
                     args.Handled = true;
                     break;
                 case Key.Enter:

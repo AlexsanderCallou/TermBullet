@@ -44,15 +44,15 @@ public sealed class PlanningViewModel
             [
                 "Topic: -",
                 "Project tag: -",
-                "Volume: Medium (10-20 tasks)",
+                "Detail level: High",
                 "Start today: Yes",
                 "Distribution: today, week, month, backlog"
             ],
             ["Generate draft", "Apply plan", "Discard draft"],
             [
                 "assistant> Fill the guided fields, then generate a structured draft.",
-                "assistant> The model writes tasks; TermBullet controls count, tags, and placement."
+                "assistant> The model chooses task count; TermBullet controls tag and placement."
             ],
             ["Topic and tag are edited in the Setup panel."],
-            " Tab/1-4 focus  ? help  Esc back  q quit");
+            " Tab focus  ? help  Esc back");
 }

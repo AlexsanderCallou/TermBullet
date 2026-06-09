@@ -10,8 +10,10 @@ Source checked:
 - `src/TermBullet/Tui/TermBulletTuiApp.cs`
 - `src/TermBullet/Tui/Screens/SearchScreen.cs`
 - `src/TermBullet/Tui/Screens/AddItemScreen.cs`
+- `src/TermBullet/Tui/Screens/EditItemScreen.cs`
 - `src/TermBullet/Tui/Screens/PlanningScreen.cs`
 - `src/TermBullet/Tui/Screens/ItemListScreen.cs`
+- `src/TermBullet/Tui/Screens/DailyReviewScreen.cs`
 - `src/TermBullet/Tui/Screens/CalendarScreen.cs`
 - `src/TermBullet/Tui/Screens/TagsScreen.cs`
 - `src/TermBullet/Tui/Screens/CreateTagScreen.cs`
@@ -20,9 +22,10 @@ Source checked:
 
 Current implemented screens:
 
-- Main Dashboard
+- Daily
 - Search
 - Add Item auxiliary flow
+- Edit Item auxiliary flow
 - Item Detail
 - Planning
 - Week View
@@ -43,7 +46,7 @@ Planned but not currently implemented as TUI screens:
 
 ## Layout Convention
 
-Full-screen layouts must use the Main Dashboard top bar pattern:
+Full-screen layouts must use the Daily top bar pattern:
 
 ```text
 + TermBullet - <Screen Title> ------------------------------------------------------------+
@@ -55,11 +58,82 @@ top bar unless a future screen explicitly needs that state in its own content
 area. Auxiliary modal flows, such as Add Type Picker and Quick Task, keep their
 compact modal title bars.
 
-## Screen 01 - Main Dashboard
+## TUI Control Standard
+
+Quick Task is the reference for compact popup forms: a bordered title, one clear
+field group, a small status/summary area when useful, and physical action
+buttons at the bottom.
+
+ASCII controls must be rendered consistently:
+
+```text
+[ x ] checkbox selected
+[   ] checkbox empty
+
+( x ) radio selected
+(   ) radio empty
+
+[ Save ]  [ Cancel ]
+```
+
+Interaction rules:
+
+- any screen or popup containing text input fields must use visible physical
+  buttons for actions;
+- ordinary letter keys must not trigger actions on text-input screens;
+- `Enter` activates only the focused button or non-text control;
+- inside multiline text input, `Enter` keeps its text-editing behavior;
+- `Tab` and `Shift+Tab` move focus;
+- `Esc` cancels or returns;
+- `?` may open help only when it does not interfere with text input;
+- buttons are laid out horizontally with at most four buttons per line;
+- list screens that need text input should open a popup instead of capturing
+  free text directly inside a shortcut-heavy list screen.
+
+Standard screen families:
+
+- **Popup form:** Quick Task, Delete confirmation, Apply Draft confirmation,
+  Daily Review Decision, future text entry popups.
+- **Full form:** Add Task, Add Note, Add Event, Edit Task, Edit Note, Edit
+  Event, Create Tag, Migrate Item.
+- **List + Preview + Actions:** Week, Month, Backlog, Daily Review, Forgotten,
+  Notes, Tags.
+- **Cockpit:** Daily.
+- **Specialized:** Search, Planning, Calendar, Item Detail, Tag Detail.
+
+Refactor target:
+
+- normalize all checkbox/radio rendering to the ASCII controls above;
+- remove letter-key actions from every text-input screen;
+- move actions into bottom action panels or popups;
+- keep screen-specific shortcuts only on screens without text input;
+- numbered full-screen panels should be navigable with number keys when the
+  screen has no text input;
+- screens with text input must not use number keys for panel navigation while a
+  text input can receive focus, because numbers may be part of normal content.
+
+Refactor validation checklist:
+
+- the visible Daily menu entry is named `Daily`, not `Dashboard`;
+- selected tasks open the correct Item Detail from Today/Daily items, Week,
+  Month, Backlog, Daily Review, Forgotten, and Tag Detail;
+- Tag Detail opens from Tags and shows the selected tag's current tasks, notes,
+  and events;
+- tasks opened from Tag Detail preserve their public ref and original
+  collection;
+- number keys navigate numbered panels only on screens without text input;
+- number keys must not trigger panel navigation while focus is in a text input;
+- text input screens must tolerate normal text containing action letters such
+  as `e`, `s`, `t`, `g`, `d`, `x`, and `n`;
+- every action button must call the same Application use case previously used
+  by the equivalent shortcut.
+
+## Screen 01 - Daily
 
 Status: implemented.
 
-Role: main operational dashboard loaded when the TUI starts.
+Role: main daily operational surface loaded when the TUI starts. The menu label
+must be `Daily`, not `Dashboard`.
 
 Navigation:
 
@@ -80,7 +154,7 @@ Refined target ASCII layout:
 ```text
 + TermBullet - Daily YYYY-MM-DD ------------------------------------------------------------+
 | 1 Menu              | 2 Day Items                       | 3 Details                     |
-| > Dashboard         | > [ ] t-0526-1 Fix auth flow      | ref: t-0526-1                 |
+| > Daily             | > [   ] t-0526-1 Fix auth flow    | ref: t-0526-1                 |
 |   Search            |   (.) n-0526-1 Capture edge case  | type: task                    |
 |   Planning          |   (o) e-0526-1 Review 16:00       | status: open                  |
 |   Month             |                                   | priority: normal              |
@@ -110,15 +184,15 @@ Refined target ASCII layout:
 Notes:
 
 - The code names the second panel `Day Items`, not `Daily Log`.
-- This cleaner dashboard removes AI-facing language from the main surface. AI
+- This cleaner Daily screen removes AI-facing language from the main surface. AI
   should appear later inside the Planning workspace that proposes new tasks, not as a
-  permanent dashboard panel.
+  permanent Daily panel.
 - `Details` keeps structured metadata compact and leaves the larger lower panel
   for the selected item's actual content.
 - `Context` shows collection counts for Today, Daily Review, Week, Month,
   Backlog, Forgotten, and active tags.
-- `Planning` opens a future AI-assisted planning placeholder. It is not the
-  Week View and is not part of the V1 execution workflow.
+- `Planning` opens the V2 AI-assisted new planning workspace. It is not the
+  Week View and does not edit existing plans.
 - `Tags` opens the catalog view where tags can be created, inspected, and later
   selected while editing or creating items.
 - `Content` is the main reading/editing surface for the selected item. It
@@ -126,7 +200,7 @@ Notes:
   own persisted `notes` collection.
 - `Enter open` opens the selected item in the Item Detail screen.
 - The footer includes `e edit`, but edit is not currently handled by the
-  dashboard key handling code.
+  Daily key handling code.
 
 ## Screen 02 - Search
 
@@ -137,11 +211,16 @@ Role: item search screen and early command-palette foundation.
 Navigation:
 
 - `/` represents search mode in the footer.
-- Type a query and press `Enter` in the query field to search.
-- `Tab` and `Shift+Tab` move focus between Results and Preview.
+- Type a query in the query field.
+- `Tab` and `Shift+Tab` move focus between Query, Results, Preview, and
+  Actions.
+- `Enter` activates the focused button or opens the selected focused result.
 - `Esc` returns to the previous screen.
 - `?` opens contextual help.
 - `q` quits.
+
+Search has a text input field. It must not use ordinary letter-key actions.
+Search execution and item actions must be available through physical buttons.
 
 Target ASCII layout:
 
@@ -150,32 +229,36 @@ Target ASCII layout:
 | query: jwt                                                                               |
 |-------------------------------------------------------------------------------------------|
 | 1 Results                                    | 2 Preview                                  |
-| > [ ] t-0526-1 Fix auth flow                | ref: t-0526-1                              |
+| > [   ] t-0526-1 Fix auth flow              | ref: t-0526-1                              |
 |   (.) n-0526-1 Empty audience note          | type: task                                 |
-|   [ ] t-0526-4 Review token logic           | priority: high                             |
+|   [   ] t-0526-4 Review token logic         | priority: high                             |
 |                                              | status: open                               |
 |                                              |                                            |
 |                                              |                                            |
 |                                              |                                            |
+|-------------------------------------------------------------------------------------------|
+| 3 Actions                                                                                 |
+| [ Search ]  [ Open ]  [ Back ]                                                           |
 +-------------------------------------------------------------------------------------------+
-| / search  Enter open  Ctrl+e edit  Ctrl+x done  Tab focus  ? help  Esc back              |
+| Tab focus  Enter activate focused button  Esc back  ? help                                |
 +-------------------------------------------------------------------------------------------+
 ```
 
 Notes:
 
-- Search currently renders two panels: Results and Preview.
+- Search currently renders two panels: Results and Preview. The refactor target
+  adds a physical Actions panel.
 - The query field sits above the panels.
 - The preview currently shows ref, collection, priority, and status.
-- `Enter open` should open the selected result in the Item Detail screen.
-- The footer advertises `Ctrl+e edit` and `Ctrl+x done`; these are
-  product-direction shortcuts and are not fully wired in the current screen.
+- `Open` opens the selected result in the Item Detail screen.
+- Search should not advertise edit/done letter shortcuts while the query input
+  exists on the screen. Those actions can be reached after opening the item.
 
 ## Flow 03 - Add Item
 
 Status: implemented.
 
-Role: keyboard-first creation flow opened from the Main Dashboard. The flow is
+Role: keyboard-first creation flow opened from Daily. The flow is
 split because tasks, notes, and events collect different fields.
 
 Entry points:
@@ -192,7 +275,7 @@ Navigation:
 - `CursorUp` and `CursorDown` move between item types.
 - `t`, `n`, and `e` jump directly to Task, Note, and Event.
 - `Enter` confirms the selected type and opens the matching form.
-- `Esc` cancels and returns to the dashboard.
+- `Esc` cancels and returns to Daily.
 
 ASCII layout:
 
@@ -217,14 +300,14 @@ Notes:
 ### Flow 03B - Quick Task
 
 Role: fastest possible capture for a task in Today, opened with `n`
-from the dashboard.
+from Daily.
 
 Navigation:
 
 - `Tab` and `Shift+Tab` move between Task, Save, and Cancel.
 - `Enter` activates the focused control.
 - `Save` creates the task.
-- `Cancel` or `Esc` returns to the dashboard without creating anything.
+- `Cancel` or `Esc` returns to Daily without creating anything.
 
 Request mapping:
 
@@ -265,7 +348,7 @@ Navigation:
 - `Space` cycles the active timing or priority choice.
 - `Enter` activates the focused control.
 - `Save` submits the form.
-- `Cancel` or `Esc` returns to the dashboard without creating anything.
+- `Cancel` or `Esc` returns to Daily without creating anything.
 
 Fields:
 
@@ -303,9 +386,9 @@ ASCII layout:
 | > None   Low   Medium   High                                        |
 |                                                                      |
 | Tags                                                                 |
-| > [x] auth                                                           |
-|   [x] cli                                                            |
-|   [ ] tui                                                            |
+| > [ x ] auth                                                         |
+|   [ x ] cli                                                          |
+|   [   ] tui                                                          |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
@@ -331,7 +414,7 @@ Navigation:
 - `Tab` and `Shift+Tab` move between fields, Save, and Cancel.
 - `Enter` activates the focused control.
 - `Save` submits the form.
-- `Cancel` or `Esc` returns to the dashboard without creating anything.
+- `Cancel` or `Esc` returns to Daily without creating anything.
 
 Fields:
 
@@ -357,9 +440,9 @@ ASCII layout:
 | error happens when token audience is empty                           |
 |                                                                      |
 | Tags                                                                 |
-| > [x] auth                                                           |
-|   [x] incident                                                       |
-|   [ ] tui                                                            |
+| > [ x ] auth                                                         |
+|   [ x ] incident                                                     |
+|   [   ] tui                                                          |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
@@ -385,7 +468,7 @@ Navigation:
 - `Tab` and `Shift+Tab` move between fields, Save, and Cancel.
 - `Enter` activates the focused control.
 - `Save` submits the form.
-- `Cancel` or `Esc` returns to the dashboard without creating anything.
+- `Cancel` or `Esc` returns to Daily without creating anything.
 
 Fields:
 
@@ -416,8 +499,8 @@ ASCII layout:
 | bring insurance card                                                 |
 |                                                                      |
 | Tags                                                                 |
-| > [x] health                                                         |
-|   [ ] personal                                                       |
+| > [ x ] health                                                       |
+|   [   ] personal                                                     |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
@@ -436,13 +519,13 @@ Notes:
 
 ## Flow 04 - Edit Item
 
-Status: planned.
+Status: implemented.
 
 Role: edit an existing task, note, or event without changing its identity.
 
 Entry points:
 
-- `e` on the selected item from Main Dashboard.
+- `e` on the selected item from Daily.
 - `e` on the selected item from Today, Week, Month, Backlog, Forgotten, Notes,
   Calendar, or Search.
 - `e` from Item Detail.
@@ -511,14 +594,14 @@ ASCII layout:
 | > None   Low   Medium   High                                         |
 |                                                                      |
 | 5 Tags                                                               |
-| > [x] auth                                                           |
-|   [x] cli                                                            |
-|   [ ] tui                                                            |
+| > [ x ] auth                                                         |
+|   [ x ] cli                                                          |
+|   [   ] tui                                                          |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
 | Status: task | ref: t-0526-1 | today | priority: high                |
-| Enter activate  Tab/1-5 focus  Arrows move  Space toggle  Esc cancel |
+| Enter activate  Tab focus  Arrows move  Space cycle  Esc cancel  ? help |
 +----------------------------------------------------------------------+
 ```
 
@@ -567,14 +650,14 @@ ASCII layout:
 | include terminal log and repro steps                                 |
 |                                                                      |
 | 3 Tags                                                               |
-| > [x] auth                                                           |
-|   [x] incident                                                       |
-|   [ ] tui                                                            |
+| > [ x ] auth                                                         |
+|   [ x ] incident                                                     |
+|   [   ] tui                                                          |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
 | Status: note | ref: n-0526-1 | tag: auth                             |
-| Enter activate  Tab/1-3 focus  Esc cancel  ? help                    |
+| Enter activate  Tab focus  Esc cancel  ? help                        |
 +----------------------------------------------------------------------+
 ```
 
@@ -624,13 +707,13 @@ ASCII layout:
 | bring insurance card                                                 |
 |                                                                      |
 | 4 Tags                                                               |
-| > [x] health                                                         |
-|   [ ] personal                                                       |
+| > [ x ] health                                                       |
+|   [   ] personal                                                     |
 |                                                                      |
 | [ Save ]  [ Cancel ]                                                 |
 +----------------------------------------------------------------------+
 | Status: event | ref: e-0526-1 | scheduled_at: 2026-05-12             |
-| Enter activate  Tab/1-4 focus  Esc cancel  ? help                    |
+| Enter activate  Tab focus  Esc cancel  ? help                        |
 +----------------------------------------------------------------------+
 ```
 
@@ -646,7 +729,7 @@ Notes:
 Status: implemented.
 
 Role: focused read view for one selected item. This screen opens from Main
-Dashboard, Search, Forgotten Review, Backlog Triage, Notes, Calendar, and any
+Daily, Search, Forgotten Review, Backlog Triage, Notes, Calendar, and any
 future list where an item can be selected.
 
 Navigation:
@@ -746,13 +829,13 @@ for a validated draft preview. The draft can be applied or discarded.
 
 Entry points:
 
-- `Enter` on `Planning` from the Main Dashboard menu.
+- `Enter` on `Planning` from the Daily menu.
 
 Navigation:
 
 - `Tab` and `Shift+Tab` move focus between numbered panels.
 - `Enter` activates the focused button or control.
-- `Esc` returns to the dashboard.
+- `Esc` returns to Daily.
 - `?` opens contextual help.
 - `q` quits.
 
@@ -766,8 +849,8 @@ Planning target ASCII layout:
 ```text
 + TermBullet - Planning ------------------------------------------------------------------+
 | 1 Setup                                      | 2 Rules                                   |
-| Topic        Rust programming               | Detail level: [x] High  [ ] Low           |
-| Project tag  studies-rust                   | [x] Start today                           |
+| Topic        Rust programming               | Detail level: [ x ] High  [   ] Low       |
+| Project tag  studies-rust                   | [ x ] Start today                         |
 | All task titles start with 1., 2., 3.       |                                           |
 |                                              | High: each task = one atomic action.      |
 |                                              | Low: each task = ~1 day or ~2h of work.   |
@@ -791,7 +874,7 @@ Planning target ASCII layout:
 | 4 Actions                                                                               |
 | [ Generate ]  [ Apply ]  [ Discard ]                                                    |
 +-----------------------------------------------------------------------------------------+
-| Tab/1-4 focus  ? help  Esc back  q quit                                                 |
+| Tab focus  ? help  Esc back                                                             |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -803,7 +886,7 @@ The Actions panel uses physical buttons with a maximum of 4 buttons per line:
 
 The Rules panel contains interactive controls:
 
-- **Detail level** checkboxes: `[x] High` or `[ ] Low` (mutually exclusive).
+- **Detail level** checkboxes: `[ x ] High` or `[   ] Low` (mutually exclusive).
   - High: each task is a single atomic action.
   - Low: each task represents approximately 1 day or 2 hours of work.
 - **Start today** checkbox: controls whether the first task is placed in `today`.
@@ -870,8 +953,8 @@ dated task schedule.
 
 Entry points:
 
-- Future shortcut: `w` from the dashboard.
-- Future menu entry if Week View becomes a top-level dashboard route again.
+- Future shortcut: `w` from Daily.
+- Future menu entry if Week View becomes a top-level Daily route again.
 
 Navigation:
 
@@ -882,7 +965,7 @@ Navigation:
 - `x` marks a selected task done.
 - `z` cancels a selected task or event.
 - `d` deletes the selected item.
-- `Esc` returns to the dashboard.
+- `Esc` returns to Daily.
 - `?` opens contextual help.
 
 Target ASCII layout:
@@ -890,19 +973,20 @@ Target ASCII layout:
 ```text
 + TermBullet - Week ---------------------------------------------------------------------+
 | 1 Week                                          | 2 Preview                           |
-| > [ ] t-0526-4 Fix auth flow                   | ref: t-0526-4                      |
-|   [ ] t-0526-5 Write tests                     | type: task                         |
-|   [ ] t-0526-7 Review parser                   | status: open                       |
+| > [   ] t-0526-4 Fix auth flow                 | ref: t-0526-4                      |
+|   [   ] t-0526-5 Write tests                   | type: task                         |
+|   [   ] t-0526-7 Review parser                 | status: open                       |
 |                                                 | collection: week                   |
 |-------------------------------------------------+------------------------------------|
 | 3 Actions                                                                              |
-| > migrate selected task                                                                |
-|   open detail                                                                          |
+| > open detail                                                                          |
+|   edit selected                                                                        |
+|   migrate selected task                                                                |
 |   mark done                                                                            |
 |   cancel                                                                               |
 |   delete                                                                               |
 +-----------------------------------------------------------------------------------------+
-| Enter open  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back          |
+| Enter open/action  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back   |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -921,7 +1005,7 @@ a dated task schedule.
 
 Entry points:
 
-- `Enter` on `Month` from the Main Dashboard menu.
+- `Enter` on `Month` from the Daily menu.
 
 Navigation and layout match Screen 06 - Week View, with the first panel titled
 `Month` and rows loaded from the `month` collection.
@@ -935,8 +1019,8 @@ material.
 
 Entry points:
 
-- `Enter` on `Backlog` from the Main Dashboard menu.
-- Future shortcut: `b` from the dashboard.
+- `Enter` on `Backlog` from the Daily menu.
+- Future shortcut: `b` from Daily.
 
 Navigation:
 
@@ -947,7 +1031,7 @@ Navigation:
 - `x` marks a selected task done.
 - `z` cancels a selected task.
 - `d` deletes the selected item.
-- `Esc` returns to the dashboard.
+- `Esc` returns to Daily.
 - `?` opens contextual help.
 
 Target ASCII layout:
@@ -955,10 +1039,10 @@ Target ASCII layout:
 ```text
 + TermBullet - Backlog ------------------------------------------------------------------+
 | 1 Backlog                                        | 2 Preview                           |
-| > [ ] t-0526-12 Refactor tag selector           | ref: t-0526-12                      |
-|   [ ] t-0526-13 Review CLI help                 | type: task                          |
-|   [ ] t-0526-14 Prepare release notes           | status: open                        |
-|   [ ] t-0526-15 Review installer flow           | collection: backlog                 |
+| > [   ] t-0526-12 Refactor tag selector         | ref: t-0526-12                      |
+|   [   ] t-0526-13 Review CLI help               | type: task                          |
+|   [   ] t-0526-14 Prepare release notes         | status: open                        |
+|   [   ] t-0526-15 Review installer flow         | collection: backlog                 |
 |                                                  | tag: infra                         |
 |--------------------------------------------------+-------------------------------------|
 | 3 Actions                                                                              |
@@ -968,7 +1052,7 @@ Target ASCII layout:
 |   open detail                                                                          |
 |   delete                                                                                |
 +-----------------------------------------------------------------------------------------+
-| Enter open  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back          |
+| Enter open/action  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back   |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -990,8 +1074,8 @@ local date.
 
 Entry points:
 
-- `Enter` on `Daily Review` from the Main Dashboard menu.
-- Future shortcut: `r` from the dashboard.
+- `Enter` on `Daily Review` from the Daily menu.
+- Future shortcut: `r` from Daily.
 - CLI: `termbullet daily review`, `termbullet daily keep <ref>`,
   `termbullet daily move <ref> --collection <week|month|backlog>`,
   `termbullet daily done <ref>`, and `termbullet daily cancel <ref>`.
@@ -1004,7 +1088,7 @@ Navigation:
 - `o` opens the selected task detail.
 - In the Decision popup, `Save` applies the selected decision.
 - In the Decision popup, `Cancel` or `Esc` closes without changing data.
-- `Esc` returns to the dashboard.
+- `Esc` returns to Daily.
 - `?` opens contextual help.
 
 Target ASCII layout:
@@ -1012,9 +1096,9 @@ Target ASCII layout:
 ```text
 + TermBullet - Daily Review ------------------------------------------------------------+
 | 1 Stale Today Tasks                         | 2 Details                              |
-| > [ ] t-0626-3 Study ownership in Rust      | ref: t-0626-3                          |
-|   [ ] t-0626-4 Build CLI parser sample      | last today review: 2026-06-07          |
-|   [ ] t-0626-5 Read async chapter           | status: open                           |
+| > [   ] t-0626-3 Study ownership in Rust    | ref: t-0626-3                          |
+|   [   ] t-0626-4 Build CLI parser sample    | last today review: 2026-06-07          |
+|   [   ] t-0626-5 Read async chapter         | status: open                           |
 |                                             | collection: today                      |
 |                                             | tag: studies-rust                      |
 |                                             | priority: none                         |
@@ -1027,12 +1111,12 @@ Target ASCII layout:
 + Daily Review Decision ---------------------------------------------------------------+
 | t-0626-3 Study ownership in Rust                                                     |
 | Choose what to do with this stale Today task:                                        |
-| (x) Keep today                                                                       |
-| ( ) Move to week                                                                     |
-| ( ) Move to month                                                                    |
-| ( ) Move to backlog                                                                  |
-| ( ) Mark done                                                                        |
-| ( ) Cancel task                                                                      |
+| ( x ) Keep today                                                                     |
+| (   ) Move to week                                                                   |
+| (   ) Move to month                                                                  |
+| (   ) Move to backlog                                                                |
+| (   ) Mark done                                                                      |
+| (   ) Cancel task                                                                    |
 | [ Save ] [ Cancel ]                                                                  |
 +---------------------------------------------------------------------------------------+
 ```
@@ -1058,19 +1142,19 @@ Alternative considered:
 ```text
 + TermBullet - Today -------------------------------------------------------------------+
 | 1 Daily Review                               | 2 Today Tasks                          |
-| > [!] t-0626-3 Study ownership in Rust       | [ ] t-0626-8 Practice CLI              |
-|   [!] t-0626-4 Build CLI parser sample       | [ ] t-0626-9 Read docs                 |
-|                                             | [x] t-0626-2 Setup env                 |
+| > [!] t-0626-3 Study ownership in Rust       | [   ] t-0626-8 Practice CLI            |
+|   [!] t-0626-4 Build CLI parser sample       | [   ] t-0626-9 Read docs               |
+|                                             | [ x ] t-0626-2 Setup env               |
 |---------------------------------------------+----------------------------------------|
 | 3 Decision                                  | 4 Details                              |
-| (x) keep today                              | last review: 2026-06-07                |
-| ( ) move to week                            | tag: studies-rust                      |
-| ( ) move to month                           | collection: today                      |
-| ( ) move to backlog                         |                                        |
-| ( ) mark done                               |                                        |
-| ( ) cancel                                  |                                        |
+| ( x ) keep today                            | last review: 2026-06-07                |
+| (   ) move to week                          | tag: studies-rust                      |
+| (   ) move to month                         | collection: today                      |
+| (   ) move to backlog                       |                                        |
+| (   ) mark done                             |                                        |
+| (   ) cancel                                |                                        |
 +---------------------------------------------------------------------------------------+
-| Enter apply  Space decision  Tab focus  > migrate  x done  z cancel  Esc back         |
+| Enter apply  Space decision  Tab focus  Esc cancel                                    |
 +---------------------------------------------------------------------------------------+
 ```
 
@@ -1087,8 +1171,8 @@ completed or cancelled.
 
 Entry points:
 
-- `Enter` on `Forgotten` from the Main Dashboard menu.
-- Future shortcut: `f` from the dashboard.
+- `Enter` on `Forgotten` from the Daily menu.
+- Future shortcut: `f` from Daily.
 
 Navigation:
 
@@ -1099,7 +1183,7 @@ Navigation:
 - `x` marks the selected task done.
 - `z` cancels the selected task.
 - `d` deletes the selected task.
-- `Esc` returns to the dashboard.
+- `Esc` returns to Daily.
 - `?` opens contextual help.
 
 Target ASCII layout:
@@ -1107,9 +1191,9 @@ Target ASCII layout:
 ```text
 + TermBullet - Forgotten ---------------------------------------------------------------+
 | 1 Items                                         | 2 Preview                            |
-| > [ ] t-0426-3 Fix flaky test      previous month | ref: t-0426-3                    |
-|   [ ] t-0426-6 Update docs         previous month | type: task                       |
-|   [ ] t-0426-8 Check backup path   previous month | status: open                     |
+| > [   ] t-0426-3 Fix flaky test    previous month | ref: t-0426-3                    |
+|   [   ] t-0426-6 Update docs       previous month | type: task                       |
+|   [   ] t-0426-8 Check backup path previous month | status: open                     |
 |                                                  | collection: today                   |
 |                                                  | tag: tests                         |
 |--------------------------------------------------+-------------------------------------|
@@ -1121,7 +1205,7 @@ Target ASCII layout:
 |   mark done                                                                            |
 |   cancel                                                                               |
 +-----------------------------------------------------------------------------------------+
-| Enter open  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back          |
+| Enter open/action  > migrate  x done  z cancel  d delete  Tab focus  ? help  Esc back   |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -1145,8 +1229,8 @@ reference material and should not be mixed with executable work in this view.
 
 Entry points:
 
-- `Enter` on `Notes` from the Main Dashboard menu.
-- Future shortcut: `N` from the dashboard.
+- `Enter` on `Notes` from the Daily menu.
+- Future shortcut: `N` from Daily.
 
 Navigation:
 
@@ -1154,7 +1238,7 @@ Navigation:
 - `Tab` and `Shift+Tab` move focus between Notes, Preview, and Actions.
 - `Enter` opens Item Detail for the selected note.
 - `d` deletes the selected note.
-- `Esc` returns to the dashboard.
+- `Esc` returns to Daily.
 - `?` opens contextual help.
 
 Target ASCII layout:
@@ -1194,8 +1278,8 @@ collection.
 
 Entry points:
 
-- `Enter` on `Calendar` from the Main Dashboard menu.
-- Future shortcut: `k` from the dashboard.
+- `Enter` on `Calendar` from the Daily menu.
+- Future shortcut: `k` from Daily.
 
 Navigation:
 
@@ -1207,7 +1291,7 @@ Navigation:
 - `Enter` opens Item Detail for the selected item in the focused day.
 - `z` cancels a selected event.
 - `d` deletes the selected item.
-- `Esc` returns to the dashboard.
+- `Esc` returns to Daily.
 - `?` opens contextual help.
 
 Target ASCII layout:
@@ -1258,14 +1342,14 @@ Notes:
 
 Status: implemented.
 
-Role: catalog view for tags used by item metadata and by the dashboard Context
+Role: catalog view for tags used by item metadata and by the Daily Context
 panel. Tags describe topics, areas, or grouping labels. This screen is not an
 item list and must not create tasks, notes, or events by itself.
 
 Entry points:
 
-- `Enter` on `Tags` from the Main Dashboard menu.
-- `t` from the dashboard.
+- `Enter` on `Tags` from the Daily menu.
+- `t` from Daily.
 
 Navigation:
 
@@ -1274,7 +1358,7 @@ Navigation:
 - `1`, `2`, `3`, and `4` focus Search, Tags, Preview, and Actions.
 - `n` opens the Create Tag flow.
 - `Enter` opens the selected tag detail.
-- `Esc` returns to the dashboard.
+- `Esc` returns to Daily.
 - `?` opens contextual help.
 
 Target ASCII layout:
@@ -1296,7 +1380,7 @@ Target ASCII layout:
 | > open detail                                                                          |
 |   create tag                                                                           |
 +-----------------------------------------------------------------------------------------+
-| Enter detail  n new  Tab/1-4 focus  ? help  Esc back  q quit                           |
+| Enter activate  Tab focus  Esc back                                                     |
 +-----------------------------------------------------------------------------------------+
 ```
 
@@ -1304,9 +1388,9 @@ Notes:
 
 - Tags are metadata strings attached to items; they are not item types.
 - Each item has exactly one `tag`; missing tags use protected `default`.
-- The dashboard Context panel shows at most four active non-default tags, oldest
+- The Daily Context panel shows at most four active non-default tags, oldest
   first.
-- The dashboard Context panel should show the most relevant active tags based on
+- The Daily Context panel should show the most relevant active tags based on
   item usage.
 - Removing or editing tag catalog entries is deferred until a clear business
   rule exists. Until then, the TUI must not advertise edit/delete for tags.
@@ -1345,13 +1429,13 @@ Target ASCII layout:
 |----------------------------------------------+------------------------------------------|
 | 3 Tasks                                      | 4 Notes                                  |
 | today                                        | > (.) n-0526-2 OAuth notes              |
-| > [ ] t-0526-1 Fix auth flow                |                                          |
+| > [   ] t-0526-1 Fix auth flow              |                                          |
 | week                                         |------------------------------------------|
-|   [ ] t-0526-4 Rotate keys                  | 5 Events                                 |
+|   [   ] t-0526-4 Rotate keys                | 5 Events                                 |
 | month                                        |   (o) e-0526-1 Auth review              |
-|   [ ] t-0526-8 Review login errors          |                                          |
+|   [   ] t-0526-8 Review login errors        |                                          |
 | backlog                                      |                                          |
-|   [ ] t-0526-9 Document auth setup          |                                          |
+|   [   ] t-0526-9 Document auth setup        |                                          |
 +-----------------------------------------------------------------------------------------+
 | Enter detail  c create  n quick task  e edit item  Tab/1-5 focus  Esc back  q quit      |
 +-----------------------------------------------------------------------------------------+
@@ -1426,7 +1510,7 @@ show the basic item data, ask for one destination, and confirm or cancel.
 
 Entry points:
 
-- `>` from Main Dashboard selected task.
+- `>` from Daily selected task.
 - Future list screens where a task is selected.
 
 Navigation:
@@ -1451,10 +1535,10 @@ Target ASCII layout:
 | tag: auth                                                                                 |
 |-------------------------------------------------------------------------------------------|
 | Destination                                                                               |
-| (x) Today                                                                                 |
-| ( ) Week                                                                                  |
-| ( ) Month                                                                                 |
-| ( ) Backlog                                                                               |
+| ( x ) Today                                                                               |
+| (   ) Week                                                                                |
+| (   ) Month                                                                               |
+| (   ) Backlog                                                                             |
 |                                                                                           |
 | Result                                                                                    |
 | t-0526-1: today -> today                                                                 |
@@ -1477,10 +1561,10 @@ Backlog destination example:
 | collection: today                                                                         |
 |-------------------------------------------------------------------------------------------|
 | Destination                                                                               |
-| ( ) Today                                                                                 |
-| ( ) Week                                                                                  |
-| ( ) Month                                                                                 |
-| (x) Backlog                                                                               |
+| (   ) Today                                                                               |
+| (   ) Week                                                                                |
+| (   ) Month                                                                               |
+| ( x ) Backlog                                                                             |
 |                                                                                           |
 | Result                                                                                    |
 | t-0526-1: today -> backlog                                                               |
@@ -1505,10 +1589,11 @@ Notes:
 
 ## Implementation Gap Notes
 
-The product spec describes a broader TUI with AI Planning, Week,
-Backlog Triage, Forgotten Review, Review, Notes, Calendar, Tags, and Search.
-The active codebase currently contains `MainDashboard`, `Search`, `ItemDetail`,
-`Planning`, `Week`, `Backlog`, `Forgotten`, `Notes`, `Calendar`, `Tags`, and
-`MigrateItem` in `TuiScreen`, plus the Add Item auxiliary flow for type picking,
-quick task capture, type-specific creation forms, and the Create Tag flow.
-Review remains a future screen outside the current route set.
+The active codebase currently contains `MainDashboard` for the Daily screen,
+`Search`, `ItemDetail`,
+`MigrateItem`, `Planning`, `Week`, `Month`, `Backlog`, `DailyReview`,
+`Forgotten`, `Notes`, `Calendar`, and `Tags` in `TuiScreen`, plus auxiliary
+flows for Add Item, Edit Item, Quick Task, Create Tag, and Daily Review
+decision popups.
+
+Review and Sync / Cloud remain future screens outside the current route set.
